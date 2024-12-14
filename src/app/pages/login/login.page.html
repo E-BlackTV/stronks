@@ -1,27 +1,24 @@
 <ion-content [fullscreen]="true">
   <ion-card>
     <ion-card-header>
-      <ion-card-title class="ion-text-center">
-        Login
-      </ion-card-title>
+      <ion-card-title class="ion-text-center">Login</ion-card-title>
     </ion-card-header>
-
     <ion-card-content>
-      <ion-item>
-        <ion-label position="stacked">Username</ion-label>
-        <ion-input></ion-input>
-      </ion-item>
-
-      <ion-item>
-        <ion-label position="stacked">Password</ion-label>
-        <ion-input type="password"></ion-input>
-      </ion-item>
-      <br>
-      <ion-checkbox labelPlacement="end">
-        <ion-label>Remember Me</ion-label>
-      </ion-checkbox>
-      <br>
-      <ion-button expand="block" color="tertiary">Login</ion-button>
+      <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+        <ion-item>
+          <ion-label position="stacked">Benutzername</ion-label>
+          <ion-input formControlName="username"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">Passwort</ion-label>
+          <ion-input type="password" formControlName="password"></ion-input>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-label>Angemeldet bleiben</ion-label>
+          <ion-checkbox formControlName="rememberMe"></ion-checkbox>
+        </ion-item>
+        <ion-button expand="block" type="submit" [disabled]="!loginForm.valid">Anmelden</ion-button>
+      </form>
     </ion-card-content>
   </ion-card>
 </ion-content>
