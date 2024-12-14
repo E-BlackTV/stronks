@@ -4,15 +4,6 @@
 
 ---
 
-## Inhalt
-
-1. [Anforderungen](#anforderungen)
-2. [Spezifikationen](#spezifikationen)
-3. [Detailplanung](#detailplanung)
-4. [Implementierung](#implementierung)
-
----
-
 ## Anforderungen
 
 ### Priorisierung
