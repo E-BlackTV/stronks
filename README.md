@@ -29,7 +29,8 @@
 - **Technologie**: Ionic Framework (Angular)
 - **Zielplattform**: iOS, Android
 - **Backend**: Firebase (für Authentifizierung und Datenhaltung)
-- **Datenquellen**: API für Echtzeit-Aktien- und Crypto-Daten
+- **Datenquellen**: API für Echtzeit-Aktien-(Yahoo finance = https://rapidapi.com/davethebeast/api/yahoo-finance166/playground/apiendpoint_a0f7b3cc-d473-49f2-a5be-bbf6c09f6ced)
+                    und Crypto-Daten
 
 ### Seitenstruktur
 1. **Wallet-Seite**:
