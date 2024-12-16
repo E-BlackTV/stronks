@@ -25,18 +25,17 @@ export class LoginPage implements OnInit {
   ngOnInit() {}
 
   onLogin() {
-    if (this.loginForm.valid) {
-      this.http.post('http://localhost/stronks/backend/login.php', this.loginForm.value)
-        .subscribe((response: any) => {
-          if (response.success) {
-            alert(response.message);
-            this.navCtrl.navigateRoot('/home');
-          } else {
-            alert(response.message);
-          }
-        }, error => {
-          console.error('Login error', error);
-        });
+    this.http.post('http://localhost/stronks/backend/login.php', this.loginForm.value)
+  .subscribe((response: any) => {
+    if (response.success) {
+      alert(response.message);
+      this.navCtrl.navigateRoot('/home');
+    } else {
+      alert(response.message);
     }
+  }, error => {
+    console.error('Fehler bei der Anfrage:', error);
+    alert('Serverfehler. Prüfen Sie die Konsole für Details.');
+  });
   }
 }
