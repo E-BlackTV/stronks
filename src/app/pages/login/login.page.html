@@ -7,21 +7,21 @@
     </ion-card-header>
 
     <ion-card-content>
-      <ion-item>
-        <ion-label position="stacked">Username</ion-label>
-        <ion-input></ion-input>
-      </ion-item>
+      <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+        <ion-item>
+          <ion-label position="stacked">Username</ion-label>
+          <ion-input formControlName="username"></ion-input>
+        </ion-item>
 
-      <ion-item>
-        <ion-label position="stacked">Password</ion-label>
-        <ion-input type="password"></ion-input>
-      </ion-item>
-      <br>
-      <ion-checkbox labelPlacement="end">
-        <ion-label>Remember Me</ion-label>
-      </ion-checkbox>
-      <br>
-      <ion-button expand="block" color="tertiary">Login</ion-button>
+        <ion-item>
+          <ion-label position="stacked">Password</ion-label>
+          <ion-input type="password" formControlName="password"></ion-input>
+        </ion-item>
+
+        <ion-button expand="block" type="submit" [disabled]="!loginForm.valid">
+          Login
+        </ion-button>
+      </form>
     </ion-card-content>
   </ion-card>
 </ion-content>
