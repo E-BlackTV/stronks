@@ -17,6 +17,6 @@ import { LoginPage } from './login.page';
     HttpClientModule,
   ],
   declarations: [LoginPage],
-  bootstrap: [LoginPage]
+  bootstrap: [LoginPage],
 })
 export class LoginPageModule {}
