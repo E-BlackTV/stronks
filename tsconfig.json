@@ -21,7 +21,9 @@
       "es2018", 
       "dom"
     ],
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "types": ["node", "jasmine", "mocha", "jest"]
+
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
