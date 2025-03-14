@@ -8,6 +8,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 header('Content-Type: application/json');
+
 $servername = "localhost";
 $username = "root";
 $password = "";
@@ -29,11 +30,8 @@ if (!isset($data["username"]) || !isset($data["password"])) {
 $username = $data["username"];
 $password = $data["password"];
 
-// Enhanced debugging output
-file_put_contents('php://stderr', "Received username: " . $username . "\n");
-file_put_contents('php://stderr', "Received password: " . $password . "\n");
-
-$sql = "SELECT * FROM users WHERE username = ?";
+// SQL-Abfrage vorbereiten
+$sql = "SELECT password FROM users WHERE username = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username);
 $stmt->execute();
@@ -41,19 +39,18 @@ $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
-    file_put_contents('php://stderr', "Found user in database\n");
-    file_put_contents('php://stderr', "Stored hash: " . $user['password'] . "\n");
-    
-    if (password_verify($password, $user['password'])) {
-        file_put_contents('php://stderr', "Password verification successful\n");
-        echo json_encode(["success" => true, "message" => "Login successful"]);
+    $hashed_password = $user['password']; // Passwort-Hash aus der Datenbank
+    //zum testen
+    //echo json_encode(["success" => true, "message" => "Login erfolgreich", "dbpasswort"=>$hashed_password, "password"=>$password, "valid"=>password_hash($password, PASSWORD_BCRYPT)]);
+    //die();
+    // Passwort überprüfen
+    if (password_verify($password, $hashed_password)) {
+        echo json_encode(["success" => true, "message" => "Login erfolgreich"]);
     } else {
-        file_put_contents('php://stderr', "Password verification failed\n");
-        echo json_encode(["success" => false, "message" => "Invalid credentials"]);
+        echo json_encode(["success" => false, "message" => "Ungültige Anmeldedaten"]);
     }
 } else {
-    file_put_contents('php://stderr', "No user found with this username\n");
-    echo json_encode(["success" => false, "message" => "Invalid credentials"]);
+    echo json_encode(["success" => false, "message" => "Benutzer nicht gefunden"]);
 }
 
 $stmt->close();

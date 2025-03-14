@@ -31,9 +31,8 @@ if (empty($user) || empty($pass)) {
     echo json_encode(["success" => false, "message" => "Benutzername und Passwort sind erforderlich."]);
     exit;
 }
-
 // Passwort hashen
-$hashed_password = password_hash($pass, PASSWORD_DEFAULT);
+$hashed_password = password_hash($pass, PASSWORD_BCRYPT);
 
 // Überprüfen, ob der Benutzer bereits existiert
 $sql = "SELECT * FROM users WHERE username = ?";
