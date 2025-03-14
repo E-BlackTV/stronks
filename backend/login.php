@@ -19,25 +19,32 @@ if ($conn->connect_error) {
     die(json_encode(["success" => false, "message" => "Connection failed: " . $conn->connect_error]));
 }
 
-if (!$conn) {
-  die(json_encode(["success" => false, "message" => "Datenbankverbindung fehlgeschlagen: " . mysqli_connect_error()]));
+$data = json_decode(file_get_contents("php://input"), true);
+
+if (!isset($data["username"]) || !isset($data["password"])) {
+    echo json_encode(["success" => false, "message" => "Benutzername und Passwort sind erforderlich."]);
+    exit;
 }
 
-$data = json_decode(file_get_contents("php://input"), true);
 $username = $data["username"];
 $password = $data["password"];
 
 // Debugging-Ausgabe
 file_put_contents('php://stderr', print_r("Empfangene Daten: $username, $password\n", true));
 
-$sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+$sql = "SELECT * FROM users WHERE username = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("ss", $username, $password);
+$stmt->bind_param("s", $username);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
-    echo json_encode(["success" => true, "message" => "Login successful"]);
+    $user = $result->fetch_assoc();
+    if (password_verify($password, $user['password'])) {
+        echo json_encode(["success" => true, "message" => "Login successful"]);
+    } else {
+        echo json_encode(["success" => false, "message" => "Invalid credentials"]);
+    }
 } else {
     echo json_encode(["success" => false, "message" => "Invalid credentials"]);
 }
