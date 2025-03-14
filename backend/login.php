@@ -29,8 +29,9 @@ if (!isset($data["username"]) || !isset($data["password"])) {
 $username = $data["username"];
 $password = $data["password"];
 
-// Debugging-Ausgabe
-file_put_contents('php://stderr', print_r("Empfangene Daten: $username, $password\n", true));
+// Enhanced debugging output
+file_put_contents('php://stderr', "Received username: " . $username . "\n");
+file_put_contents('php://stderr', "Received password: " . $password . "\n");
 
 $sql = "SELECT * FROM users WHERE username = ?";
 $stmt = $conn->prepare($sql);
@@ -40,12 +41,18 @@ $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
+    file_put_contents('php://stderr', "Found user in database\n");
+    file_put_contents('php://stderr', "Stored hash: " . $user['password'] . "\n");
+    
     if (password_verify($password, $user['password'])) {
+        file_put_contents('php://stderr', "Password verification successful\n");
         echo json_encode(["success" => true, "message" => "Login successful"]);
     } else {
+        file_put_contents('php://stderr', "Password verification failed\n");
         echo json_encode(["success" => false, "message" => "Invalid credentials"]);
     }
 } else {
+    file_put_contents('php://stderr', "No user found with this username\n");
     echo json_encode(["success" => false, "message" => "Invalid credentials"]);
 }
 
