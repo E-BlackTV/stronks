@@ -9,21 +9,21 @@ import { NavController } from '@ionic/angular';
   styleUrls: ['./register.page.scss'],
 })
 export class RegisterPage implements OnInit {
-  registerForm: FormGroup;
+  registerForm!: FormGroup;
 
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
     private navCtrl: NavController
-  ) {
+  ) {}
+
+  ngOnInit() {
     this.registerForm = this.fb.group({
       username: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', Validators.required],
     }, { validator: this.passwordMatchValidator });
   }
-
-  ngOnInit() {}
 
   passwordMatchValidator(form: FormGroup) {
     return form.get('password')?.value === form.get('confirmPassword')?.value

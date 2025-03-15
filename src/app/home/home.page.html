@@ -9,4 +9,30 @@
   <div style="width: 100%; height: 300px">
     <canvas #lineChart></canvas>
   </div>
+
+  <ion-grid>
+    <ion-row>
+      <ion-col>
+        <ion-list>
+          <ion-item>
+            <ion-label>
+              <h2>Datum</h2>
+            </ion-label>
+            <ion-label>
+              <h2>Preis (USD)</h2>
+            </ion-label>
+            <ion-label>
+              <h2>Volumen</h2>
+            </ion-label>
+          </ion-item>
+
+          <ion-item *ngFor="let row of tableData">
+            <ion-label>{{row.date}}</ion-label>
+            <ion-label>${{row.price}}</ion-label>
+            <ion-label>{{row.volume}}</ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
 </ion-content>

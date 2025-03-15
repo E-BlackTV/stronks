@@ -11,6 +11,7 @@ import { environment } from '../../environments/environment';
 export class HomePage {
   @ViewChild('lineChart', { static: false }) lineChart: any;
   chart: any;
+  tableData: any[] = [];
 
   constructor() {
     Chart.register(...registerables);
@@ -23,26 +24,42 @@ export class HomePage {
   async fetchData() {
     const options = {
       method: 'GET',
-      url: 'https://yahoo-finance166.p.rapidapi.com/api/stock/get-chart',
-      params: {
-        symbol: 'BTC-USD',
-        region: 'EUROPE',
-        range: '1y',
-        interval: '1mo',
-      },
+      url: environment.apiUrl + '/cache.php',
+      withCredentials: true,
       headers: {
-        'X-RapidAPI-Key': environment.rapidApiKey,
-        'X-RapidAPI-Host': environment.rapidApiHost,
-      },
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
     };
 
     try {
       const response = await axios.request(options);
       console.log('API Response:', response.data);
 
+      if (response.data.error) {
+        console.error('API Error:', response.data.error);
+        return;
+      }
+
       const data = response.data;
-      const prices = data.chart?.result[0]?.indicators?.quote[0]?.close || [];
-      const timestamps = data.chart?.result[0]?.timestamp || [];
+      if (!data.chart?.result?.[0]) {
+        console.error('Unexpected data format:', data);
+        return;
+      }
+
+      const prices = data.chart.result[0].indicators?.quote[0]?.close || [];
+      const timestamps = data.chart.result[0].timestamp || [];
+      const volumes = data.chart.result[0].indicators?.quote[0]?.volume || [];
+
+      // Format data for table
+      this.tableData = timestamps.map((timestamp: number, index: number) => {
+        const date = new Date(timestamp * 1000);
+        return {
+          date: `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`,
+          price: prices[index]?.toFixed(2) || 'N/A',
+          volume: volumes[index]?.toLocaleString() || 'N/A'
+        };
+      });
 
       // Zeitstempel in lesbare Daten umwandeln
       const labels = timestamps.map((timestamp: number) => {
