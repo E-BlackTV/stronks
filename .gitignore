@@ -92,3 +92,4 @@ src/environments/*
 # System Files
 .DS_Store
 Thumbs.db
+backend/config.php
