@@ -25,6 +25,33 @@
       <div style="width: 100%; height: 300px">
         <canvas #lineChart></canvas>
       </div>
+
+      <!-- Kaufformular hinzufügen -->
+      <div class="buy-form">
+        <ion-item>
+          <ion-label position="floating">Investitionsbetrag (€)</ion-label>
+          <ion-input
+            type="number"
+            [(ngModel)]="investmentAmount"
+            (ionChange)="calculateShares()"
+            min="0"
+          ></ion-input>
+        </ion-item>
+
+        <ion-text color="medium" *ngIf="currentPrice">
+          <p>Aktueller Bitcoin-Preis: {{currentPrice | number:'1.2-2'}} €</p>
+          <p>Geschätzte Anteile: {{calculatedShares | number:'1.8-8'}}</p>
+        </ion-text>
+
+        <ion-button
+          color="success"
+          expand="full"
+          (click)="buyBitcoin()"
+          [disabled]="!investmentAmount || !calculatedShares"
+        >
+          Bitcoin kaufen
+        </ion-button>
+      </div>
     </ion-card-content>
   </ion-card>
 </ion-content>
