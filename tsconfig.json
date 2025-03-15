@@ -17,11 +17,11 @@
     "importHelpers": true,
     "target": "es2022",
     "module": "es2020",
-    "lib": [
-      "es2018", 
-      "dom"
-    ],
-    "useDefineForClassFields": false
+    "lib": ["es2018", "dom"],
+    "useDefineForClassFields": false,
+    "types": ["node", "jasmine", "mocha", "jest"],
+    "esModuleInterop": true, // Hinzugefügt
+    "allowSyntheticDefaultImports": true // Hinzugefügt
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
