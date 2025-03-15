@@ -25,7 +25,7 @@ export class HomePage {
       method: 'GET',
       url: 'https://yahoo-finance166.p.rapidapi.com/api/stock/get-chart',
       params: {
-        symbol: 'BTC-USD',
+        symbol: 'BTC-USD', // Änderung hier
         region: 'EUROPE',
         range: '1y',
         interval: '1mo',
