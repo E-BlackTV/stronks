@@ -1,8 +1,9 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 import axios from 'axios';
 import { environment } from '../../environments/environment';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { interval, Subscription } from 'rxjs';
 
 interface PurchaseResponse {
   success: boolean;
@@ -22,22 +23,66 @@ interface PurchaseData {
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
 })
-export class HomePage {
+export class HomePage implements OnInit, OnDestroy {
   @ViewChild('lineChart', { static: false }) lineChart: any;
   chart: any;
   tableData: any[] = [];
   investmentAmount: number = 0;
   currentPrice: number = 0;
   calculatedShares: number = 0;
-  userId: number = 9; // Deine Test-User-ID
-  readonly ASSET_TYPE: string = 'Bitcoin'; // or you could make this dynamic if needed
+  accountBalance: number = 0;
+  portfolioValue: number = 0;
+  userId: number = 9; //Test-User-ID
+  readonly ASSET_TYPE: string = 'Bitcoin'; //could make this dynamic if needed
+  private refreshSubscription: Subscription;
+  initialInvestment: number = 0;
+  profitLossPercentage: number = 0;
+  currentPrices: { [key: string]: number } = {
+    Bitcoin: 0,
+    Tesla: 0,
+    Apple: 0,
+    // Add other investment types here
+  };
 
   constructor(private http: HttpClient) {
     Chart.register(...registerables);
+    // Set up auto-refresh every 10 seconds
+    this.refreshSubscription = interval(10000).subscribe(() => {
+      this.fetchAccountBalance();
+    });
+  }
+
+  async ngOnInit() {
+    await this.fetchAccountBalance();
+    await this.fetchAllCurrentPrices();
+    await this.fetchData();
+    await this.calculatePortfolioValue();
+  }
+
+  ngOnDestroy() {
+    if (this.refreshSubscription) {
+      this.refreshSubscription.unsubscribe();
+    }
   }
 
   ionViewDidEnter() {
     this.fetchData();
+  }
+
+  async fetchAccountBalance() {
+    try {
+      const response = await this.http
+        .get<any>(
+          `http://localhost/stronks/backend/get_balance.php?user_id=${this.userId}`
+        )
+        .toPromise();
+
+      if (response && response.success) {
+        this.accountBalance = response.balance;
+      }
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
   }
 
   async fetchData() {
@@ -187,6 +232,8 @@ export class HomePage {
         alert('Kauf erfolgreich!');
         this.investmentAmount = 0;
         this.calculatedShares = 0;
+        await this.fetchAccountBalance(); // Refresh balance after successful purchase
+        await this.calculatePortfolioValue(); // Add this line
         await this.fetchData();
       } else {
         alert(response?.message || 'Kauf fehlgeschlagen');
@@ -197,10 +244,77 @@ export class HomePage {
     }
   }
 
+  async fetchAllCurrentPrices() {
+    // Fetch current prices for all investment types
+    this.currentPrices['Bitcoin'] = this.currentPrice; // Bitcoin price from existing code
+    // Add API calls for other investment types
+    // Example:
+    // this.currentPrices['Tesla'] = await this.fetchStockPrice('TSLA');
+  }
+
+  async calculatePortfolioValue() {
+    try {
+      const response = await this.http
+        .get<any>(
+          `http://localhost/stronks/backend/get_portfolio.php?user_id=${this.userId}`
+        )
+        .toPromise();
+
+      if (response && response.success) {
+        // Calculate total invested amount (Startkapital)
+        this.initialInvestment =
+          response.investments.reduce((total: number, investment: any) => {
+            return total + parseFloat(investment.amount);
+          }, 0) + this.accountBalance;
+
+        // Calculate current value of investments
+        const investmentValue = response.investments.reduce(
+          (total: number, investment: any) => {
+            const shares =
+              parseFloat(investment.amount) /
+              parseFloat(investment.purchase_price);
+            const currentValue = shares * this.currentPrice;
+
+            console.log('Investment calculation:', {
+              amount: investment.amount,
+              purchasePrice: investment.purchase_price,
+              shares: shares,
+              currentBitcoinPrice: this.currentPrice,
+              calculatedValue: currentValue,
+            });
+
+            return total + currentValue;
+          },
+          0
+        );
+
+        this.portfolioValue = this.accountBalance + investmentValue;
+
+        // Calculate profit/loss percentage
+        if (this.initialInvestment > 0) {
+          this.profitLossPercentage =
+            ((this.portfolioValue - this.initialInvestment) /
+              this.initialInvestment) *
+            100;
+        }
+
+        console.log('Portfolio details:', {
+          accountBalance: this.accountBalance,
+          initialInvestment: this.initialInvestment,
+          currentInvestmentValue: investmentValue,
+          portfolioValue: this.portfolioValue,
+          profitLossPercentage: this.profitLossPercentage,
+        });
+      }
+    } catch (error) {
+      console.error('Error calculating portfolio value:', error);
+    }
+  }
+
   calculatePercentageChange(
     current_price: number,
     purchase_price: number
   ): number {
     return ((current_price - purchase_price) / purchase_price) * 100;
   }
-  }
+}

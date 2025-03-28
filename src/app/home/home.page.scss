@@ -11,7 +11,7 @@ canvas {
   font-weight: 400;
 }
 
-.content-size{
+.content-size {
   position: fixed;
   top: 56px; // Höhe der Toolbar
   left: 0;
@@ -19,12 +19,12 @@ canvas {
   padding: 16px;
   background: var(--ion-background-color);
   z-index: 1000;
-  
+
   ion-card {
     margin: 0 auto;
     border-radius: 15px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    
+
     @media (min-width: 768px) {
       width: 60%;
     }
@@ -58,4 +58,56 @@ ion-card-content {
   canvas {
     border-radius: 8px; // Abgerundete Ecken für den Chart
   }
+}
+
+// Add these new styles for thick fonts
+ion-card-title {
+  font-weight: 900; // Bold weight
+  font-size: 1.4em; // Slightly larger size
+}
+
+.bitcoin-price {
+  font-weight: 900;
+  font-size: 1.7em;
+}
+
+.balance-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  gap: 16px;
+
+  .balance-card {
+    flex: 1;
+    margin: 0;
+
+    ion-card-title {
+      font-weight: 900;
+      font-size: 1.5em;
+    }
+  }
+
+  // Mobile-Version: Untereinander
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+}
+
+.profit {
+  color: #4caf50;
+  font-size: 0.8em;
+  margin-left: 8px;
+}
+
+.loss {
+  color: #f44336;
+  font-size: 0.8em;
+  margin-left: 8px;
+}
+
+ion-note {
+  font-size: 0.8em;
+  color: #666;
+  display: block;
+  margin-top: 4px;
 }

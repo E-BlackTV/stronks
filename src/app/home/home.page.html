@@ -2,11 +2,30 @@
   <ion-toolbar class="bold title-align"> Stronks </ion-toolbar>
 </ion-header>
 
-<div class="content-sizes">
-  <ion-card>
+<div class="balance-container">
+  <ion-card class="balance-card">
     <ion-card-header>
-      <ion-card-title>100 000$</ion-card-title>
+      <ion-card-subtitle>Kontostand</ion-card-subtitle>
+      <ion-card-title
+        >{{ accountBalance | currency:'USD':'symbol':'1.2-2' }}</ion-card-title
+      >
+    </ion-card-header>
+  </ion-card>
+
+  <ion-card class="balance-card">
+    <ion-card-header>
       <ion-card-subtitle>Portfoliowert</ion-card-subtitle>
+      <ion-card-title>
+        {{ portfolioValue | currency:'USD':'symbol':'1.2-2' }}
+        <span
+          [ngClass]="{'profit': profitLossPercentage > 0, 'loss': profitLossPercentage < 0}"
+        >
+          ({{ profitLossPercentage | number:'1.2-2' }}%)
+        </span>
+      </ion-card-title>
+      <ion-note>
+        Startkapital: {{ initialInvestment | currency:'USD':'symbol':'1.2-2' }}
+      </ion-note>
     </ion-card-header>
   </ion-card>
 </div>
@@ -14,7 +33,10 @@
 <ion-content class="ion-padding">
   <ion-card>
     <ion-card-header>
-      <ion-card-title>Bitcoin</ion-card-title>
+      <ion-card-subtitle>Bitcoin</ion-card-subtitle>
+      <ion-card-title class="bitcoin-price"
+        >{{ currentPrice | currency:'USD':'symbol':'1.2-2' }}</ion-card-title
+      >
       <ion-card-subtitle>Test Version</ion-card-subtitle>
     </ion-card-header>
 
@@ -22,7 +44,7 @@
       <ion-button color="dark" expand="full" (click)="fetchData()">
         Daten aktualisieren
       </ion-button>
-      <div style="width: 100%; height: 300px">
+      <div style="width: 100%; height: 200px">
         <canvas #lineChart></canvas>
       </div>
 
