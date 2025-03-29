@@ -95,19 +95,24 @@ ion-card-title {
 
 .profit {
   color: #4caf50;
-  font-size: 0.8em;
   margin-left: 8px;
 }
 
 .loss {
   color: #f44336;
-  font-size: 0.8em;
   margin-left: 8px;
 }
 
 ion-note {
-  font-size: 0.8em;
-  color: #666;
+  font-size: 1em;
   display: block;
-  margin-top: 4px;
+  margin-top: 8px;
+
+  &.profit {
+    color: #4caf50;
+  }
+
+  &.loss {
+    color: #f44336;
+  }
 }

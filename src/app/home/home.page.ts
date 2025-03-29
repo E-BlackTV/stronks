@@ -18,6 +18,52 @@ interface PurchaseData {
   purchase_price: number; // Price at purchase time
 }
 
+enum TimePeriod {
+  HOUR = '1h',
+  DAY = '1d',
+  WEEK = '1w',
+  MONTH = '1m',
+  YEAR = '1y',
+}
+
+interface TimeframeOption {
+  label: string;
+  value: TimePeriod;
+  interval: string;
+}
+
+enum TimeRange {
+  DAY = '1d',
+  WEEK = '1w',
+  MONTH = '1m',
+  THREE_MONTHS = '3m',
+  SIX_MONTHS = '6m',
+  YEAR = '1y',
+  FIVE_YEARS = '5y',
+}
+
+enum DataInterval {
+  ONE_MINUTE = '1m',
+  FIVE_MINUTES = '5m',
+  FIFTEEN_MINUTES = '15m',
+  THIRTY_MINUTES = '30m',
+  ONE_HOUR = '1h',
+  ONE_DAY = '1d',
+  ONE_WEEK = '1wk',
+  ONE_MONTH = '1mo',
+}
+
+interface RangeOption {
+  label: string;
+  value: TimeRange;
+}
+
+interface IntervalOption {
+  label: string;
+  value: DataInterval;
+  allowedRanges: TimeRange[]; // Which time ranges this interval works with
+}
+
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
@@ -37,12 +83,86 @@ export class HomePage implements OnInit, OnDestroy {
   private refreshSubscription: Subscription;
   initialInvestment: number = 0;
   profitLossPercentage: number = 0;
+  profitLoss: number = 0; // Add this property
   currentPrices: { [key: string]: number } = {
     Bitcoin: 0,
     Tesla: 0,
     Apple: 0,
     // Add other investment types here
   };
+  selectedPeriod: TimePeriod = TimePeriod.DAY;
+  timeframeOptions: TimeframeOption[] = [
+    { label: '1 Hour', value: TimePeriod.HOUR, interval: '1m' },
+    { label: '1 Day', value: TimePeriod.DAY, interval: '5m' },
+    { label: '1 Week', value: TimePeriod.WEEK, interval: '15m' },
+    { label: '1 Month', value: TimePeriod.MONTH, interval: '1d' },
+    { label: '1 Year', value: TimePeriod.YEAR, interval: '1wk' },
+  ];
+
+  selectedRange: TimeRange = TimeRange.DAY;
+  selectedInterval: DataInterval = DataInterval.FIVE_MINUTES;
+
+  rangeOptions: RangeOption[] = [
+    { label: 'Last Day', value: TimeRange.DAY },
+    { label: 'Last Week', value: TimeRange.WEEK },
+    { label: 'Last Month', value: TimeRange.MONTH },
+    { label: 'Last 3 Months', value: TimeRange.THREE_MONTHS },
+    { label: 'Last 6 Months', value: TimeRange.SIX_MONTHS },
+    { label: 'Last Year', value: TimeRange.YEAR },
+    { label: 'Last 5 Years', value: TimeRange.FIVE_YEARS },
+  ];
+
+  intervalOptions: IntervalOption[] = [
+    {
+      label: '1 Minute',
+      value: DataInterval.ONE_MINUTE,
+      allowedRanges: [TimeRange.DAY, TimeRange.WEEK],
+    },
+    {
+      label: '5 Minutes',
+      value: DataInterval.FIVE_MINUTES,
+      allowedRanges: [TimeRange.DAY, TimeRange.WEEK, TimeRange.MONTH],
+    },
+    {
+      label: '15 Minutes',
+      value: DataInterval.FIFTEEN_MINUTES,
+      allowedRanges: [TimeRange.DAY, TimeRange.WEEK, TimeRange.MONTH],
+    },
+    {
+      label: '30 Minutes',
+      value: DataInterval.THIRTY_MINUTES,
+      allowedRanges: [TimeRange.WEEK, TimeRange.MONTH],
+    },
+    {
+      label: '1 Hour',
+      value: DataInterval.ONE_HOUR,
+      allowedRanges: [TimeRange.WEEK, TimeRange.MONTH, TimeRange.THREE_MONTHS],
+    },
+    {
+      label: '1 Day',
+      value: DataInterval.ONE_DAY,
+      allowedRanges: [
+        TimeRange.MONTH,
+        TimeRange.THREE_MONTHS,
+        TimeRange.SIX_MONTHS,
+        TimeRange.YEAR,
+      ],
+    },
+    {
+      label: '1 Week',
+      value: DataInterval.ONE_WEEK,
+      allowedRanges: [
+        TimeRange.SIX_MONTHS,
+        TimeRange.YEAR,
+        TimeRange.FIVE_YEARS,
+      ],
+    },
+    {
+      label: '1 Month',
+      value: DataInterval.ONE_MONTH,
+      allowedRanges: [TimeRange.YEAR, TimeRange.FIVE_YEARS],
+    },
+  ];
 
   constructor(private http: HttpClient) {
     Chart.register(...registerables);
@@ -86,17 +206,27 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async fetchData() {
-    const options = {
-      method: 'GET',
-      url: environment.apiUrl + '/cache.php',
-      withCredentials: true,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    };
-
     try {
+      // Get the selected interval option to use its configuration
+      const selectedIntervalOption = this.intervalOptions.find(
+        (option) => option.value === this.selectedInterval
+      );
+
+      if (!selectedIntervalOption) {
+        console.error('No valid interval selected');
+        return;
+      }
+
+      const options = {
+        method: 'GET',
+        url: environment.apiUrl + '/cache.php',
+        params: {
+          symbol: 'BTC-USD',
+          range: this.selectedRange,
+          interval: this.selectedInterval,
+        },
+      };
+
       const response = await axios.request(options);
       console.log('API Response:', response.data);
 
@@ -111,47 +241,73 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
-      const prices = data.chart.result[0].indicators?.quote[0]?.close || [];
-      const timestamps = data.chart.result[0].timestamp || [];
-      const volumes = data.chart.result[0].indicators?.quote[0]?.volume || [];
+      const result = data.chart.result[0];
+      const prices = result.indicators?.quote[0]?.close || [];
+      const timestamps = result.timestamp || [];
+      const volumes = result.indicators?.quote[0]?.volume || [];
 
-      // Format data for table
-      this.tableData = timestamps.map((timestamp: number, index: number) => {
-        const date = new Date(timestamp * 1000);
-        return {
-          date: `${date.getDate()}/${
-            date.getMonth() + 1
-          }/${date.getFullYear()}`,
-          price: prices[index]?.toFixed(2) || 'N/A',
-          volume: volumes[index]?.toLocaleString() || 'N/A',
-        };
-      });
-
-      // Zeitstempel in lesbare Daten umwandeln
+      // Format dates based on selected range and interval
       const labels = timestamps.map((timestamp: number) => {
-        const date = new Date(timestamp * 1000); // Unix-Timestamp in Millisekunden
-        return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+        const date = new Date(timestamp * 1000);
+        switch (this.selectedRange) {
+          case TimeRange.DAY:
+            return date.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          case TimeRange.WEEK:
+            return date.toLocaleDateString([], { weekday: 'short' });
+          case TimeRange.MONTH:
+            return date.toLocaleDateString([], {
+              day: 'numeric',
+              month: 'short',
+            });
+          case TimeRange.THREE_MONTHS:
+          case TimeRange.SIX_MONTHS:
+            return date.toLocaleDateString([], {
+              month: 'short',
+              day: 'numeric',
+            });
+          case TimeRange.YEAR:
+          case TimeRange.FIVE_YEARS:
+            return date.toLocaleDateString([], {
+              month: 'short',
+              year: '2-digit',
+            });
+          default:
+            return date.toLocaleDateString();
+        }
       });
 
-      console.log('Prices:', prices);
-      console.log('Labels:', labels);
-
+      // Update chart with new data
       this.createChart(prices, labels);
 
-      // Aktualisiere den aktuellen Preis
-      this.currentPrice =
-        data.chart.result[0].indicators?.quote[0]?.close.slice(-1)[0] || 0;
+      // Update current price and other data
+      this.currentPrice = prices[prices.length - 1] || 0;
       this.calculateShares();
+      await this.calculatePortfolioValue();
+
+      // Update table data
+      this.tableData = timestamps.map((timestamp: number, index: number) => ({
+        date: labels[index],
+        price: prices[index]?.toFixed(2) || 'N/A',
+        volume: volumes[index]?.toLocaleString() || 'N/A',
+      }));
+
+      console.log('Chart data updated:', {
+        range: this.selectedRange,
+        interval: this.selectedInterval,
+        dataPoints: prices.length,
+        currentPrice: this.currentPrice,
+      });
     } catch (error) {
-      console.error('Fehler beim Laden der Daten:', error);
+      console.error('Error fetching data:', error);
     }
   }
 
   createChart(prices: number[], labels: string[]) {
-    console.log('Creating chart with prices:', prices);
-
     if (this.chart) {
-      this.chart.destroy(); // Chart resetten, wenn schon einer existiert
+      this.chart.destroy();
     }
 
     if (!this.lineChart?.nativeElement) {
@@ -162,23 +318,101 @@ export class HomePage implements OnInit, OnDestroy {
     this.chart = new Chart(this.lineChart.nativeElement, {
       type: 'line',
       data: {
-        labels: labels, // Zeitstempel als Labels
+        labels: labels,
         datasets: [
           {
             label: 'Bitcoin Preis (USD)',
-            data: prices, // Historische Preise
+            data: prices,
             borderColor: '#4caf50',
             backgroundColor: 'rgba(76, 175, 80, 0.2)',
             fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            borderWidth: 2,
+            tension: 0.4, // Smooth curve
+            cubicInterpolationMode: 'monotone',
           },
         ],
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        animations: {
+          tension: {
+            duration: 1000,
+            easing: 'linear',
+            from: 0.8,
+            to: 0.4,
+            loop: false,
+          },
+        },
         plugins: {
           legend: {
             display: true,
             position: 'top',
+            labels: {
+              font: {
+                size: 14,
+                weight: 'bold',
+              },
+              padding: 20,
+            },
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleFont: {
+              size: 16,
+              weight: 'bold',
+            },
+            bodyFont: {
+              size: 14,
+            },
+            padding: 12,
+            displayColors: false,
+            callbacks: {
+              label: function (context) {
+                return `Price: $${context.parsed.y.toFixed(2)}`;
+              },
+            },
+          },
+        },
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        hover: {
+          mode: 'index',
+          intersect: false,
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false,
+            },
+            ticks: {
+              font: {
+                size: 12,
+              },
+              maxRotation: 45,
+              minRotation: 45,
+            },
+          },
+          y: {
+            position: 'right',
+            grid: {
+              color: 'rgba(200, 200, 200, 0.2)',
+            },
+            ticks: {
+              font: {
+                size: 12,
+                weight: 'bold',
+              },
+              callback: function (value) {
+                return '$' + value.toLocaleString();
+              },
+            },
           },
         },
       },
@@ -261,8 +495,8 @@ export class HomePage implements OnInit, OnDestroy {
         .toPromise();
 
       if (response && response.success) {
-        // Calculate total invested amount (Startkapital)
-        this.initialInvestment =
+        // Calculate total invested amount
+        const totalInvested =
           response.investments.reduce((total: number, investment: any) => {
             return total + parseFloat(investment.amount);
           }, 0) + this.accountBalance;
@@ -274,15 +508,6 @@ export class HomePage implements OnInit, OnDestroy {
               parseFloat(investment.amount) /
               parseFloat(investment.purchase_price);
             const currentValue = shares * this.currentPrice;
-
-            console.log('Investment calculation:', {
-              amount: investment.amount,
-              purchasePrice: investment.purchase_price,
-              shares: shares,
-              currentBitcoinPrice: this.currentPrice,
-              calculatedValue: currentValue,
-            });
-
             return total + currentValue;
           },
           0
@@ -290,20 +515,18 @@ export class HomePage implements OnInit, OnDestroy {
 
         this.portfolioValue = this.accountBalance + investmentValue;
 
-        // Calculate profit/loss percentage
-        if (this.initialInvestment > 0) {
-          this.profitLossPercentage =
-            ((this.portfolioValue - this.initialInvestment) /
-              this.initialInvestment) *
-            100;
-        }
+        // Calculate absolute profit/loss in USD
+        this.profitLoss = this.portfolioValue - totalInvested;
+
+        // Calculate percentage for color indication
+        this.profitLossPercentage =
+          ((this.portfolioValue - totalInvested) / totalInvested) * 100;
 
         console.log('Portfolio details:', {
           accountBalance: this.accountBalance,
-          initialInvestment: this.initialInvestment,
-          currentInvestmentValue: investmentValue,
+          investmentValue: investmentValue,
           portfolioValue: this.portfolioValue,
-          profitLossPercentage: this.profitLossPercentage,
+          profitLoss: this.profitLoss,
         });
       }
     } catch (error) {
@@ -316,5 +539,35 @@ export class HomePage implements OnInit, OnDestroy {
     purchase_price: number
   ): number {
     return ((current_price - purchase_price) / purchase_price) * 100;
+  }
+
+  onPeriodChange(event: any) {
+    this.selectedPeriod = event.detail.value;
+    this.fetchData();
+  }
+
+  getAvailableIntervals(): IntervalOption[] {
+    return this.intervalOptions.filter((interval) =>
+      interval.allowedRanges.includes(this.selectedRange)
+    );
+  }
+
+  onRangeChange(event: any) {
+    this.selectedRange = event.detail.value;
+    // Check if current interval is valid for new range
+    if (
+      !this.getAvailableIntervals().find(
+        (i) => i.value === this.selectedInterval
+      )
+    ) {
+      // Set to first available interval
+      this.selectedInterval = this.getAvailableIntervals()[0].value;
+    }
+    this.fetchData();
+  }
+
+  onIntervalChange(event: any) {
+    this.selectedInterval = event.detail.value;
+    this.fetchData();
   }
 }

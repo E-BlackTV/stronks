@@ -5,7 +5,7 @@
 <div class="balance-container">
   <ion-card class="balance-card">
     <ion-card-header>
-      <ion-card-subtitle>Kontostand</ion-card-subtitle>
+      <ion-card-subtitle>Verfügbar</ion-card-subtitle>
       <ion-card-title
         >{{ accountBalance | currency:'USD':'symbol':'1.2-2' }}</ion-card-title
       >
@@ -23,8 +23,8 @@
           ({{ profitLossPercentage | number:'1.2-2' }}%)
         </span>
       </ion-card-title>
-      <ion-note>
-        Startkapital: {{ initialInvestment | currency:'USD':'symbol':'1.2-2' }}
+      <ion-note [ngClass]="{'profit': profitLoss > 0, 'loss': profitLoss < 0}">
+        {{ profitLoss >= 0 ? '+' : '-'}}{{ profitLoss | currency:'USD':'symbol':'1.2-2' }}
       </ion-note>
     </ion-card-header>
   </ion-card>
@@ -44,6 +44,25 @@
       <ion-button color="dark" expand="full" (click)="fetchData()">
         Daten aktualisieren
       </ion-button>
+          <div class="chart-controls">
+        <ion-item>
+          <ion-label>Time Range</ion-label>
+          <ion-select [(ngModel)]="selectedRange" (ionChange)="onRangeChange($event)">
+            <ion-select-option *ngFor="let option of rangeOptions" [value]="option.value">
+              {{ option.label }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item>
+          <ion-label>Interval</ion-label>
+          <ion-select [(ngModel)]="selectedInterval" (ionChange)="onIntervalChange($event)">
+            <ion-select-option *ngFor="let option of getAvailableIntervals()" [value]="option.value">
+              {{ option.label }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
       <div style="width: 100%; height: 200px">
         <canvas #lineChart></canvas>
       </div>
