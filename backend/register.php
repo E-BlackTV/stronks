@@ -1,24 +1,35 @@
 <?php
+<?php
+// CORS Headers
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Preflight OPTIONS abfangen und direkt beenden
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+ini_set('display_errors', 0); // Disable error display in production
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
-header('Content-Type: application/json');
 $servername = "localhost";
 $username = "root";
 $password = "";
 $database = "ionic_app";
 
-// Erstelle eine Verbindung zur Datenbank
+// Create connection with proper error handling
 $conn = new mysqli($servername, $username, $password, $database);
 
-// Überprüfe die Verbindung
 if ($conn->connect_error) {
-    die(json_encode(["success" => false, "message" => "Connection failed: " . $conn->connect_error]));
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Connection failed: " . $conn->connect_error
+    ]);
+    exit;
 }
 
 // Empfangene Daten auslesen
@@ -28,7 +39,11 @@ $pass = $data["password"];
 
 // Überprüfen, ob der Benutzername und das Passwort gesetzt sind
 if (empty($user) || empty($pass)) {
-    echo json_encode(["success" => false, "message" => "Benutzername und Passwort sind erforderlich."]);
+    http_response_code(400);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Benutzername und Passwort sind erforderlich."
+    ]);
     exit;
 }
 // Passwort hashen
@@ -42,7 +57,11 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
-    echo json_encode(["success" => false, "message" => "Benutzername bereits vergeben."]);
+    http_response_code(409); // Conflict
+    echo json_encode([
+        "success" => false, 
+        "message" => "Benutzername bereits vergeben."
+    ]);
 } else {
     // Neuen Benutzer registrieren
     $sql = "INSERT INTO users (username, password) VALUES (?, ?)";
@@ -50,9 +69,17 @@ if ($result->num_rows > 0) {
     $stmt->bind_param("ss", $user, $hashed_password);
     
     if ($stmt->execute()) {
-        echo json_encode(["success" => true, "message" => "Registrierung erfolgreich."]);
+        http_response_code(201); // Created
+        echo json_encode([
+            "success" => true, 
+            "message" => "Registrierung erfolgreich."
+        ]);
     } else {
-        echo json_encode(["success" => false, "message" => "Fehler bei der Registrierung."]);
+        http_response_code(500);
+        echo json_encode([
+            "success" => false, 
+            "message" => "Fehler bei der Registrierung."
+        ]);
     }
 }
 

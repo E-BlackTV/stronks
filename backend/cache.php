@@ -1,6 +1,15 @@
 <?php
 require_once('config.php');
 
+// Define RAPIDAPI_KEY and RAPIDAPI_HOST if not already defined
+if (!defined('RAPIDAPI_KEY')) {
+    define('RAPIDAPI_KEY', 'your-rapidapi-key-here'); // Replace with your actual RapidAPI key
+}
+
+if (!defined('RAPIDAPI_HOST')) {
+    define('RAPIDAPI_HOST', 'yahoo-finance166.p.rapidapi.com'); // Replace with your actual RapidAPI host
+}
+
 // Clear any previous output
 if (ob_get_level()) ob_end_clean();
 
