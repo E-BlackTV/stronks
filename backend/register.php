@@ -1,18 +1,17 @@
 <?php
-<?php
-// CORS Headers
+session_start();
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header('Content-Type: application/json');
 
-// Preflight OPTIONS abfangen und direkt beenden
+// Preflight OPTIONS handler
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
 ini_set('display_errors', 0); // Disable error display in production
-ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 $servername = "localhost";
@@ -20,7 +19,7 @@ $username = "root";
 $password = "";
 $database = "ionic_app";
 
-// Create connection with proper error handling
+// Create connection
 $conn = new mysqli($servername, $username, $password, $database);
 
 if ($conn->connect_error) {
@@ -32,12 +31,12 @@ if ($conn->connect_error) {
     exit;
 }
 
-// Empfangene Daten auslesen
+// Parse input data
 $data = json_decode(file_get_contents("php://input"), true);
 $user = $data["username"];
 $pass = $data["password"];
 
-// Überprüfen, ob der Benutzername und das Passwort gesetzt sind
+// Validate input
 if (empty($user) || empty($pass)) {
     http_response_code(400);
     echo json_encode([
@@ -46,10 +45,11 @@ if (empty($user) || empty($pass)) {
     ]);
     exit;
 }
-// Passwort hashen
+
+// Hash password
 $hashed_password = password_hash($pass, PASSWORD_BCRYPT);
 
-// Überprüfen, ob der Benutzer bereits existiert
+// Check if user exists
 $sql = "SELECT * FROM users WHERE username = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $user);
@@ -57,19 +57,24 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
-    http_response_code(409); // Conflict
+    http_response_code(409);
     echo json_encode([
         "success" => false, 
         "message" => "Benutzername bereits vergeben."
     ]);
 } else {
-    // Neuen Benutzer registrieren
-    $sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+    // Register new user with default balance
+    $sql = "INSERT INTO users (username, password, accountbalance) VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ss", $user, $hashed_password);
+    $default_balance = 10000.00;
+    $stmt->bind_param("ssd", $user, $hashed_password, $default_balance);
     
     if ($stmt->execute()) {
-        http_response_code(201); // Created
+        // Log the user in upon registration
+        $_SESSION['user_id'] = $conn->insert_id;
+        $_SESSION['username'] = $user;
+        $_SESSION['balance'] = $default_balance;
+        http_response_code(201);
         echo json_encode([
             "success" => true, 
             "message" => "Registrierung erfolgreich."
@@ -78,7 +83,7 @@ if ($result->num_rows > 0) {
         http_response_code(500);
         echo json_encode([
             "success" => false, 
-            "message" => "Fehler bei der Registrierung."
+            "message" => "Fehler bei der Registrierung: " . $conn->error
         ]);
     }
 }

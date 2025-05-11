@@ -70,7 +70,7 @@ testem.log
 Thumbs.db
 
 # Environment variables
-src/environments/*
+config.json
 
 # Dependencies
 /node_modules

@@ -1,71 +1,83 @@
 <?php
-require_once('config.php');
-
-// Define RAPIDAPI_KEY and RAPIDAPI_HOST if not already defined
-if (!defined('RAPIDAPI_KEY')) {
-    define('RAPIDAPI_KEY', 'your-rapidapi-key-here'); // Replace with your actual RapidAPI key
+// Load configuration
+$configPath = __DIR__ . '/../config.json';
+if (!file_exists($configPath)) {
+    http_response_code(500);
+    error_log('config.json not found at: ' . $configPath);
+    echo json_encode(['error' => 'Configuration file missing']);
+    exit;
 }
 
-if (!defined('RAPIDAPI_HOST')) {
-    define('RAPIDAPI_HOST', 'yahoo-finance166.p.rapidapi.com'); // Replace with your actual RapidAPI host
+$cfg = json_decode(file_get_contents($configPath), true);
+if (!$cfg) {
+    http_response_code(500);
+    error_log('Invalid JSON in config.json: ' . json_last_error_msg());
+    echo json_encode(['error' => 'Invalid configuration']);
+    exit;
 }
 
-// Clear any previous output
-if (ob_get_level()) ob_end_clean();
+// Define API credentials from config
+define('RAPIDAPI_KEY', $cfg['rapidApiKey']);
+define('RAPIDAPI_HOST', $cfg['rapidApiHost']);
 
-// Specific origin instead of wildcard
+// Enable error logging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+error_log("Starting cache.php request");
+
+// CORS headers
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-RapidAPI-Key");
+header('Content-Type: application/json');
 
+// Clear output buffer
+if (ob_get_level()) ob_end_clean();
+
+// Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-// Set content type for all responses
-header('Content-Type: application/json');
-
-// Enable error reporting
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// cache.php
-
-// Datenbank-Zugangsdaten
+// Database connection
 $servername = "localhost";
 $username = "root";
 $password = "";
 $database = "ionic_app";
 
-// Create database connection
 $conn = new mysqli($servername, $username, $password, $database);
 
-// Check connection
 if ($conn->connect_error) {
-    die(json_encode(["success" => false, "message" => "Connection failed: " . $conn->connect_error]));
+    error_log("Database connection failed: " . $conn->connect_error);
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "message" => "Database connection failed",
+        "error" => $conn->connect_error
+    ]);
+    exit;
 }
 
 // Cache-Ablaufzeit in Sekunden (z. B. 3600 = 1 Stunde)
-$cacheExpiry = 36;
+$cacheExpiry = 3600;
 
-// API-Parameter
+// Get and validate parameters
 $symbol = isset($_GET['symbol']) ? $_GET['symbol'] : 'BTC-USD';
+// Ensure the symbol is properly formatted for crypto
+if (strpos($symbol, 'BTC') !== false && strpos($symbol, '-USD') === false) {
+    $symbol = 'BTC-USD';
+}
+
 $range = isset($_GET['range']) ? $_GET['range'] : '1d';
 $interval = isset($_GET['interval']) ? $_GET['interval'] : '5m';
 
 $period1 = isset($_GET['period1']) ? (int)$_GET['period1'] : strtotime('-1 day');
 $period2 = isset($_GET['period2']) ? (int)$_GET['period2'] : time();
 
-$url = "https://query1.finance.yahoo.com/v8/finance/chart/{$symbol}?" .
-       "range={$range}&" .
-       "interval={$interval}&" .
-       "includePrePost=false&" .
-       "useYfid=true&" .
-       "lang=en-US&" .
-       "region=US";
+error_log("Requested: symbol=$symbol, range=$range, interval=$interval");
 
 // Create a unique cache key for this combination
 $cacheKey = "{$symbol}_{$range}_{$interval}";
@@ -93,8 +105,12 @@ $params = http_build_query([
     "symbol" => $symbol,
     "region" => "US",
     "range" => $range,
-    "interval" => $interval
+    "interval" => $interval,
+    "includePrePost" => "false",
+    "useYfid" => "true",
+    "lang" => "en-US"
 ]);
+
 $fullUrl = $url . "?" . $params;
 
 $headers = [
@@ -102,51 +118,91 @@ $headers = [
     'X-RapidAPI-Host: ' . RAPIDAPI_HOST
 ];
 
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $fullUrl);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-$response = curl_exec($ch);
+// Debug logging
+error_log("Requesting URL: " . $url . "?" . $params);
+error_log("Using Symbol: " . $symbol);
 
-if (curl_errno($ch)) {
-    error_log("RapidAPI call failed: " . curl_error($ch));
-    http_response_code(503);
-    echo json_encode(["error" => "Service temporarily unavailable"]);
-    curl_close($ch);
+$ch = curl_init();
+curl_setopt_array($ch, [
+    CURLOPT_URL => $url . "?" . $params,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_ENCODING => "",
+    CURLOPT_MAXREDIRS => 10,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+    CURLOPT_CUSTOMREQUEST => "GET",
+    CURLOPT_HTTPHEADER => [
+        "X-RapidAPI-Host: " . RAPIDAPI_HOST,
+        "X-RapidAPI-Key: " . RAPIDAPI_KEY
+    ],
+    CURLOPT_SSL_VERIFYPEER => false // Only for development
+]);
+
+$response = curl_exec($ch);
+$err = curl_error($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+curl_close($ch);
+
+if ($err) {
+    error_log("cURL Error: " . $err);
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "message" => "API request failed",
+        "error" => $err
+    ]);
     exit;
 }
 
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($httpCode === 200) {
-    // Store in cache using prepared statement
-    $stmt = $conn->prepare("INSERT INTO cached_data 
-        (symbol, range_period, interval_period, data, last_updated) 
-        VALUES (?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE 
-        data = VALUES(data),
-        last_updated = NOW()");
-    
-    $stmt->bind_param("ssss", 
-        $symbol,
-        $range,
-        $interval,
-        $response
-    );
-    
-    if (!$stmt->execute()) {
-        error_log("Failed to store in cache: " . $stmt->error);
-    }
-    
-    header('X-Cache: MISS');
-    echo $response;
-} else {
-    error_log("RapidAPI returned error: $httpCode");
+if ($httpCode !== 200) {
+    error_log("API returned non-200 status: $httpCode");
+    error_log("Response: " . $response);
     http_response_code($httpCode);
-    echo json_encode(["error" => "Failed to fetch data"]);
+    echo json_encode([
+        "success" => false,
+        "message" => "API request failed",
+        "status" => $httpCode,
+        "response" => json_decode($response)
+    ]);
+    exit;
 }
+
+// Validate JSON response
+$data = json_decode($response);
+if (json_last_error() !== JSON_ERROR_NONE) {
+    error_log("Invalid JSON response: " . json_last_error_msg());
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "message" => "Invalid API response",
+        "error" => json_last_error_msg()
+    ]);
+    exit;
+}
+
+// Store in cache using prepared statement
+$stmt = $conn->prepare("INSERT INTO cached_data 
+    (symbol, range_period, interval_period, data, last_updated) 
+    VALUES (?, ?, ?, ?, NOW())
+    ON DUPLICATE KEY UPDATE 
+    data = VALUES(data),
+    last_updated = NOW()");
+
+$stmt->bind_param("ssss", 
+    $symbol,
+    $range,
+    $interval,
+    $response
+);
+
+if (!$stmt->execute()) {
+    error_log("Failed to store in cache: " . $stmt->error);
+}
+
+header('X-Cache: MISS');
+echo $response;
 
 $conn->close();
 ?>
