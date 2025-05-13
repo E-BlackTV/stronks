@@ -1,20 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
-import { NavController } from '@ionic/angular';
+import { Router } from '@angular/router';
+import { AuthenticationService } from '../services/authentication.service';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
 })
-export class LoginPage implements OnInit {
+export class LoginPage {
   loginForm: FormGroup;
+  error: string = '';
 
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient,
-    private navCtrl: NavController
+    private authService: AuthenticationService,
+    private router: Router
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -22,24 +23,26 @@ export class LoginPage implements OnInit {
     });
   }
 
-  ngOnInit() {}
-
   onLogin() {
-    this.http
-      .post('http://localhost/stronks/backend/login.php', this.loginForm.value)
-      .subscribe(
-        (response: any) => {
-          if (response.success) {
-            alert(response.message);
-            this.navCtrl.navigateRoot('/home');
+    if (this.loginForm.valid) {
+      const { username, password } = this.loginForm.value;
+      this.authService.login(username, password).subscribe(
+        success => {
+          if (success) {
+            this.router.navigate(['/home']);
           } else {
-            alert(response.message);
+            this.error = 'Invalid credentials';
           }
         },
-        (error) => {
-          console.error('Fehler bei der Anfrage:', error);
-          alert('Serverfehler. Prüfen Sie die Konsole für Details.');
+        error => {
+          console.error('Login error:', error);
+          this.error = 'Login failed';
         }
       );
+    }
+  }
+
+  goToRegister() {
+    this.router.navigate(['/register']);
   }
 }

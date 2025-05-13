@@ -1,5 +1,14 @@
 <ion-header>
   <ion-toolbar class="bold title-align"> Stronks </ion-toolbar>
+  <ion-toolbar>
+    <ion-title>Stronks</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out-outline"></ion-icon>
+        Logout
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
 </ion-header>
 
 <div class="balance-container">
