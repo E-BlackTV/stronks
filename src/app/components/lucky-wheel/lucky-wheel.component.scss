@@ -1,0 +1,99 @@
+.wheel-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px auto;
+  width: 300px;
+  height: 300px;
+}
+
+.wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  box-shadow: 0 0 0 8px #333;
+  background: #fff;
+}
+
+.wheel-section {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  transform-origin: 100% 100%;
+  left: 50%;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-weight: bold;
+  color: #fff;
+  padding-left: 25px;
+  box-sizing: border-box;
+  
+  // Create pie sections
+  &:nth-child(1) { transform: rotate(0deg) skewY(-45deg); }
+  &:nth-child(2) { transform: rotate(45deg) skewY(-45deg); }
+  &:nth-child(3) { transform: rotate(90deg) skewY(-45deg); }
+  &:nth-child(4) { transform: rotate(135deg) skewY(-45deg); }
+  &:nth-child(5) { transform: rotate(180deg) skewY(-45deg); }
+  &:nth-child(6) { transform: rotate(225deg) skewY(-45deg); }
+  &:nth-child(7) { transform: rotate(270deg) skewY(-45deg); }
+  &:nth-child(8) { transform: rotate(315deg) skewY(-45deg); }
+
+  // Alternating colors
+  &:nth-child(odd) {
+    background: linear-gradient(45deg, #3880ff, #2b5cc5);
+  }
+  &:nth-child(even) {
+    background: linear-gradient(45deg, #2dd36f, #1e9d4f);
+  }
+
+  span {
+    transform: skewY(45deg) rotate(22.5deg);
+    transform-origin: 0 0;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+}
+
+.pointer {
+  position: absolute;
+  top: -20px;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 30px solid #333;
+  z-index: 2;
+}
+
+.wheel-outer-border {
+  position: absolute;
+  width: 110%;
+  height: 110%;
+  top: -5%;
+  left: -5%;
+  border-radius: 50%;
+  background: #333;
+  z-index: -1;
+}
+
+.spin-button {
+  margin-top: 20px;
+  --background: #3880ff;
+  --background-activated: #2d66cc;
+  font-weight: bold;
+  
+  &[disabled] {
+    --background: #cccccc;
+  }
+}
+
+canvas {
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
