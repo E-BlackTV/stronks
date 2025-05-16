@@ -40,7 +40,7 @@ if ($conn->connect_error) {
 }
 
 // Cache-Ablaufzeit in Sekunden (z. B. 3600 = 1 Stunde)
-$cacheExpiry = 36;
+$cacheExpiry = 36000;
 
 // API-Parameter
 $symbol = isset($_GET['symbol']) ? $_GET['symbol'] : 'BTC-USD';
