@@ -4,6 +4,9 @@ import axios from 'axios';
 import { environment } from '../../environments/environment';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { interval, Subscription } from 'rxjs';
+import { AuthenticationService } from '../services/authentication.service';
+import { ModalController } from '@ionic/angular';
+import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
 
 interface PurchaseResponse {
   success: boolean;
@@ -164,12 +167,21 @@ export class HomePage implements OnInit, OnDestroy {
     },
   ];
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private authService: AuthenticationService,
+    private modalController: ModalController
+  ) {
     Chart.register(...registerables);
-    // Set up auto-refresh every 10 seconds
     this.refreshSubscription = interval(10000).subscribe(() => {
       this.fetchAccountBalance();
     });
+    
+    // Get user ID from auth service
+    const currentUser = this.authService.currentUserValue;
+    if (currentUser) {
+      this.userId = currentUser.id;
+    }
   }
 
   async ngOnInit() {
@@ -569,5 +581,23 @@ export class HomePage implements OnInit, OnDestroy {
   onIntervalChange(event: any) {
     this.selectedInterval = event.detail.value;
     this.fetchData();
+  }
+
+  async openLuckyWheel() {
+    const modal = await this.modalController.create({
+      component: LuckyWheelComponent,
+      cssClass: 'lucky-wheel-modal'
+    });
+    
+    await modal.present();
+    
+    const { data } = await modal.onWillDismiss();
+    if (data?.refresh) {
+      this.fetchAccountBalance();
+    }
+  }
+
+  logout() {
+    this.authService.logout();
   }
 }

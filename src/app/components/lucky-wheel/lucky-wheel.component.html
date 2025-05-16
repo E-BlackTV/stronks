@@ -1,0 +1,25 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Daily Lucky Wheel</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="wheel-container">
+    <canvas #wheelCanvas width="300" height="300"></canvas>
+    <div class="pointer"></div>
+  </div>
+
+  <ion-button 
+    expand="block" 
+    (click)="spin()" 
+    [disabled]="!canSpin || isSpinning"
+    class="spin-button">
+    {{ canSpin ? 'SPIN!' : 'Come back tomorrow!' }}
+  </ion-button>
+</ion-content>

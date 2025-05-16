@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, BehaviorSubject } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
-import { Storage } from '@ionic/storage-angular';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { map } from 'rxjs/operators';
 
 interface User {
   id: number;
@@ -11,43 +11,29 @@ interface User {
 }
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class AuthenticationService {
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser: Observable<User | null>;
-  private readonly USER_KEY = 'current-user';
+  private readonly USER_KEY = 'currentUser';
 
-  constructor(private storage: Storage, private http: HttpClient) {
-    this.storage.create();
-    this.currentUserSubject = new BehaviorSubject<User | null>(null);
+  constructor(private http: HttpClient, private router: Router) {
+    const storedUser = localStorage.getItem(this.USER_KEY);
+    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser ? JSON.parse(storedUser) : null);
     this.currentUser = this.currentUserSubject.asObservable();
-    this.checkStoredUser();
   }
 
-  private async checkStoredUser() {
-    const user = await this.storage.get(this.USER_KEY);
-    if (user) {
-      this.currentUserSubject.next(user);
-    }
+  public get currentUserValue(): User | null {
+    return this.currentUserSubject.value;
   }
 
-  login(
-    username: string,
-    password: string,
-    rememberMe: boolean
-  ): Observable<boolean> {
-    return this.http
-      .post<{ success: boolean; user: User }>(
-        'http://localhost/stronks/backend/login.php',
-        { username, password }
-      )
+  login(username: string, password: string): Observable<boolean> {
+    return this.http.post<any>('http://localhost/stronks/backend/login.php', { username, password })
       .pipe(
-        map((response) => {
+        map(response => {
           if (response.success && response.user) {
-            if (rememberMe) {
-              this.storage.set(this.USER_KEY, response.user);
-            }
+            localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
             this.currentUserSubject.next(response.user);
             return true;
           }
@@ -56,16 +42,13 @@ export class AuthenticationService {
       );
   }
 
-  async logout(): Promise<void> {
+  logout() {
+    localStorage.removeItem(this.USER_KEY);
     this.currentUserSubject.next(null);
-    await this.storage.remove(this.USER_KEY);
+    this.router.navigate(['/login']);
   }
 
   isLoggedIn(): boolean {
-    return this.currentUserSubject.value !== null;
-  }
-
-  getCurrentUser(): User | null {
-    return this.currentUserSubject.value;
+    return this.currentUserValue !== null;
   }
 }

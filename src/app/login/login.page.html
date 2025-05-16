@@ -1,9 +1,7 @@
 <ion-content [fullscreen]="true">
   <ion-card>
     <ion-card-header>
-      <ion-card-title class="ion-text-center">
-        Login
-      </ion-card-title>
+      <ion-card-title class="ion-text-center">Login</ion-card-title>
     </ion-card-header>
 
     <ion-card-content>
@@ -18,8 +16,16 @@
           <ion-input type="password" formControlName="password"></ion-input>
         </ion-item>
 
+        <div class="error-message" *ngIf="error">
+          {{ error }}
+        </div>
+
         <ion-button expand="block" type="submit" [disabled]="!loginForm.valid">
           Login
+        </ion-button>
+
+        <ion-button expand="block" fill="clear" (click)="goToRegister()">
+          Don't have an account? Register here
         </ion-button>
       </form>
     </ion-card-content>
