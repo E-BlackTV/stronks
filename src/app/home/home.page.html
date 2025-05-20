@@ -35,7 +35,8 @@
         </span>
       </ion-card-title>
       <ion-note [ngClass]="{'profit': profitLoss > 0, 'loss': profitLoss < 0}">
-        {{ profitLoss >= 0 ? '+' : '-'}}{{ profitLoss | currency:'USD':'symbol':'1.2-2' }}
+        {{ profitLoss >= 0 ? '+' : ''}}{{ profitLoss |
+        currency:'USD':'symbol':'1.2-2' }}
       </ion-note>
     </ion-card-header>
   </ion-card>
@@ -55,11 +56,17 @@
       <ion-button color="dark" expand="full" (click)="fetchData()">
         Daten aktualisieren
       </ion-button>
-          <div class="chart-controls">
+      <div class="chart-controls">
         <ion-item>
           <ion-label>Time Range</ion-label>
-          <ion-select [(ngModel)]="selectedRange" (ionChange)="onRangeChange($event)">
-            <ion-select-option *ngFor="let option of rangeOptions" [value]="option.value">
+          <ion-select
+            [(ngModel)]="selectedRange"
+            (ionChange)="onRangeChange($event)"
+          >
+            <ion-select-option
+              *ngFor="let option of rangeOptions"
+              [value]="option.value"
+            >
               {{ option.label }}
             </ion-select-option>
           </ion-select>
@@ -67,8 +74,14 @@
 
         <ion-item>
           <ion-label>Interval</ion-label>
-          <ion-select [(ngModel)]="selectedInterval" (ionChange)="onIntervalChange($event)">
-            <ion-select-option *ngFor="let option of getAvailableIntervals()" [value]="option.value">
+          <ion-select
+            [(ngModel)]="selectedInterval"
+            (ionChange)="onIntervalChange($event)"
+          >
+            <ion-select-option
+              *ngFor="let option of getAvailableIntervals()"
+              [value]="option.value"
+            >
               {{ option.label }}
             </ion-select-option>
           </ion-select>
@@ -81,7 +94,7 @@
       <!-- Kaufformular hinzufügen -->
       <div class="buy-form">
         <ion-item>
-          <ion-label position="floating">Investitionsbetrag (€)</ion-label>
+          <ion-label position="floating">Investitionsbetrag ($)</ion-label>
           <ion-input
             type="number"
             [(ngModel)]="investmentAmount"
@@ -91,7 +104,7 @@
         </ion-item>
 
         <ion-text color="medium" *ngIf="currentPrice">
-          <p>Aktueller Bitcoin-Preis: {{currentPrice | number:'1.2-2'}} €</p>
+          <p>Aktueller Bitcoin-Preis: {{currentPrice | number:'1.2-2'}} $</p>
           <p>Geschätzte Anteile: {{calculatedShares | number:'1.8-8'}}</p>
         </ion-text>
 
