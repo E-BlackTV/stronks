@@ -17,8 +17,8 @@ if (!$cfg) {
 }
 
 // Define API credentials from config
-define('RAPIDAPI_KEY', $cfg['rapidApiKey']);
-define('RAPIDAPI_HOST', $cfg['rapidApiHost']);
+define('RAPIDAPI_KEY', $cfg['rapidApiKey']);  //Wahrscheinlich liegt es daran dass er keine Daten bekommt
+define('RAPIDAPI_HOST', $cfg['rapidApiHost']);// -------""---------- Config.json + environment.ts anschauen.!!!
 
 // Enable error logging
 ini_set('display_errors', 1);
