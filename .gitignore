@@ -93,3 +93,4 @@ config.json
 .DS_Store
 Thumbs.db
 backend/config.php
+src/environments/environment.prod.ts

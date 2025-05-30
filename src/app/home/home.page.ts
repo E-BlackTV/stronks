@@ -5,7 +5,7 @@ import { environment } from '../../environments/environment';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { interval, Subscription } from 'rxjs';
 import { AuthenticationService } from '../services/authentication.service';
-import { ModalController } from '@ionic/angular';
+import { ModalController, ToastController } from '@ionic/angular'; // Add ToastController here
 import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
 
 interface PurchaseResponse {
@@ -108,19 +108,11 @@ export class HomePage implements OnInit, OnDestroy {
   rangeOptions: RangeOption[] = [
     { label: 'Last Day', value: TimeRange.DAY },
     { label: 'Last Week', value: TimeRange.WEEK },
-    { label: 'Last Month', value: TimeRange.MONTH },
-    { label: 'Last 3 Months', value: TimeRange.THREE_MONTHS },
-    { label: 'Last 6 Months', value: TimeRange.SIX_MONTHS },
     { label: 'Last Year', value: TimeRange.YEAR },
     { label: 'Last 5 Years', value: TimeRange.FIVE_YEARS },
   ];
 
   intervalOptions: IntervalOption[] = [
-    {
-      label: '1 Minute',
-      value: DataInterval.ONE_MINUTE,
-      allowedRanges: [TimeRange.DAY, TimeRange.WEEK],
-    },
     {
       label: '5 Minutes',
       value: DataInterval.FIVE_MINUTES,
@@ -167,16 +159,20 @@ export class HomePage implements OnInit, OnDestroy {
     },
   ];
 
+  showInvestments: boolean = false;
+  userInvestments: any[] = [];
+
   constructor(
     private http: HttpClient,
     private authService: AuthenticationService,
-    private modalController: ModalController
+    private modalController: ModalController,
+    private toastController: ToastController // Add this line
   ) {
     Chart.register(...registerables);
     this.refreshSubscription = interval(10000).subscribe(() => {
       this.fetchAccountBalance();
     });
-    
+
     // Get user ID from auth service
     const currentUser = this.authService.currentUserValue;
     if (currentUser) {
@@ -586,11 +582,11 @@ export class HomePage implements OnInit, OnDestroy {
   async openLuckyWheel() {
     const modal = await this.modalController.create({
       component: LuckyWheelComponent,
-      cssClass: 'lucky-wheel-modal'
+      cssClass: 'lucky-wheel-modal',
     });
-    
+
     await modal.present();
-    
+
     const { data } = await modal.onWillDismiss();
     if (data?.refresh) {
       this.fetchAccountBalance();
@@ -599,5 +595,99 @@ export class HomePage implements OnInit, OnDestroy {
 
   logout() {
     this.authService.logout();
+  }
+
+  toggleInvestments() {
+    this.showInvestments = !this.showInvestments;
+    if (this.showInvestments) {
+      this.fetchUserInvestments();
+    }
+  }
+
+  async fetchUserInvestments() {
+    try {
+      const response = await this.http
+        .get<any>(
+          `http://localhost/stronks/backend/get_portfolio.php?user_id=${this.userId}`
+        )
+        .toPromise();
+
+      if (response && response.success) {
+        this.userInvestments = response.investments.map((inv: any) => ({
+          ...inv,
+          // Calculate shares based on amount and purchase price
+          calculatedShares:
+            parseFloat(inv.amount) / parseFloat(inv.purchase_price),
+          // Calculate current value based on calculated shares and current price
+          currentValue:
+            (parseFloat(inv.amount) / parseFloat(inv.purchase_price)) *
+            this.currentPrice,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching investments:', error);
+    }
+  }
+
+  async sellInvestment(investmentId: number) {
+    try {
+      const response = await this.http
+        .post<any>('http://localhost/stronks/backend/sellInvestment.php', {
+          user_id: this.userId,
+          investment_id: investmentId,
+        })
+        .toPromise();
+
+      if (response && response.success) {
+        // Refresh data
+        await this.fetchUserInvestments();
+        await this.fetchAccountBalance();
+        await this.calculatePortfolioValue();
+
+        // Show success message
+        const toast = await this.toastController.create({
+          message: 'Investment erfolgreich verkauft!',
+          duration: 2000,
+          color: 'success',
+        });
+        toast.present();
+      }
+    } catch (error) {
+      console.error('Error selling investment:', error);
+    }
+  }
+
+  async onBuyConfirm(purchaseData: any) {
+    try {
+      const response = await this.http
+        .post<PurchaseResponse>(
+          'http://localhost/stronks/backend/buy.php',
+          purchaseData
+        )
+        .toPromise();
+
+      if (response && response.success) {
+        // Refresh all relevant data
+        await this.fetchAccountBalance();
+        await this.fetchUserInvestments(); // Add this line
+        await this.calculatePortfolioValue();
+        this.showInvestments = true; // Automatically show investments panel
+
+        const toast = await this.toastController.create({
+          message: 'Investment erfolgreich!',
+          duration: 2000,
+          color: 'success',
+        });
+        toast.present();
+      }
+    } catch (error) {
+      console.error('Error making purchase:', error);
+      const toast = await this.toastController.create({
+        message: 'Fehler beim Kauf',
+        duration: 2000,
+        color: 'danger',
+      });
+      toast.present();
+    }
   }
 }

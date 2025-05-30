@@ -116,3 +116,39 @@ ion-note {
     color: #f44336;
   }
 }
+
+.investments-container {
+  margin-top: 16px;
+
+  .investment-item {
+    --padding-start: 0;
+    --inner-padding-end: 0;
+
+    .investment-details {
+      width: 100%;
+      padding: 8px 16px;
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: bold;
+      }
+
+      .investment-stats {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+
+        p {
+          margin: 0;
+          color: var(--ion-color-medium);
+        }
+
+        small {
+          color: var(--ion-color-success);
+        }
+      }
+    }
+  }
+}

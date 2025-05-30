@@ -45,6 +45,48 @@
 <ion-content class="ion-padding">
   <ion-card>
     <ion-card-header>
+      <ion-card-subtitle>Investitionen</ion-card-subtitle>
+      <ion-button fill="clear" (click)="toggleInvestments()">
+        <ion-icon
+          [name]="showInvestments ? 'chevron-up' : 'chevron-down'"
+        ></ion-icon>
+      </ion-button>
+
+      <div *ngIf="showInvestments" class="investments-container">
+        <ion-list>
+          <ion-item
+            *ngFor="let investment of userInvestments"
+            class="investment-item"
+          >
+            <div class="investment-details">
+              <h3>{{ investment.investments }}</h3>
+              <div class="investment-stats">
+                <p>
+                  Shares: {{ investment.calculatedShares | number:'1.8-8' }}
+                </p>
+                <small>
+                  Betrag: {{ investment.currentValue |
+                  currency:'USD':'symbol':'1.2-2' }}
+                </small>
+              </div>
+              <ion-button
+                color="danger"
+                size="small"
+                (click)="sellInvestment(investment.id)"
+              >
+                Verkaufen
+              </ion-button>
+            </div>
+          </ion-item>
+        </ion-list>
+      </div>
+    </ion-card-header>
+  </ion-card>
+</ion-content>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
       <ion-card-subtitle>Bitcoin</ion-card-subtitle>
       <ion-card-title class="bitcoin-price"
         >{{ currentPrice | currency:'USD':'symbol':'1.2-2' }}</ion-card-title
