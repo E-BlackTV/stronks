@@ -31,6 +31,14 @@ canvas {
   }
 }
 
+// Main layout
+ion-content {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+}
+
 ion-content {
   --padding: 20px;
 
@@ -41,12 +49,34 @@ ion-content {
 
     // Desktop-Version: 30% Breite
     @media (min-width: 768px) {
-      width: 30%;
+      width: 100%;
     }
 
     // Mobile-Version: Volle Breite
     @media (max-width: 767px) {
       width: 100%;
+    }
+  }
+}
+
+// Balance cards at top
+.balance-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+
+  .balance-card {
+    flex: 1;
+    margin: 0;
+
+    ion-card-title {
+      font-size: 1.5em;
+      font-weight: 900;
     }
   }
 }
@@ -151,4 +181,110 @@ ion-note {
       }
     }
   }
+}
+
+.cards-container {
+  display: grid;
+  gap: 20px;
+  margin: 0 auto;
+  max-width: 1200px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .investment-card,
+  .bitcoin-card {
+    margin: 0;
+    height: -moz-fit-content;
+    height: fit-content;
+  }
+}
+
+// Investment list scrolling
+.investments-scroll-container {
+  height: 400px;
+  overflow-y: auto;
+
+  // Remove scrollbar-gutter for better compatibility
+  padding-right: 8px; // Add padding instead
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--ion-color-light);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--ion-color-medium);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--ion-color-medium-shade);
+    }
+  }
+}
+
+// Investment items
+.investment-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+
+  .investment-details {
+    width: 100%;
+
+    h3 {
+      margin: 0 0 8px 0;
+      font-weight: 600;
+    }
+
+    .investment-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      p,
+      small {
+        margin: 0;
+      }
+    }
+  }
+}
+
+// Status indicators
+.profit {
+  color: var(--ion-color-success);
+}
+
+.loss {
+  color: var(--ion-color-danger);
+}
+
+// Bitcoin price display
+.bitcoin-price {
+  font-size: 1.7em;
+  font-weight: 900;
+}
+
+// Chart styling
+.chart-container {
+  margin-top: 16px;
+
+  canvas {
+    width: 100% !important;
+    height: 200px !important;
+  }
+}
+
+// Chart container sizing
+.chart-controls {
+  margin-bottom: 16px;
+}
+
+canvas {
+  width: 100% !important;
+  height: 200px !important;
 }
