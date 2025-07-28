@@ -201,7 +201,7 @@ export class HomePage implements OnInit, OnDestroy {
     try {
       const response = await this.http
         .get<any>(
-          `http://localhost/stronks/backend/get_balance.php?user_id=${this.userId}`
+          `${environment.apiUrl}/get_balance.php?user_id=${this.userId}`
         )
         .toPromise();
 
@@ -454,17 +454,13 @@ export class HomePage implements OnInit, OnDestroy {
 
     try {
       const response = await this.http
-        .post<PurchaseResponse>(
-          'http://localhost/stronks/backend/buy.php',
-          purchaseData,
-          {
-            withCredentials: true,
-            headers: new HttpHeaders({
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-            }),
-          }
-        )
+        .post<PurchaseResponse>(`${environment.apiUrl}/buy.php`, purchaseData, {
+          withCredentials: true,
+          headers: new HttpHeaders({
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          }),
+        })
         .toPromise();
 
       console.log('Purchase response:', response);
@@ -498,7 +494,7 @@ export class HomePage implements OnInit, OnDestroy {
     try {
       const response = await this.http
         .get<any>(
-          `http://localhost/stronks/backend/get_portfolio.php?user_id=${this.userId}`
+          `${environment.apiUrl}/get_portfolio.php?user_id=${this.userId}`
         )
         .toPromise();
 
@@ -608,7 +604,7 @@ export class HomePage implements OnInit, OnDestroy {
     try {
       const response = await this.http
         .get<any>(
-          `http://localhost/stronks/backend/get_portfolio.php?user_id=${this.userId}`
+          `${environment.apiUrl}/get_portfolio.php?user_id=${this.userId}`
         )
         .toPromise();
 
@@ -632,7 +628,7 @@ export class HomePage implements OnInit, OnDestroy {
   async sellInvestment(investmentId: number) {
     try {
       const response = await this.http
-        .post<any>('http://localhost/stronks/backend/sellInvestment.php', {
+        .post<any>(`${environment.apiUrl}/sellInvestment.php`, {
           user_id: this.userId,
           investment_id: investmentId,
         })
@@ -660,10 +656,7 @@ export class HomePage implements OnInit, OnDestroy {
   async onBuyConfirm(purchaseData: any) {
     try {
       const response = await this.http
-        .post<PurchaseResponse>(
-          'http://localhost/stronks/backend/buy.php',
-          purchaseData
-        )
+        .post<PurchaseResponse>(`${environment.apiUrl}/buy.php`, purchaseData)
         .toPromise();
 
       if (response && response.success) {

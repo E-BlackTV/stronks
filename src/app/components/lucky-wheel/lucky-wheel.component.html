@@ -1,6 +1,6 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Daily Lucky Wheel</ion-title>
+    <ion-title>Glücksrad</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="dismiss()">
         <ion-icon name="close"></ion-icon>
@@ -11,15 +11,39 @@
 
 <ion-content class="ion-padding">
   <div class="wheel-container">
-    <canvas #wheelCanvas width="300" height="300"></canvas>
-    <div class="pointer"></div>
+    <div id="wheelOfFortune">
+      <canvas #wheel id="wheel" width="500" height="500"></canvas>
+      <div #spin id="spin" (click)="spinner()">SPIN</div>
+    </div>
   </div>
 
-  <ion-button 
-    expand="block" 
-    (click)="spin()" 
-    [disabled]="!canSpin || isSpinning"
-    class="spin-button">
-    {{ canSpin ? 'SPIN!' : 'Come back tomorrow!' }}
-  </ion-button>
+  <!-- Ergebnis Anzeige -->
+  <div class="result" *ngIf="spinResult">
+    <ion-card class="result-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="trophy" color="warning"></ion-icon>
+          Gewonnen!
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="prize-display">
+          <ion-icon
+            [name]="spinResult.type === 'btc' ? 'logo-bitcoin' : 'cash-outline'"
+            class="prize-icon"
+            [style.color]="spinResult.color"
+          >
+          </ion-icon>
+          <h2>{{ spinResult.name }}</h2>
+          <p *ngIf="spinResult.type === 'euro'">
+            {{ spinResult.value | currency : "EUR" : "symbol" : "1.2-2" }}
+            wurden Ihrem Konto gutgeschrieben!
+          </p>
+          <p *ngIf="spinResult.type === 'btc'">
+            {{ spinResult.value }} BTC wurden Ihrem Portfolio hinzugefügt!
+          </p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

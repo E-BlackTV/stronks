@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { NavController } from '@ionic/angular';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-register',
@@ -18,11 +19,14 @@ export class RegisterPage implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.registerForm = this.fb.group({
-      username: ['', Validators.required],
-      password: ['', [Validators.required, Validators.minLength(6)]],
-      confirmPassword: ['', Validators.required],
-    }, { validator: this.passwordMatchValidator });
+    this.registerForm = this.fb.group(
+      {
+        username: ['', Validators.required],
+        password: ['', [Validators.required, Validators.minLength(6)]],
+        confirmPassword: ['', Validators.required],
+      },
+      { validator: this.passwordMatchValidator }
+    );
   }
 
   passwordMatchValidator(form: FormGroup) {
@@ -36,9 +40,9 @@ export class RegisterPage implements OnInit {
       alert('Bitte fülle alle Felder korrekt aus.');
       return;
     }
-    
+
     this.http
-      .post('http://localhost/stronks/backend/register.php', this.registerForm.value)
+      .post(`${environment.apiUrl}/register.php`, this.registerForm.value)
       .subscribe(
         (response: any) => {
           if (response.success) {
