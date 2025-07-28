@@ -3,6 +3,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { map } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 interface User {
   id: number;
@@ -11,7 +12,7 @@ interface User {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthenticationService {
   private currentUserSubject: BehaviorSubject<User | null>;
@@ -20,7 +21,9 @@ export class AuthenticationService {
 
   constructor(private http: HttpClient, private router: Router) {
     const storedUser = localStorage.getItem(this.USER_KEY);
-    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser ? JSON.parse(storedUser) : null);
+    this.currentUserSubject = new BehaviorSubject<User | null>(
+      storedUser ? JSON.parse(storedUser) : null
+    );
     this.currentUser = this.currentUserSubject.asObservable();
   }
 
@@ -29,9 +32,13 @@ export class AuthenticationService {
   }
 
   login(username: string, password: string): Observable<boolean> {
-    return this.http.post<any>('http://localhost/stronks/backend/login.php', { username, password })
+    return this.http
+      .post<any>(`${environment.apiUrl}/login.php`, {
+        username,
+        password,
+      })
       .pipe(
-        map(response => {
+        map((response) => {
           if (response.success && response.user) {
             localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
             this.currentUserSubject.next(response.user);

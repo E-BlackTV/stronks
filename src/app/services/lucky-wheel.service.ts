@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 interface WheelResponse {
   success: boolean;
@@ -14,7 +15,7 @@ interface WheelResponse {
   providedIn: 'root'
 })
 export class LuckyWheelService {
-  private apiUrl = 'http://localhost/stronks/backend/lucky-wheel.php';
+  private apiUrl = `${environment.apiUrl}/lucky-wheel.php`;
 
   constructor(private http: HttpClient) {}
 

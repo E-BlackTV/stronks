@@ -4,5 +4,5 @@ export const environment = {
   production: false,
   rapidApiKey: raw.rapidApiKey,
   rapidApiHost: raw.rapidApiHost,
-  apiUrl: 'http://localhost/stronks/backend',
+  apiUrl: '/backend',
 };

@@ -1,173 +1,108 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header('Content-Type: application/json');
+// Error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-// CORS Check
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
-}
+try {
+    $conn = new mysqli("localhost", "root", "", "ionic_app");
 
-$conn = new mysqli("localhost", "root", "", "ionic_app");
-
-if ($conn->connect_error) {
-    die(json_encode(["success" => false, "message" => "Connection failed"]));
-}
-
-// Enable Prepared Statements
-$conn->set_charset('utf8mb4');
-
-// Create table if not exists
-$createTable = "CREATE TABLE IF NOT EXISTS lucky_wheel_spins (
-    user_id INT PRIMARY KEY,
-    last_spin DATETIME,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-)";
-$conn->query($createTable);
-
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $userId = $_GET['user_id'];
-    
-    // Debug output
-    error_log("Checking spin for user: " . $userId);
-    
-    $stmt = $conn->prepare("SELECT last_spin FROM lucky_wheel_spins WHERE user_id = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $lastSpin = strtotime($row['last_spin']);
-        $timeDiff = time() - $lastSpin;
-        $canSpin = $timeDiff >= 86400;
-        
-        // Debug output
-        error_log("Last spin: " . date('Y-m-d H:i:s', $lastSpin));
-        error_log("Time diff: " . $timeDiff);
-        error_log("Can spin: " . ($canSpin ? "yes" : "no"));
-    } else {
-        $canSpin = true;
-        error_log("No previous spin found - can spin: yes");
+    if ($conn->connect_error) {
+        throw new Exception("Connection failed: " . $conn->connect_error);
     }
-    
+
+    // Enable Prepared Statements
+    $conn->set_charset('utf8mb4');
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $action = $_GET['action'] ?? '';
+        
+        if ($action === 'spin_wheel') {
+            $input = file_get_contents("php://input");
+            $data = json_decode($input, true);
+            
+            // Log for debugging
+            error_log("Received data: " . $input);
+            
+            // Validate input data
+            if (!isset($data['user_id']) || !isset($data['prize_value'])) {
+                throw new Exception('Invalid parameters: user_id and prize_value required');
+            }
+
+            $userId = filter_var($data['user_id'], FILTER_VALIDATE_INT);
+            $prizeValue = filter_var($data['prize_value'], FILTER_VALIDATE_FLOAT);
+            
+            if (!$userId || !$prizeValue) {
+                throw new Exception('Invalid user_id or prize_value');
+            }
+
+            // Begin transaction
+            $conn->begin_transaction();
+
+            try {
+                // Add prize value to user's balance in users table
+                $stmt = $conn->prepare("UPDATE users SET accountbalance = accountbalance + ? WHERE id = ?");
+                if (!$stmt) {
+                    throw new Exception("Prepare failed: " . $conn->error);
+                }
+                
+                $stmt->bind_param("di", $prizeValue, $userId);
+                
+                if (!$stmt->execute()) {
+                    throw new Exception("Execute failed: " . $stmt->error);
+                }
+
+                // Check if update was successful
+                if ($stmt->affected_rows === 0) {
+                    throw new Exception("User not found or no changes made");
+                }
+
+                // Update or insert spin record in lucky_wheel_spins table
+                $stmt2 = $conn->prepare("INSERT INTO lucky_wheel_spins (user_id, last_spin) VALUES (?, NOW()) ON DUPLICATE KEY UPDATE last_spin = NOW()");
+                if (!$stmt2) {
+                    throw new Exception("Prepare failed for lucky_wheel_spins: " . $conn->error);
+                }
+                
+                $stmt2->bind_param("i", $userId);
+                
+                if (!$stmt2->execute()) {
+                    throw new Exception("Execute failed for lucky_wheel_spins: " . $stmt2->error);
+                }
+
+                $conn->commit();
+
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    "success" => true,
+                    "message" => "Gewinn erfolgreich hinzugefügt!",
+                    "prize_value" => $prizeValue,
+                    "user_id" => $userId
+                ]);
+
+            } catch (Exception $e) {
+                $conn->rollback();
+                throw $e;
+            }
+        } else {
+            throw new Exception('Invalid action: ' . $action);
+        }
+    } else {
+        throw new Exception('Only POST method allowed');
+    }
+
+} catch (Exception $e) {
+    error_log("Lucky wheel error: " . $e->getMessage());
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
-        "success" => true,
-        "canSpin" => $canSpin,
-        "debug" => [
-            "userId" => $userId,
-            "hasLastSpin" => ($result->num_rows > 0),
-            "lastSpin" => isset($lastSpin) ? date('Y-m-d H:i:s', $lastSpin) : null,
-            "timeDiff" => isset($timeDiff) ? $timeDiff : null
+        'success' => false, 
+        'message' => 'Fehler: ' . $e->getMessage(),
+        'debug' => [
+            'method' => $_SERVER['REQUEST_METHOD'],
+            'action' => $_GET['action'] ?? 'none',
+            'input' => file_get_contents("php://input")
         ]
     ]);
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents("php://input"), true);
-    
-    // Validate input data
-    if (!isset($data['user_id']) || !isset($data['timestamp']) || !isset($data['action'])) {
-        die(json_encode(['success' => false, 'message' => 'Invalid parameters']));
-    }
-
-    $userId = filter_var($data['user_id'], FILTER_VALIDATE_INT);
-    if (!$userId) {
-        die(json_encode(['success' => false, 'message' => 'Invalid user ID']));
-    }
-
-    // Check timestamp (not older than 5 seconds)
-    if (time() - ($data['timestamp'] / 1000) > 5) {
-        die(json_encode(['success' => false, 'message' => 'Request timeout']));
-    }
-    
-    // Check if user can spin
-    $stmt = $conn->prepare("SELECT last_spin FROM lucky_wheel_spins WHERE user_id = ?");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $lastSpin = strtotime($row['last_spin']);
-        if ((time() - $lastSpin) < 86400) {
-            echo json_encode(["success" => false, "message" => "You can only spin once per day!"]);
-            exit;
-        }
-    }
-
-    // Begin transaction
-    $conn->begin_transaction();
-
-    try {
-        $prizes = [
-            ['value' => 100, 'probability' => 5],
-            ['value' => 5, 'probability' => 20],
-            ['value' => 25, 'probability' => 10],
-            ['value' => 10, 'probability' => 20],
-            ['value' => 50, 'probability' => 5],
-            ['value' => 15, 'probability' => 15],
-            ['value' => 30, 'probability' => 10],
-            ['value' => 20, 'probability' => 15]
-        ];
-
-        // Select prize
-        $rand = mt_rand(1, 100);
-        $currentProb = 0;
-        $selectedPrize = null;
-        $prizeIndex = 0;
-
-        foreach ($prizes as $index => $prize) {
-            $currentProb += $prize['probability'];
-            if ($rand <= $currentProb) {
-                $selectedPrize = $prize['value'];
-                $prizeIndex = $index;
-                break;
-            }
-        }
-
-        // Calculate wheel position first
-        $degreesPerSection = 360 / count($prizes);
-        $targetDegrees = ($prizeIndex * $degreesPerSection);
-        $finalDegrees = (5 * 360) + $targetDegrees + ($degreesPerSection / 2);
-
-        // Send response before updating balance
-        echo json_encode([
-            "success" => true,
-            "prize" => $selectedPrize,
-            "degrees" => $finalDegrees,
-            "message" => "Congratulations! You won {$selectedPrize}€!"
-        ]);
-        
-        // Flush the output buffer to send response immediately
-        ob_flush();
-        flush();
-
-        // Add delay to match animation
-        sleep(5);
-
-        // Update user balance
-        $stmt = $conn->prepare("UPDATE users SET accountbalance = accountbalance + ? WHERE id = ?");
-        $stmt->bind_param("di", $selectedPrize, $userId);
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to update balance");
-        }
-
-        // Record spin time
-        $stmt = $conn->prepare("INSERT INTO lucky_wheel_spins (user_id, last_spin) 
-                              VALUES (?, NOW()) ON DUPLICATE KEY UPDATE last_spin = NOW()");
-        $stmt->bind_param("i", $userId);
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to record spin time");
-        }
-
-        $conn->commit();
-
-    } catch (Exception $e) {
-        $conn->rollback();
-        error_log($e->getMessage());
+} finally {
+    if (isset($conn)) {
+        $conn->close();
     }
 }
-
-$conn->close();

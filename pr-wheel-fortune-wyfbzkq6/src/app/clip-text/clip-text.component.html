@@ -1,0 +1,6 @@
+<div class="example-button-container" style="display: flex; justify-content: center; align-items: center">
+	<textarea id="clipboard-example-textarea" cols="60" rows="3" [(ngModel)]="value"></textarea>
+	<button mat-mini-fab aria-label="Copy to winners" [cdkCopyToClipboard]="value">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+</div>

@@ -1,0 +1,11 @@
+{
+  "/backend/*": {
+    "target": "http://localhost/stronks/backend",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/backend": ""
+    }
+  }
+}

@@ -26,21 +26,10 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 error_log("Starting cache.php request");
 
-// CORS headers
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-RapidAPI-Key");
 header('Content-Type: application/json');
 
 // Clear output buffer
 if (ob_get_level()) ob_end_clean();
-
-// Handle preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
 
 // Database connection
 $servername = "localhost";
@@ -62,7 +51,7 @@ if ($conn->connect_error) {
 }
 
 // Cache-Ablaufzeit in Sekunden (z. B. 3600 = 1 Stunde)
-$cacheExpiry = 3600;
+$cacheExpiry = 360000;
 
 // Get and validate parameters
 $symbol = isset($_GET['symbol']) ? $_GET['symbol'] : 'BTC-USD';

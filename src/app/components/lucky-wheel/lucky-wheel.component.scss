@@ -1,99 +1,182 @@
 .wheel-container {
-  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 20px auto;
-  width: 300px;
-  height: 300px;
+  margin: 20px 0;
 }
 
-.wheel {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
+#wheelOfFortune {
+  display: inline-block;
   position: relative;
   overflow: hidden;
-  transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
-  box-shadow: 0 0 0 8px #333;
-  background: #fff;
 }
 
-.wheel-section {
+#wheel {
+  display: block;
+}
+
+#spin {
+  font: 1.5em/0 sans-serif;
+  user-select: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: absolute;
-  width: 50%;
-  height: 50%;
-  transform-origin: 100% 100%;
+  top: 50%;
   left: 50%;
-  top: 0;
+  width: 30%;
+  height: 30%;
+  margin: -15%;
+  background: #fff;
+  color: #fff;
+  box-shadow: 0 0 0 8px currentColor, 0 0px 15px 5px rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  transition: 0.8s;
+}
+
+#spin::after {
+  content: "";
+  position: absolute;
+  top: -17px;
+  border: 10px solid transparent;
+  border-bottom-color: currentColor;
+  border-top: none;
+}
+
+.status-info {
+  margin: 20px 0;
+}
+
+.result {
+  margin: 20px 0;
+}
+
+.result-card {
+  --background: rgba(255, 255, 255, 0.95);
+  --border-radius: 24px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.2);
+  border: none;
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+
+  ion-card-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: 0;
+    padding: 24px 20px;
+    position: relative;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        45deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 70%
+      );
+      animation: shimmer 2s infinite;
+    }
+  }
+
+  ion-card-title {
+    font-size: 24px;
+    font-weight: 700;
+    text-shadow: none;
+    letter-spacing: 0.5px;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.prize-display {
+  padding: 20px 0;
+
+  .prize-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: bold;
+    margin: 10px 0;
+    color: #333;
+  }
+
+  p {
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+  }
+}
+
+.balance-info {
+  margin: 20px 0;
+}
+
+.balance-item {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  font-weight: bold;
-  color: #fff;
-  padding-left: 25px;
-  box-sizing: border-box;
-  
-  // Create pie sections
-  &:nth-child(1) { transform: rotate(0deg) skewY(-45deg); }
-  &:nth-child(2) { transform: rotate(45deg) skewY(-45deg); }
-  &:nth-child(3) { transform: rotate(90deg) skewY(-45deg); }
-  &:nth-child(4) { transform: rotate(135deg) skewY(-45deg); }
-  &:nth-child(5) { transform: rotate(180deg) skewY(-45deg); }
-  &:nth-child(6) { transform: rotate(225deg) skewY(-45deg); }
-  &:nth-child(7) { transform: rotate(270deg) skewY(-45deg); }
-  &:nth-child(8) { transform: rotate(315deg) skewY(-45deg); }
+  gap: 10px;
+  margin: 10px 0;
+  font-size: 16px;
+  font-weight: 500;
 
-  // Alternating colors
-  &:nth-child(odd) {
-    background: linear-gradient(45deg, #3880ff, #2b5cc5);
-  }
-  &:nth-child(even) {
-    background: linear-gradient(45deg, #2dd36f, #1e9d4f);
-  }
-
-  span {
-    transform: skewY(45deg) rotate(22.5deg);
-    transform-origin: 0 0;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    white-space: nowrap;
+  ion-icon {
+    font-size: 20px;
   }
 }
 
-.pointer {
-  position: absolute;
-  top: -20px;
-  width: 0;
-  height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-top: 30px solid #333;
-  z-index: 2;
-}
-
-.wheel-outer-border {
-  position: absolute;
-  width: 110%;
-  height: 110%;
-  top: -5%;
-  left: -5%;
-  border-radius: 50%;
-  background: #333;
-  z-index: -1;
-}
-
-.spin-button {
-  margin-top: 20px;
-  --background: #3880ff;
-  --background-activated: #2d66cc;
-  font-weight: bold;
-  
-  &[disabled] {
-    --background: #cccccc;
+// Responsive Design
+@media (max-width: 768px) {
+  .wheel-container {
+    margin: 10px 0;
   }
-}
 
-canvas {
-  border-radius: 50%;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  #wheel {
+    width: 300px;
+    height: 300px;
+  }
+
+  .result-card {
+    ion-card-header {
+      padding: 16px 12px;
+    }
+
+    ion-card-title {
+      font-size: 20px;
+    }
+  }
+
+  .prize-display {
+    padding: 16px 0;
+
+    .prize-icon {
+      font-size: 36px;
+    }
+
+    h2 {
+      font-size: 24px;
+    }
+
+    p {
+      font-size: 14px;
+    }
+  }
 }
