@@ -64,7 +64,6 @@ ion-content {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
 
   @media (max-width: 767px) {
     flex-direction: column;

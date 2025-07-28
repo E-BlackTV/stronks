@@ -81,7 +81,7 @@ export class HomePage implements OnInit, OnDestroy {
   calculatedShares: number = 0;
   accountBalance: number = 0;
   portfolioValue: number = 0;
-  userId: number = 9; //Test-User-ID
+  userId: number = this.authService.currentUserValue?.id || 0; // Get user ID from auth service
   readonly ASSET_TYPE: string = 'Bitcoin'; //could make this dynamic if needed
   private refreshSubscription: Subscription;
   initialInvestment: number = 0;
@@ -166,7 +166,7 @@ export class HomePage implements OnInit, OnDestroy {
     private http: HttpClient,
     private authService: AuthenticationService,
     private modalController: ModalController,
-    private toastController: ToastController // Add this line
+    private toastController: ToastController
   ) {
     Chart.register(...registerables);
     this.refreshSubscription = interval(10000).subscribe(() => {
