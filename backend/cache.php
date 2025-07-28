@@ -51,147 +51,107 @@ if ($conn->connect_error) {
 }
 
 // Cache-Ablaufzeit in Sekunden (z. B. 3600 = 1 Stunde)
-$cacheExpiry = 360000;
+$cacheExpiry = 36000000;
 
-// Get and validate parameters
-$symbol = isset($_GET['symbol']) ? $_GET['symbol'] : 'BTC-USD';
-// Ensure the symbol is properly formatted for crypto
-if (strpos($symbol, 'BTC') !== false && strpos($symbol, '-USD') === false) {
-    $symbol = 'BTC-USD';
-}
+// Liste aller zu cachenden Symbole
+$symbols = [
+    'BTC-USD', 'ETH-USD', 'SOL-USD', // Kryptowährungen
+    'TSLA', 'AAPL', 'MSFT', 'AMZN',  // Aktien
+    // beliebig erweiterbar
+];
 
-$range = isset($_GET['range']) ? $_GET['range'] : '1d';
-$interval = isset($_GET['interval']) ? $_GET['interval'] : '5m';
+$rangeIntervalMap = [
+    '1d'   => ['5m', '15m'],
+    '1wk'  => ['5m', '15m', '30m', '1h'],
+    '1y'   => ['1d', '1wk', '1mo'],
+    '5y'   => ['1wk', '1mo'],
+];
 
-$period1 = isset($_GET['period1']) ? (int)$_GET['period1'] : strtotime('-1 day');
-$period2 = isset($_GET['period2']) ? (int)$_GET['period2'] : time();
+foreach ($symbols as $symbol) {
+    foreach ($rangeIntervalMap as $range => $intervals) {
+        foreach ($intervals as $interval) {
+            error_log("Processing: $symbol | $range | $interval");
 
-error_log("Requested: symbol=$symbol, range=$range, interval=$interval");
+            // Prüfe Cache
+            $stmt = $conn->prepare("SELECT data, last_updated FROM cached_data 
+                WHERE symbol = ? AND range_period = ? AND interval_period = ?");
+            $stmt->bind_param("sss", $symbol, $range, $interval);
+            $stmt->execute();
+            $result = $stmt->get_result();
 
-// Create a unique cache key for this combination
-$cacheKey = "{$symbol}_{$range}_{$interval}";
+            $cacheHit = false;
+            if ($result && $result->num_rows > 0) {
+                $row = $result->fetch_assoc();
+                $lastUpdated = strtotime($row['last_updated']);
+                if (time() - $lastUpdated < $cacheExpiry) {
+                    error_log("Cache HIT for $symbol | $range | $interval");
+                    continue;
+                }
+            }
 
-// Check cache first
-$stmt = $conn->prepare("SELECT data, last_updated FROM cached_data 
-    WHERE symbol = ? AND range_period = ? AND interval_period = ?");
-$stmt->bind_param("sss", $symbol, $range, $interval);
-$stmt->execute();
-$result = $stmt->get_result();
+            // Hole Daten von RapidAPI
+            $url = "https://yahoo-finance166.p.rapidapi.com/api/stock/get-chart";
+            $params = http_build_query([
+                "symbol" => $symbol,
+                "region" => "US",
+                "range" => $range,
+                "interval" => $interval,
+                "includePrePost" => "false",
+                "useYfid" => "true",
+                "lang" => "en-US"
+            ]);
 
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $lastUpdated = strtotime($row['last_updated']);
-    if (time() - $lastUpdated < $cacheExpiry) {
-        header('X-Cache: HIT');
-        echo $row['data'];
-        exit;
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url . "?" . $params,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "GET",
+                CURLOPT_HTTPHEADER => [
+                    "X-RapidAPI-Host: " . RAPIDAPI_HOST,
+                    "X-RapidAPI-Key: " . RAPIDAPI_KEY
+                ],
+                CURLOPT_SSL_VERIFYPEER => false // Nur für Entwicklung
+            ]);
+
+            $response = curl_exec($ch);
+            $err = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($err || $httpCode !== 200) {
+                error_log("API error for $symbol | $range | $interval: $err, HTTP $httpCode");
+                continue;
+            }
+
+            // Prüfe JSON
+            $data = json_decode($response);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                error_log("Invalid JSON for $symbol | $range | $interval: " . json_last_error_msg());
+                continue;
+            }
+
+            // In DB speichern
+            $stmt = $conn->prepare("INSERT INTO cached_data 
+                (symbol, range_period, interval_period, data, last_updated) 
+                VALUES (?, ?, ?, ?, NOW())
+                ON DUPLICATE KEY UPDATE 
+                data = VALUES(data),
+                last_updated = NOW()");
+            $stmt->bind_param("ssss", $symbol, $range, $interval, $response);
+            if (!$stmt->execute()) {
+                error_log("DB error for $symbol | $range | $interval: " . $stmt->error);
+            } else {
+                error_log("Cache MISS/Update for $symbol | $range | $interval");
+            }
+        }
     }
 }
 
-// Cache miss - fetch from RapidAPI
-$url = "https://yahoo-finance166.p.rapidapi.com/api/stock/get-chart";
-$params = http_build_query([
-    "symbol" => $symbol,
-    "region" => "US",
-    "range" => $range,
-    "interval" => $interval,
-    "includePrePost" => "false",
-    "useYfid" => "true",
-    "lang" => "en-US"
-]);
-
-$fullUrl = $url . "?" . $params;
-
-$headers = [
-    'X-RapidAPI-Key: ' . RAPIDAPI_KEY,
-    'X-RapidAPI-Host: ' . RAPIDAPI_HOST
-];
-
-// Debug logging
-error_log("Requesting URL: " . $url . "?" . $params);
-error_log("Using Symbol: " . $symbol);
-
-$ch = curl_init();
-curl_setopt_array($ch, [
-    CURLOPT_URL => $url . "?" . $params,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_ENCODING => "",
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 30,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => "GET",
-    CURLOPT_HTTPHEADER => [
-        "X-RapidAPI-Host: " . RAPIDAPI_HOST,
-        "X-RapidAPI-Key: " . RAPIDAPI_KEY
-    ],
-    CURLOPT_SSL_VERIFYPEER => false // Only for development
-]);
-
-$response = curl_exec($ch);
-$err = curl_error($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-curl_close($ch);
-
-if ($err) {
-    error_log("cURL Error: " . $err);
-    http_response_code(500);
-    echo json_encode([
-        "success" => false,
-        "message" => "API request failed",
-        "error" => $err
-    ]);
-    exit;
-}
-
-if ($httpCode !== 200) {
-    error_log("API returned non-200 status: $httpCode");
-    error_log("Response: " . $response);
-    http_response_code($httpCode);
-    echo json_encode([
-        "success" => false,
-        "message" => "API request failed",
-        "status" => $httpCode,
-        "response" => json_decode($response)
-    ]);
-    exit;
-}
-
-// Validate JSON response
-$data = json_decode($response);
-if (json_last_error() !== JSON_ERROR_NONE) {
-    error_log("Invalid JSON response: " . json_last_error_msg());
-    http_response_code(500);
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid API response",
-        "error" => json_last_error_msg()
-    ]);
-    exit;
-}
-
-// Store in cache using prepared statement
-$stmt = $conn->prepare("INSERT INTO cached_data 
-    (symbol, range_period, interval_period, data, last_updated) 
-    VALUES (?, ?, ?, ?, NOW())
-    ON DUPLICATE KEY UPDATE 
-    data = VALUES(data),
-    last_updated = NOW()");
-
-$stmt->bind_param("ssss", 
-    $symbol,
-    $range,
-    $interval,
-    $response
-);
-
-if (!$stmt->execute()) {
-    error_log("Failed to store in cache: " . $stmt->error);
-}
-
-header('X-Cache: MISS');
-echo $response;
-
 $conn->close();
+echo json_encode(["success" => true, "message" => "Alle Symbole verarbeitet!"]);
 ?>
