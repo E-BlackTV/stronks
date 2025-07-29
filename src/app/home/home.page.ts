@@ -1,12 +1,13 @@
 import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 import axios from 'axios';
-import { environment } from '../../environments/environment';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { interval, Subscription } from 'rxjs';
 import { AuthenticationService } from '../services/authentication.service';
-import { ModalController, ToastController } from '@ionic/angular'; // Add ToastController here
+import { TradingService } from '../services/trading.service';
+import { ModalController, ToastController } from '@ionic/angular';
 import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
+import { TradePopupComponent } from '../components/trade-popup/trade-popup.component';
 
 interface PurchaseResponse {
   success: boolean;
@@ -15,10 +16,10 @@ interface PurchaseResponse {
 
 interface PurchaseData {
   user_id: number;
-  investments: string; // Asset type (e.g., 'Bitcoin')
-  shares: number; // calculatedShares
-  amount: number; // investmentAmount
-  purchase_price: number; // Price at purchase time
+  investments: string;
+  shares: number;
+  amount: number;
+  purchase_price: number;
 }
 
 enum TimePeriod {
@@ -64,7 +65,7 @@ interface RangeOption {
 interface IntervalOption {
   label: string;
   value: DataInterval;
-  allowedRanges: TimeRange[]; // Which time ranges this interval works with
+  allowedRanges: TimeRange[];
 }
 
 @Component({
@@ -76,22 +77,19 @@ export class HomePage implements OnInit, OnDestroy {
   @ViewChild('lineChart', { static: false }) lineChart: any;
   chart: any;
   tableData: any[] = [];
-  investmentAmount: number = 0;
   currentPrice: number = 0;
-  calculatedShares: number = 0;
   accountBalance: number = 0;
   portfolioValue: number = 0;
-  userId: number = this.authService.currentUserValue?.id || 0; // Get user ID from auth service
-  readonly ASSET_TYPE: string = 'Bitcoin'; //could make this dynamic if needed
+  userId: number = this.authService.currentUserValue?.id || 0;
+  readonly ASSET_TYPE: string = 'Bitcoin';
   private refreshSubscription: Subscription;
   initialInvestment: number = 0;
   profitLossPercentage: number = 0;
-  profitLoss: number = 0; // Add this property
+  profitLoss: number = 0;
   currentPrices: { [key: string]: number } = {
     Bitcoin: 0,
     Tesla: 0,
     Apple: 0,
-    // Add other investment types here
   };
   selectedPeriod: TimePeriod = TimePeriod.DAY;
   timeframeOptions: TimeframeOption[] = [
@@ -162,9 +160,15 @@ export class HomePage implements OnInit, OnDestroy {
   showInvestments: boolean = false;
   userInvestments: any[] = [];
 
+  // Trading-Popup
+  showTradePopup = false;
+  tradeAction: 'buy' | 'sell' = 'buy';
+  currentUser: any;
+
   constructor(
     private http: HttpClient,
     private authService: AuthenticationService,
+    private tradingService: TradingService,
     private modalController: ModalController,
     private toastController: ToastController
   ) {
@@ -173,21 +177,39 @@ export class HomePage implements OnInit, OnDestroy {
       this.fetchAccountBalance();
     });
 
-    // Get user ID from auth service
     const currentUser = this.authService.currentUserValue;
     if (currentUser) {
       this.userId = currentUser.id;
     }
   }
 
-  async ngOnInit() {
-    await this.fetchAccountBalance();
-    await this.fetchData(); // Lädt auch currentPrice
-    await this.fetchAllCurrentPrices(); // Aktualisiert currentPrices
-    await this.fetchUserInvestments(); // uses this.currentPrice
-    await this.calculatePortfolioValue();
-    this.showInvestments = false;
-    await this.toggleInvestments();
+  ngOnInit() {
+    this.initializeData();
+  }
+
+  async initializeData() {
+    try {
+      // Benutzer einloggen falls nicht angemeldet
+      const user = this.authService.getCurrentUser();
+      if (!user) {
+        this.authService.login('testuser', 'test').subscribe((success) => {
+          if (success) {
+            this.currentUser = this.authService.getCurrentUser();
+            this.loadAllData();
+          }
+        });
+      } else {
+        this.currentUser = user;
+        this.loadAllData();
+      }
+    } catch (error) {
+      console.error('Fehler beim Initialisieren:', error);
+    }
+  }
+
+  async loadAllData() {
+    await this.calculatePortfolioValue(); // Dies lädt auch die Balance und userInvestments
+    await this.fetchAllCurrentPrices();
   }
 
   ngOnDestroy() {
@@ -200,25 +222,151 @@ export class HomePage implements OnInit, OnDestroy {
     this.fetchData();
   }
 
+  // Trading-Funktionen
+  openBuyPopup() {
+    this.tradeAction = 'buy';
+    this.showTradePopup = true;
+  }
+
+  openSellPopup() {
+    this.tradeAction = 'sell';
+    this.showTradePopup = true;
+  }
+
+  closeTradePopup() {
+    this.showTradePopup = false;
+  }
+
+  onTradeCompleted(tradeData: any) {
+    // Nur einen einzigen API-Aufruf für alle Daten
+    this.loadAllData();
+
+    // Erfolgsmeldung anzeigen
+    this.showToast('Trade erfolgreich ausgeführt!', 'success');
+  }
+
+  async openTradePopup(
+    action: 'buy' | 'sell',
+    assetSymbol: string,
+    currentPrice: number
+  ) {
+    // Für Verkauf: Verwende bereits geladene Daten anstatt neue API-Aufrufe
+    let availableQuantity = 0;
+
+    if (action === 'sell') {
+      // Verwende bereits geladene userInvestments anstatt neue API-Aufrufe
+      const portfolioItem = this.userInvestments.find(
+        (item) => item.asset_symbol === assetSymbol
+      );
+
+      if (portfolioItem) {
+        availableQuantity =
+          portfolioItem.quantity || portfolioItem.calculatedShares || 0;
+      }
+    }
+
+    const modal = await this.modalController.create({
+      component: TradePopupComponent,
+      componentProps: {
+        action: action,
+        assetSymbol: assetSymbol,
+        currentPrice: currentPrice,
+        userBalance: this.accountBalance,
+        availableQuantity: availableQuantity,
+      },
+    });
+
+    await modal.present();
+
+    const result = await modal.onDidDismiss();
+
+    // Nur nach Trade aktualisieren, nicht bei jedem Popup-Öffnen
+    if (result.data && result.data.refresh) {
+      await this.loadAllData();
+    }
+  }
+
+  async onLuckyWheelWin() {
+    // Balance nach Lucky Wheel Gewinn aktualisieren
+    this.showToast('Gewinn erhalten!', 'success');
+    await this.fetchAccountBalance();
+    await this.calculatePortfolioValue();
+    await this.loadPortfolio();
+  }
+
+  getBitcoinQuantity(): number {
+    // Berechne die verfügbare Bitcoin-Menge aus dem Portfolio
+    let totalBitcoin = 0;
+
+    // Verwende das neue Portfolio-System
+    if (this.userInvestments && this.userInvestments.length > 0) {
+      const bitcoinInvestments = this.userInvestments.filter(
+        (inv) => inv.asset_symbol === 'BTC-USD' || inv.investments === 'Bitcoin'
+      );
+      bitcoinInvestments.forEach((inv) => {
+        // Verwende quantity aus dem neuen Portfolio-System
+        totalBitcoin += inv.quantity || inv.calculatedShares || 0;
+      });
+    }
+
+    return totalBitcoin;
+  }
+
+  async showToast(message: string, color: string = 'primary') {
+    const toast = await this.toastController.create({
+      message: message,
+      duration: 2000,
+      color: color,
+      position: 'top',
+    });
+    toast.present();
+  }
+
   async fetchAccountBalance() {
     try {
-      const response = await this.http
-        .get<any>(
-          `${environment.apiUrl}/get_balance.php?user_id=${this.userId}`
-        )
-        .toPromise();
+      const user = this.authService.getCurrentUser();
+      if (user) {
+        // Balance direkt von der API abrufen
+        this.http.get(`/backend/get_balance.php?user_id=${user.id}`).subscribe({
+          next: (response: any) => {
+            if (response.success) {
+              this.accountBalance = response.balance;
+              console.log(
+                'Account balance loaded from API:',
+                this.accountBalance
+              );
 
-      if (response && response.success) {
-        this.accountBalance = response.balance;
+              // Aktualisiere auch den localStorage
+              const currentUser = this.authService.getCurrentUser();
+              if (currentUser) {
+                currentUser.accountbalance = this.accountBalance;
+                localStorage.setItem(
+                  'currentUser',
+                  JSON.stringify(currentUser)
+                );
+              }
+            } else {
+              console.error('Error loading balance:', response.message);
+            }
+          },
+          error: (error) => {
+            console.error('Error fetching balance from API:', error);
+            // Fallback auf localStorage
+            this.accountBalance = user.accountbalance || 0;
+          },
+        });
+      } else {
+        console.error('No user found');
+        this.accountBalance = 0;
       }
     } catch (error) {
       console.error('Error fetching balance:', error);
+      this.accountBalance = 0;
     }
   }
 
   async fetchData() {
     try {
-      // Get the selected interval option to use its configuration
       const selectedIntervalOption = this.intervalOptions.find(
         (option) => option.value === this.selectedInterval
       );
@@ -230,7 +378,7 @@ export class HomePage implements OnInit, OnDestroy {
 
       const options = {
         method: 'GET',
-        url: environment.apiUrl + '/cache.php',
+        url: '/backend/cache.php',
         params: {
           symbol: 'BTC-USD',
           range: this.selectedRange,
@@ -257,7 +405,6 @@ export class HomePage implements OnInit, OnDestroy {
       const timestamps = result.timestamp || [];
       const volumes = result.indicators?.quote[0]?.volume || [];
 
-      // Format dates based on selected range and interval
       const labels = timestamps.map((timestamp: number) => {
         const date = new Date(timestamp * 1000);
         switch (this.selectedRange) {
@@ -290,15 +437,11 @@ export class HomePage implements OnInit, OnDestroy {
         }
       });
 
-      // Update chart with new data
       this.createChart(prices, labels);
 
-      // Update current price and other data
       this.currentPrice = prices[prices.length - 1] || 0;
-      this.calculateShares();
       await this.calculatePortfolioValue();
 
-      // Update table data
       this.tableData = timestamps.map((timestamp: number, index: number) => ({
         date: labels[index],
         price: prices[index]?.toFixed(2) || 'N/A',
@@ -339,12 +482,12 @@ export class HomePage implements OnInit, OnDestroy {
             label: 'Bitcoin Preis (USD)',
             data: prices,
             borderColor: mintColor,
-            backgroundColor: mintColor + '33', // optional: transparent fill
+            backgroundColor: mintColor + '33',
             fill: true,
             pointRadius: 0,
             pointHoverRadius: 6,
             borderWidth: 2,
-            tension: 0.4, // Smooth curve
+            tension: 0.4,
             cubicInterpolationMode: 'monotone',
           },
         ],
@@ -434,78 +577,25 @@ export class HomePage implements OnInit, OnDestroy {
     });
   }
 
-  // Berechne die Anteile basierend auf dem Investitionsbetrag
-  calculateShares() {
-    if (this.currentPrice && this.investmentAmount) {
-      this.calculatedShares = this.investmentAmount / this.currentPrice;
-    }
-  }
-
-  // Kauflogik
-  async buyBitcoin() {
-    if (!this.investmentAmount || !this.currentPrice) {
-      return;
-    }
-
-    // Nutze this.calculatedShares anstatt neu zu berechnen
-    const purchaseData = {
-      user_id: this.userId,
-      investments: this.ASSET_TYPE,
-      shares: this.calculatedShares, // Verwende die bereits berechneten shares
-      amount: this.investmentAmount,
-      purchase_price: this.currentPrice,
-    };
-
-    // Log zum Debugging
-    console.log('Purchase Data being sent:', purchaseData);
-
-    try {
-      const response = await this.http
-        .post<PurchaseResponse>(`${environment.apiUrl}/buy.php`, purchaseData, {
-          withCredentials: true,
-          headers: new HttpHeaders({
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          }),
-        })
-        .toPromise();
-
-      console.log('Purchase response:', response);
-
-      if (response?.success) {
-        // Using optional chaining
-        alert('Kauf erfolgreich!');
-        this.investmentAmount = 0;
-        this.calculatedShares = 0;
-        await this.fetchAccountBalance(); // Refresh balance after successful purchase
-        await this.calculatePortfolioValue(); // Add this line
-        await this.fetchData();
-      } else {
-        alert(response?.message || 'Kauf fehlgeschlagen');
-      }
-    } catch (error) {
-      console.error('Purchase error:', error);
-      alert('Kauf fehlgeschlagen. Bitte versuchen Sie es erneut.');
-    }
-  }
-
   async fetchAllCurrentPrices() {
     try {
-      // Lade Bitcoin-Preis von der API
-      const response = await this.http
-        .get<any>(
-          `${environment.apiUrl}/cache.php?symbol=BTC-USD&range=1d&interval=5m`
-        )
-        .toPromise();
-
-      if (response && response.chart?.result?.[0]) {
-        const result = response.chart.result[0];
-        const prices = result.indicators?.quote[0]?.close || [];
-        if (prices.length > 0) {
-          this.currentPrice = prices[prices.length - 1];
-          this.currentPrices['Bitcoin'] = this.currentPrice;
-        }
-      }
+      this.http
+        .get<any>('/backend/cache.php?symbol=BTC-USD&range=1d&interval=5m')
+        .subscribe({
+          next: (response) => {
+            if (response && response.chart?.result?.[0]) {
+              const result = response.chart.result[0];
+              const prices = result.indicators?.quote[0]?.close || [];
+              if (prices.length > 0) {
+                this.currentPrice = prices[prices.length - 1];
+                this.currentPrices['Bitcoin'] = this.currentPrice;
+              }
+            }
+          },
+          error: (error) => {
+            console.error('Error fetching current prices:', error);
+          },
+        });
     } catch (error) {
       console.error('Error fetching current prices:', error);
     }
@@ -513,49 +603,65 @@ export class HomePage implements OnInit, OnDestroy {
 
   async calculatePortfolioValue() {
     try {
-      const response = await this.http
-        .get<any>(
-          `${environment.apiUrl}/get_portfolio.php?user_id=${this.userId}`
-        )
-        .toPromise();
-
-      if (response && response.success) {
-        // Calculate total invested amount
-        const totalInvested =
-          response.investments.reduce((total: number, investment: any) => {
-            return total + parseFloat(investment.amount);
-          }, 0) + this.accountBalance;
-
-        // Calculate current value of investments
-        const investmentValue = response.investments.reduce(
-          (total: number, investment: any) => {
-            const shares =
-              parseFloat(investment.amount) /
-              parseFloat(investment.purchase_price);
-            const currentValue = shares * this.currentPrice;
-            return total + currentValue;
-          },
-          0
-        );
-
-        this.portfolioValue = this.accountBalance + investmentValue;
-
-        // Calculate absolute profit/loss in USD
-        this.profitLoss = this.portfolioValue - totalInvested;
-
-        // Calculate percentage for color indication
-        this.profitLossPercentage =
-          ((this.portfolioValue - totalInvested) / totalInvested) * 100;
-
-        console.log('Portfolio details:', {
-          accountBalance: this.accountBalance,
-          investmentValue: investmentValue,
-          portfolioValue: this.portfolioValue,
-          profitLoss: this.profitLoss,
-        });
+      const user = this.authService.getCurrentUser();
+      if (!user) {
+        this.portfolioValue = 0;
+        this.profitLoss = 0;
+        this.profitLossPercentage = 0;
+        return;
       }
+
+      // Verwende das neue Portfolio-System
+      this.tradingService.getPortfolio(user.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.portfolioValue = response.summary.total_portfolio_value;
+            this.profitLoss = response.summary.total_profit_loss;
+            this.profitLossPercentage =
+              response.summary.total_profit_loss_percent;
+
+            // Aktualisiere auch die Balance aus dem Portfolio
+            this.accountBalance = response.summary.cash_balance;
+
+            // Aktualisiere auch die userInvestments
+            this.userInvestments = response.portfolio.map((item) => ({
+              id: item.id,
+              asset_symbol: item.asset_symbol,
+              investments: item.asset_name,
+              calculatedShares: item.quantity,
+              currentValue: item.current_value,
+              purchase_price: item.avg_purchase_price,
+              amount: item.total_invested,
+              quantity: item.quantity,
+              profit_loss: item.profit_loss,
+              profit_loss_percent: item.profit_loss_percent,
+            }));
+
+            console.log('Portfolio updated:', {
+              totalValue: this.portfolioValue,
+              profitLoss: this.profitLoss,
+              profitLossPercentage: this.profitLossPercentage,
+              cashBalance: this.accountBalance,
+            });
+          } else {
+            console.error('Portfolio response not successful:', response);
+            this.portfolioValue = 0;
+            this.profitLoss = 0;
+            this.profitLossPercentage = 0;
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching portfolio:', error);
+          this.portfolioValue = 0;
+          this.profitLoss = 0;
+          this.profitLossPercentage = 0;
+        },
+      });
     } catch (error) {
       console.error('Error calculating portfolio value:', error);
+      this.portfolioValue = 0;
+      this.profitLoss = 0;
+      this.profitLossPercentage = 0;
     }
   }
 
@@ -579,13 +685,11 @@ export class HomePage implements OnInit, OnDestroy {
 
   onRangeChange(event: any) {
     this.selectedRange = event.detail.value;
-    // Check if current interval is valid for new range
     if (
       !this.getAvailableIntervals().find(
         (i) => i.value === this.selectedInterval
       )
     ) {
-      // Set to first available interval
       this.selectedInterval = this.getAvailableIntervals()[0].value;
     }
     this.fetchData();
@@ -623,85 +727,98 @@ export class HomePage implements OnInit, OnDestroy {
 
   async fetchUserInvestments() {
     try {
-      const response = await this.http
-        .get<any>(
-          `${environment.apiUrl}/get_portfolio.php?user_id=${this.userId}`
-        )
-        .toPromise();
-
-      if (response && response.success) {
-        this.userInvestments = response.investments.map((inv: any) => ({
-          ...inv,
-          // Calculate shares based on amount and purchase price
-          calculatedShares:
-            parseFloat(inv.amount) / parseFloat(inv.purchase_price),
-          // Calculate current value based on calculated shares and current price
-          currentValue:
-            (parseFloat(inv.amount) / parseFloat(inv.purchase_price)) *
-            this.currentPrice,
-        }));
+      const user = this.authService.getCurrentUser();
+      if (!user) {
+        this.userInvestments = [];
+        return;
       }
+
+      // Verwende das neue Portfolio-System
+      this.tradingService.getPortfolio(user.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Konvertiere Portfolio-Daten in das alte Format für Kompatibilität
+            this.userInvestments = response.portfolio.map((item) => ({
+              id: item.id,
+              asset_symbol: item.asset_symbol,
+              investments: item.asset_name,
+              calculatedShares: item.quantity,
+              currentValue: item.current_value,
+              purchase_price: item.avg_purchase_price,
+              amount: item.total_invested,
+              quantity: item.quantity,
+              profit_loss: item.profit_loss,
+              profit_loss_percent: item.profit_loss_percent,
+            }));
+
+            console.log(
+              'User investments updated:',
+              this.userInvestments.length,
+              'items'
+            );
+          } else {
+            console.error('Portfolio response not successful:', response);
+            this.userInvestments = [];
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching investments:', error);
+          this.userInvestments = [];
+        },
+      });
     } catch (error) {
-      console.error('Error fetching investments:', error);
+      console.error('Error fetching user investments:', error);
+      this.userInvestments = [];
     }
   }
 
   async sellInvestment(investmentId: number) {
-    try {
-      const response = await this.http
-        .post<any>(`${environment.apiUrl}/sellInvestment.php`, {
-          user_id: this.userId,
-          investment_id: investmentId,
-        })
-        .toPromise();
-
-      if (response && response.success) {
-        // Refresh data
-        await this.fetchUserInvestments();
-        await this.fetchAccountBalance();
-        await this.calculatePortfolioValue();
-
-        // Show success message
-        const toast = await this.toastController.create({
-          message: 'Investment erfolgreich verkauft!',
-          duration: 2000,
-          color: 'success',
-        });
-        toast.present();
-      }
-    } catch (error) {
-      console.error('Error selling investment:', error);
-    }
+    // Diese Methode wird nicht mehr verwendet - Verkauf läuft über das Trade-Popup
+    console.log('sellInvestment deprecated - use Trade-Popup instead');
   }
 
-  async onBuyConfirm(purchaseData: any) {
+  async loadPortfolio() {
     try {
-      const response = await this.http
-        .post<PurchaseResponse>(`${environment.apiUrl}/buy.php`, purchaseData)
-        .toPromise();
-
-      if (response && response.success) {
-        // Refresh all relevant data
-        await this.fetchAccountBalance();
-        await this.fetchUserInvestments(); // Add this line
-        await this.calculatePortfolioValue();
-        this.showInvestments = true; // Automatically show investments panel
-
-        const toast = await this.toastController.create({
-          message: 'Investment erfolgreich!',
-          duration: 2000,
-          color: 'success',
-        });
-        toast.present();
+      const user = this.authService.getCurrentUser();
+      if (!user) {
+        console.error('Kein Benutzer angemeldet');
+        return;
       }
-    } catch (error) {
-      console.error('Error making purchase:', error);
-      const toast = await this.toastController.create({
-        message: 'Fehler beim Kauf',
-        duration: 2000,
-        color: 'danger',
+
+      this.tradingService.getPortfolio(user.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Verwende die Portfolio-Daten direkt
+            this.userInvestments = response.portfolio.map((item) => ({
+              id: item.id,
+              asset_symbol: item.asset_symbol,
+              investments: item.asset_name,
+              calculatedShares: item.quantity,
+              currentValue: item.current_value,
+              purchase_price: item.avg_purchase_price,
+              amount: item.total_invested,
+              quantity: item.quantity,
+              profit_loss: item.profit_loss,
+              profit_loss_percent: item.profit_loss_percent,
+            }));
+
+            this.portfolioValue = response.summary.total_portfolio_value;
+            this.accountBalance = response.summary.cash_balance;
+            this.profitLoss = response.summary.total_profit_loss;
+            this.profitLossPercentage =
+              response.summary.total_profit_loss_percent;
+
+            console.log('Portfolio loaded successfully');
+          } else {
+            console.error('Fehler beim Laden des Portfolios:', response);
+          }
+        },
+        error: (error) => {
+          console.error('Fehler beim Laden des Portfolios:', error);
+        },
       });
-      toast.present();
+    } catch (error) {
+      console.error('Fehler beim Laden des Portfolios:', error);
     }
   }
 }

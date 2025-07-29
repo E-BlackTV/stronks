@@ -1,6 +1,8 @@
 <?php
-
 header("Content-Type: application/json");
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -9,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $data = json_decode(file_get_contents("php://input"));
 
-if (!isset($data->user_id) || !isset($data->investment_id)) {
+if (!isset($data->user_id) || !isset($data->portfolio_id) || !isset($data->sell_percentage)) {
     die(json_encode(["success" => false, "message" => "Missing parameters"]));
 }
 
@@ -22,63 +24,76 @@ if ($conn->connect_error) {
 try {
     $conn->begin_transaction();
 
-    // Get investment details including amount and purchase_price
-    $stmt = $conn->prepare("SELECT amount, purchase_price FROM depot WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ii", $data->investment_id, $data->user_id);
+    // Get portfolio details
+    $stmt = $conn->prepare("SELECT * FROM portfolio WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $data->portfolio_id, $data->user_id);
     $stmt->execute();
     $result = $stmt->get_result();
     
     if ($row = $result->fetch_assoc()) {
-        // Convert strings to float with high precision
-        $amount = floatval($row['amount']);
-        $purchasePrice = floatval($row['purchase_price']);
+        $quantity = floatval($row['quantity']);
+        $totalInvested = floatval($row['total_invested']);
+        $assetSymbol = $row['asset_symbol'];
         
-        // Calculate shares with high precision
-        $shares = bcdiv($amount, $purchasePrice, 8);
+        // Calculate sell quantity based on percentage
+        $sellQuantity = $quantity * ($data->sell_percentage / 100);
+        $sellInvested = $totalInvested * ($data->sell_percentage / 100);
         
-        // Get current Bitcoin price from cache
-        $priceStmt = $conn->prepare("SELECT data FROM cached_data WHERE symbol = 'BTC-USD' ORDER BY last_updated DESC LIMIT 1");
+        // Get current price from cache
+        $priceStmt = $conn->prepare("SELECT data FROM cached_data WHERE symbol = ? ORDER BY last_updated DESC LIMIT 1");
+        $priceStmt->bind_param("s", $assetSymbol);
         $priceStmt->execute();
         $priceResult = $priceStmt->get_result();
-        $priceData = json_decode($priceResult->fetch_assoc()['data'], true);
         
-        // Get and convert current price
+        if ($priceResult->num_rows === 0) {
+            throw new Exception("Current price not available");
+        }
+        
+        $priceData = json_decode($priceResult->fetch_assoc()['data'], true);
         $currentPrice = floatval($priceData['chart']['result'][0]['meta']['regularMarketPrice']);
         
-        // Calculate sell value with high precision
-        $sellValue = bcmul($shares, $currentPrice, 8);
+        // Calculate sell value
+        $sellValue = $sellQuantity * $currentPrice;
         
-        // Debug logging
-        error_log("Sell calculation: " . print_r([
-            'amount' => $amount,
-            'purchasePrice' => $purchasePrice,
-            'shares' => $shares,
-            'currentPrice' => $currentPrice,
-            'sellValue' => $sellValue
-        ], true));
-
-        // Update user's balance with precise value
+        // Update user's balance
         $stmt = $conn->prepare("UPDATE users SET accountbalance = accountbalance + ? WHERE id = ?");
         $stmt->bind_param("di", $sellValue, $data->user_id);
         $stmt->execute();
         
-        // Delete the investment
-        $stmt = $conn->prepare("DELETE FROM depot WHERE id = ? AND user_id = ?");
-        $stmt->bind_param("ii", $data->investment_id, $data->user_id);
-        $stmt->execute();
+        // Update or delete portfolio position
+        $remainingQuantity = $quantity - $sellQuantity;
+        $remainingInvested = $totalInvested - $sellInvested;
+        
+        if ($remainingQuantity > 0) {
+            // Update portfolio position
+            $updateStmt = $conn->prepare("UPDATE portfolio SET quantity = ?, total_invested = ? WHERE id = ?");
+            $updateStmt->bind_param("ddi", $remainingQuantity, $remainingInvested, $data->portfolio_id);
+            $updateStmt->execute();
+        } else {
+            // Delete portfolio position completely
+            $deleteStmt = $conn->prepare("DELETE FROM portfolio WHERE id = ?");
+            $deleteStmt->bind_param("i", $data->portfolio_id);
+            $deleteStmt->execute();
+        }
+        
+        // Insert transaction record
+        $transactionStmt = $conn->prepare("INSERT INTO transactions (user_id, asset_symbol, type, quantity, price_per_unit, total_amount, portfolio_id) VALUES (?, ?, 'sell', ?, ?, ?, ?)");
+        $transactionStmt->bind_param("issddi", $data->user_id, $assetSymbol, $sellQuantity, $currentPrice, $sellValue, $data->portfolio_id);
+        $transactionStmt->execute();
         
         $conn->commit();
         echo json_encode([
             "success" => true, 
             "message" => "Investment sold successfully",
-            "debug" => [
-                "shares" => $shares,
+            "data" => [
+                "sellQuantity" => $sellQuantity,
                 "currentPrice" => $currentPrice,
-                "sellValue" => $sellValue
+                "sellValue" => $sellValue,
+                "remainingQuantity" => $remainingQuantity
             ]
         ]);
     } else {
-        throw new Exception("Investment not found");
+        throw new Exception("Portfolio position not found");
     }
 } catch (Exception $e) {
     $conn->rollback();
@@ -86,3 +101,4 @@ try {
 }
 
 $conn->close();
+?>

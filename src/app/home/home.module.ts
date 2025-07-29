@@ -5,6 +5,7 @@ import { IonicModule } from '@ionic/angular';
 import { HomePageRoutingModule } from './home-routing.module';
 import { HomePage } from './home.page';
 import { LuckyWheelModule } from '../components/lucky-wheel/lucky-wheel.module';
+import { TradePopupModule } from '../components/trade-popup/trade-popup.module';
 
 @NgModule({
   imports: [
@@ -12,9 +13,10 @@ import { LuckyWheelModule } from '../components/lucky-wheel/lucky-wheel.module';
     FormsModule,
     IonicModule,
     HomePageRoutingModule,
-    LuckyWheelModule
+    LuckyWheelModule,
+    TradePopupModule,
   ],
   declarations: [HomePage],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA]
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export class HomePageModule { }
+export class HomePageModule {}
