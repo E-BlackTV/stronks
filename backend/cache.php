@@ -85,8 +85,8 @@ foreach ($symbols as $symbol) {
                 $lastUpdated = strtotime($row['last_updated']);
                 if (time() - $lastUpdated < $cacheExpiry) {
                     header('X-Cache: HIT');
-        echo $row['data'];
-        exit;
+                    echo $row['data'];
+                    exit;
                 }
             }
 

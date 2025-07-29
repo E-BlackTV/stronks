@@ -1,55 +1,171 @@
 // For information on how to create your own theme, please see:
 // http://ionicframework.com/docs/theming/
-
-
 :root {
-    /* Hauptfarbe */
-    --primary: #30eb7e;
-  
-    /* Akzentfarben */
-    --accent-darkgreen: #145a32;
-    --accent-mint: #a9dfbf;
-    --accent-turquoise: #2dd4b3;
-    --accent-gold: #f4d03f;
-  
-    /* Sekundärfarben */
-    --secondary-navy: #22313f;
-    --secondary-lightgray: #f8f9f9;
-    --secondary-midgray: #b3b6b7;
-    --secondary-white: #ffffff;
-  
-    /* Zahlen & Status */
-    --status-positive: #32ff88;
-    --status-negative: #ff6a59;
-  }
-  
-  .success-btn{
-      --background: var(--status-positive);
-  }
-  
-  .fail-text {
-    color: var(--secondary-midgray);
-  }
-  
-  .danger-btn{
-    --background: var(--accent-turquoise);
-    color: var(--secondary-navy);
-  }
-  
-  .colorful{
-    color: var(--accent-mint);
-  }
-  .negative-color{
-    color: var(--status-negative);
-  }
-  .positive-color{
-    color: var(--status-positive);
-  }
-    
-  
-  .alignment-center {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
+  /* Hauptfarbe */
+  --primary: #30eb7e;
+
+  /* Akzentfarben */
+  --accent-darkgreen: #145a32;
+  --accent-mint: #a9dfbf;
+  --accent-turquoise: #2dd4b3;
+  --accent-gold: #f4d03f;
+
+  /* Sekundärfarben */
+  --secondary-navy: #22313f;
+  --secondary-lightgray: #f8f9f9;
+  --secondary-midgray: #b3b6b7;
+  --secondary-white: #ffffff;
+
+  /* Zahlen & Status */
+  --status-positive: #32ff88;
+  --status-negative: #ff6a59;
+
+  /* Ionic Theme Colors gemappt auf deine Farben */
+  --ion-color-primary: var(--primary, #30eb7e);
+  --ion-color-primary-rgb: 48, 235, 126;
+  --ion-color-primary-contrast: var(--secondary-white, #ffffff);
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #27ae60;
+  --ion-color-primary-tint: #4beea0;
+
+  --ion-color-secondary: var(--accent-darkgreen, #145a32);
+  --ion-color-secondary-rgb: 20, 90, 50;
+  --ion-color-secondary-contrast: var(--secondary-white, #ffffff);
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #114b29;
+  --ion-color-secondary-tint: #2e7c4d;
+
+  --ion-color-tertiary: var(--accent-turquoise, #2dd4b3);
+  --ion-color-tertiary-rgb: 45, 212, 179;
+  --ion-color-tertiary-contrast: var(--secondary-navy, #22313f);
+  --ion-color-tertiary-contrast-rgb: 34, 49, 63;
+  --ion-color-tertiary-shade: #26b495;
+  --ion-color-tertiary-tint: #48dbc0;
+
+  --ion-color-success: var(--status-positive, #32ff88);
+  --ion-color-success-rgb: 50, 255, 136;
+  --ion-color-success-contrast: var(--secondary-navy, #22313f);
+  --ion-color-success-contrast-rgb: 34, 49, 63;
+  --ion-color-success-shade: #2ad977;
+  --ion-color-success-tint: #4cff97;
+
+  --ion-color-warning: var(--accent-gold, #f4d03f);
+  --ion-color-warning-rgb: 244, 208, 63;
+  --ion-color-warning-contrast: var(--secondary-navy, #22313f);
+  --ion-color-warning-contrast-rgb: 34, 49, 63;
+  --ion-color-warning-shade: #d3b53a;
+  --ion-color-warning-tint: #f6d857;
+
+  --ion-color-danger: var(--status-negative, #ff6a59);
+  --ion-color-danger-rgb: 255, 106, 89;
+  --ion-color-danger-contrast: var(--secondary-white, #ffffff);
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #e05c4e;
+  --ion-color-danger-tint: #ff7d6e;
+
+  --ion-color-light: var(--secondary-lightgray, #f8f9f9);
+  --ion-color-light-rgb: 248, 249, 249;
+  --ion-color-light-contrast: var(--secondary-navy, #22313f);
+  --ion-color-light-contrast-rgb: 34, 49, 63;
+  --ion-color-light-shade: #d8dade;
+  --ion-color-light-tint: #f9fafb;
+
+  --ion-color-medium: var(--secondary-midgray, #b3b6b7);
+  --ion-color-medium-rgb: 179, 182, 183;
+  --ion-color-medium-contrast: var(--secondary-navy, #22313f);
+  --ion-color-medium-contrast-rgb: 34, 49, 63;
+  --ion-color-medium-shade: #9ea1a2;
+  --ion-color-medium-tint: #bec1c2;
+
+  --ion-color-dark: var(--secondary-navy, #22313f);
+  --ion-color-dark-rgb: 34, 49, 63;
+  --ion-color-dark-contrast: var(--secondary-white, #ffffff);
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #1d2933;
+  --ion-color-dark-tint: #394a5a;
+
+  /* Mint-Farbe als Variable */
+  --accent-mint: #a9dfbf;
+  --accent-mint-dark: #7ed6a7; /* dunkleres Mint für Hover */
+}
+
+.toggle-btn-group {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end; /* oder center/space-between nach Wunsch */
+  margin-bottom: 8px;
+}
+
+.toggle-btn-grid {
+  margin-bottom: 8px;
+}
+.toggle-btn-col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.toggle-btn {
+  flex-direction: column;
+  align-items: center;
+  --color: var(--accent-mint, #A9DFBF);
+  font-size: 13px;
+  min-width: 80px;
+  height: 56px;
+  text-align: center;
+  transition: --color 0.2s;
+}
+.toggle-btn:hover,
+.toggle-btn:focus {
+  --color: var(--accent-mint-dark);
+}
+
+.toggle-btn ion-icon {
+  font-size: 24px;
+  margin-bottom: 2px;
+}
+
+.toggle-btn span {
+  display: block;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+/* "Bitcoin kaufen"-Button mint einfärben 
+.success-btn {
+    background-color: none;
+  --background-hover: var(--accent-mint);
+  color: #22313F; 
+  font-weight: bold;
+  transition: --color 0.2s;
+}
+*/
+
+.success-btn:hover,
+.success-btn:focus {
+  --background: var(--accent-mint-dark);
+}
+
+.fail-text {
+  color: var(--secondary-midgray);
+}
+
+.danger-btn {
+  --background: var(--accent-turquoise);
+  color: var(--secondary-navy);
+}
+
+.colorful {
+  color: var(--accent-mint);
+}
+.negative-color {
+  color: var(--status-negative);
+}
+.positive-color {
+  color: var(--status-positive);
+}
+
+.alignment-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

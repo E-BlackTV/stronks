@@ -68,6 +68,12 @@ interface IntervalOption {
   allowedRanges: TimeRange[];
 }
 
+interface CryptoAsset {
+  name: string;
+  symbol: string;
+  price: number;
+}
+
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
@@ -78,6 +84,9 @@ export class HomePage implements OnInit, OnDestroy {
   chart: any;
   tableData: any[] = [];
   currentPrice: number = 0;
+  calculatedShares: number = 0;
+  selectedCrypto: CryptoAsset | null = null;
+
   accountBalance: number = 0;
   portfolioValue: number = 0;
   userId: number = this.authService.currentUserValue?.id || 0;
@@ -159,7 +168,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   showInvestments: boolean = false;
   userInvestments: any[] = [];
-
+  
   // Trading-Popup
   showTradePopup = false;
   tradeAction: 'buy' | 'sell' = 'buy';
@@ -578,6 +587,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async fetchAllCurrentPrices() {
+
     try {
       this.http
         .get<any>('/backend/cache.php?symbol=BTC-USD&range=1d&interval=5m')
@@ -819,6 +829,195 @@ export class HomePage implements OnInit, OnDestroy {
       });
     } catch (error) {
       console.error('Fehler beim Laden des Portfolios:', error);
+    }
+  }
+
+  async buyCrypto() {
+    if (
+      !this.selectedCrypto ||
+      !this.investmentAmount ||
+      !this.calculatedShares
+    ) {
+      return;
+    }
+
+    const purchaseData: PurchaseData = {
+      user_id: this.userId,
+      investments: this.selectedCrypto.name,
+      shares: this.calculatedShares,
+      amount: this.investmentAmount,
+      purchase_price: this.selectedCrypto.price,
+    };
+
+    try {
+      const response = await this.http
+        .post<PurchaseResponse>(`${environment.apiUrl}/buy.php`, purchaseData)
+        .toPromise();
+
+      if (response && response.success) {
+        await this.fetchAccountBalance();
+        await this.fetchUserInvestments();
+        this.investmentAmount = 0;
+        this.calculatedShares = 0;
+
+        const toast = await this.toastController.create({
+          message: `${this.selectedCrypto.name} erfolgreich gekauft!`,
+          duration: 2000,
+          color: 'success',
+        });
+        toast.present();
+      } else {
+        throw new Error(response?.message || 'Purchase failed');
+      }
+    } catch (error) {
+      console.error('Error buying crypto:', error);
+      const toast = await this.toastController.create({
+        message: 'Fehler beim Kauf. Bitte versuchen Sie es erneut.',
+        duration: 2000,
+        color: 'danger',
+      });
+      toast.present();
+    }
+  }
+
+  async fetchCryptoData() {
+    if (!this.selectedCrypto) return;
+
+    try {
+      // Get the selected interval option to use its configuration
+      const selectedIntervalOption = this.intervalOptions.find(
+        (option) => option.value === this.selectedInterval
+      );
+
+      if (!selectedIntervalOption) {
+        console.error('No valid interval selected');
+        return;
+      }
+
+      const options = {
+        method: 'GET',
+        url: environment.apiUrl + '/cache.php',
+        params: {
+          symbol: `${this.selectedCrypto.symbol}-USD`,
+          range: this.selectedRange,
+          interval: this.selectedInterval,
+        },
+      };
+
+      const response = await axios.request(options);
+      console.log('API Response:', response.data);
+
+      if (response.data.error) {
+        console.error('API Error:', response.data.error);
+        return;
+      }
+
+      const data = response.data;
+      if (!data.chart?.result?.[0]) {
+        console.error('Unexpected data format:', data);
+        return;
+      }
+
+      const result = data.chart.result[0];
+      const prices = result.indicators?.quote[0]?.close || [];
+      const timestamps = result.timestamp || [];
+      const volumes = result.indicators?.quote[0]?.volume || [];
+
+      // Format dates based on selected range and interval
+      const labels = timestamps.map((timestamp: number) => {
+        const date = new Date(timestamp * 1000);
+        switch (this.selectedRange) {
+          case TimeRange.DAY:
+            return date.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          case TimeRange.WEEK:
+            return date.toLocaleDateString([], { weekday: 'short' });
+          case TimeRange.MONTH:
+            return date.toLocaleDateString([], {
+              day: 'numeric',
+              month: 'short',
+            });
+          case TimeRange.THREE_MONTHS:
+          case TimeRange.SIX_MONTHS:
+            return date.toLocaleDateString([], {
+              month: 'short',
+              day: 'numeric',
+            });
+          case TimeRange.YEAR:
+          case TimeRange.FIVE_YEARS:
+            return date.toLocaleDateString([], {
+              month: 'short',
+              year: '2-digit',
+            });
+          default:
+            return date.toLocaleDateString();
+        }
+      });
+
+      // Update chart with new data
+      this.createChart(prices, labels);
+
+      // Update selected crypto price and shares
+      this.selectedCrypto.price = prices[prices.length - 1] || 0;
+      this.calculateShares();
+
+      console.log('Chart data updated for', this.selectedCrypto.name, {
+        range: this.selectedRange,
+        interval: this.selectedInterval,
+        dataPoints: prices.length,
+        currentPrice: this.selectedCrypto.price,
+      });
+    } catch (error) {
+      console.error('Error fetching crypto data:', error);
+    }
+  }
+
+  formatDateLabel(date: Date): string {
+    switch (this.selectedRange) {
+      case TimeRange.DAY:
+        return date.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      case TimeRange.WEEK:
+        return date.toLocaleDateString([], { weekday: 'short' });
+      default:
+        return date.toLocaleDateString();
+    }
+  }
+
+  async fetchCryptoAssets() {
+    try {
+      // Hole alle Crypto-Assets aus dem Backend
+      const response = await this.http
+        .get<any>(`${environment.apiUrl}/get_crypto_assets.php`)
+        .toPromise();
+      if (response && response.success) {
+        this.cryptoAssets = response.assets;
+        this.showCryptoList = true;
+        this.showInvestments = false;
+
+        // If we have a selectedCrypto, update its price
+        if (this.selectedCrypto) {
+          const updatedAsset = this.cryptoAssets.find(
+            (asset) => asset.symbol === this.selectedCrypto?.symbol
+          );
+          if (updatedAsset) {
+            this.selectedCrypto = updatedAsset;
+            this.calculateShares();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching crypto assets:', error);
+      const toast = await this.toastController.create({
+        message: 'Fehler beim Laden der Kryptowährungen',
+        duration: 2000,
+        color: 'danger',
+      });
+      toast.present();
     }
   }
 }
