@@ -20,11 +20,11 @@
           {{ error }}
         </div>
 
-        <ion-button expand="block" type="submit" [disabled]="!loginForm.valid">
+        <ion-button expand="block" type="submit" [disabled]="!loginForm.valid" class="success-btn">
           Login
         </ion-button>
 
-        <ion-button expand="block" fill="clear" (click)="goToRegister()">
+        <ion-button expand="block" fill="clear" (click)="goToRegister()" class="fail-text">
           Don't have an account? Register here
         </ion-button>
       </form>

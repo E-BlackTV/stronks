@@ -184,7 +184,10 @@ export class HomePage implements OnInit, OnDestroy {
     await this.fetchAccountBalance();
     await this.fetchAllCurrentPrices();
     await this.fetchData();
+    await this.fetchUserInvestments(); // uses this.currentPrice
     await this.calculatePortfolioValue();
+    this.showInvestments = false;
+    await this.toggleInvestments();
   }
 
   ngOnDestroy() {
@@ -323,6 +326,11 @@ export class HomePage implements OnInit, OnDestroy {
       return;
     }
 
+    const mintColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--accent-turquoise')
+      .trim();
+
+
     this.chart = new Chart(this.lineChart.nativeElement, {
       type: 'line',
       data: {
@@ -331,8 +339,8 @@ export class HomePage implements OnInit, OnDestroy {
           {
             label: 'Bitcoin Preis (USD)',
             data: prices,
-            borderColor: '#4caf50',
-            backgroundColor: 'rgba(76, 175, 80, 0.2)',
+            borderColor: mintColor,
+            backgroundColor: mintColor + '33', // optional: transparent fill
             fill: true,
             pointRadius: 0,
             pointHoverRadius: 6,
