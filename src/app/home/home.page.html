@@ -29,12 +29,14 @@
       <ion-card-title>
         {{ portfolioValue | currency:'USD':'symbol':'1.2-2' }}
         <span
-          [ngClass]="{'profit': profitLossPercentage > 0, 'loss': profitLossPercentage < 0}"
+          [ngClass]="{'positive-color': profitLossPercentage > 0, 'negative-color': profitLossPercentage < 0}"
         >
           ({{ profitLossPercentage | number:'1.2-2' }}%)
         </span>
       </ion-card-title>
-      <ion-note [ngClass]="{'profit': profitLoss > 0, 'loss': profitLoss < 0}">
+      <ion-note
+        [ngClass]="{'positive-color': profitLoss > 0, 'negative-color': profitLoss < 0}"
+      >
         {{ profitLoss >= 0 ? '+' : ''}}{{ profitLoss |
         currency:'USD':'symbol':'1.2-2' }}
       </ion-note>
@@ -49,14 +51,19 @@
       <ion-card-header>
         <ion-card-subtitle>Investitionen</ion-card-subtitle>
         <ion-button fill="clear" (click)="toggleInvestments()">
-          <ion-icon [name]="showInvestments ? 'chevron-up' : 'chevron-down'"></ion-icon>
+          <ion-icon
+            [name]="showInvestments ? 'chevron-up' : 'chevron-down'"
+          ></ion-icon>
         </ion-button>
       </ion-card-header>
-      
+
       <ion-card-content>
         <div class="investments-scroll-container">
           <ion-list *ngIf="showInvestments">
-            <ion-item *ngFor="let investment of userInvestments" class="investment-item">
+            <ion-item
+              *ngFor="let investment of userInvestments"
+              class="investment-item"
+            >
               <div class="investment-details">
                 <h3>{{ investment.investments }}</h3>
                 <div class="investment-stats">
@@ -69,7 +76,7 @@
                   </small>
                 </div>
                 <ion-button
-                  color="danger"
+                  class="danger-btn"
                   size="small"
                   (click)="sellInvestment(investment.id)"
                 >
@@ -127,7 +134,7 @@
             </ion-select>
           </ion-item>
         </div>
-        <div style="width: 100%; height: 200px">
+        <div style="width: 100%; height: 200px" [class.colorful]="true">
           <canvas #lineChart></canvas>
         </div>
 
@@ -149,7 +156,7 @@
           </ion-text>
 
           <ion-button
-            color="success"
+            class="success-btn"
             expand="full"
             (click)="buyBitcoin()"
             [disabled]="!investmentAmount || !calculatedShares"
