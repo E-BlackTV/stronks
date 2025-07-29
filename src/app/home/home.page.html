@@ -50,16 +50,45 @@
     <ion-card class="investment-card">
       <ion-card-header>
         <ion-card-subtitle>Investitionen</ion-card-subtitle>
-        <ion-button fill="clear" (click)="toggleInvestments()">
-          <ion-icon
-            [name]="showInvestments ? 'chevron-up' : 'chevron-down'"
-          ></ion-icon>
-        </ion-button>
+        <!-- Toggle-Button für Investments -->
+        <ion-grid class="toggle-btn-grid">
+          <ion-row>
+            <ion-col size="4" class="toggle-btn-col">
+              <ion-button
+                fill="clear"
+                (click)="toggleInvestments()"
+                class="toggle-btn"
+              >
+                <ion-icon
+                  [name]="showInvestments ? 'card' : 'card-outline'"
+                ></ion-icon>
+              </ion-button>
+            </ion-col>
+            <ion-col size="4" class="toggle-btn-col">
+              <ion-button fill="clear" class="toggle-btn"  (click)="fetchCryptoAssets()">
+                <ion-icon
+                  [name]="false ? 'logo-bitcoin' : 'logo-bitcoin'"
+                ></ion-icon>
+              </ion-button>
+            </ion-col>
+            <ion-col size="4" class="toggle-btn-col">
+              <ion-button fill="clear" class="toggle-btn">
+                <ion-icon
+                  [name]="false ? 'bar-chart' : 'bar-chart-outline'"
+                ></ion-icon>
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
       </ion-card-header>
 
       <ion-card-content>
         <div class="investments-scroll-container">
+          
           <ion-list *ngIf="showInvestments">
+            <ion-card-header>
+            <ion-card-title>Portfolio</ion-card-title>
+          </ion-card-header>
             <ion-item
               *ngFor="let investment of userInvestments"
               class="investment-item"
@@ -85,6 +114,28 @@
               </div>
             </ion-item>
           </ion-list>
+          <div class="no-investments" *ngIf="!userInvestments.length">
+            Keine Investitionen vorhanden.
+          </div>
+
+          
+          <ion-list *ngIf="showCryptoList" class="crypto-list-card">
+            <ion-card-header>
+            <ion-card-title>Alle Kryptowährungen</ion-card-title>
+          </ion-card-header>
+          <ion-item *ngFor="let asset of cryptoAssets">
+            <ion-label>
+              <h3>{{ asset.name }}</h3>
+              <p>{{ asset.symbol }}</p>
+            </ion-label>
+            <ion-badge color="success" slot="end">
+              {{ asset.price | currency:'USD':'symbol':'1.2-2' }}
+            </ion-badge>
+            <ion-button size="small" color="primary" slot="end">
+              Auswählen
+            </ion-button>
+          </ion-item>
+        </ion-list>
         </div>
       </ion-card-content>
     </ion-card>
@@ -155,8 +206,9 @@
             <p>Geschätzte Anteile: {{calculatedShares | number:'1.8-8'}}</p>
           </ion-text>
 
+          <!-- "Bitcoin kaufen"-Button -->
           <ion-button
-            class="success-btn"
+            color="success"
             expand="full"
             (click)="buyBitcoin()"
             [disabled]="!investmentAmount || !calculatedShares"

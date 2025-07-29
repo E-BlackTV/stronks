@@ -84,10 +84,66 @@
   --ion-color-dark-contrast-rgb: 255, 255, 255;
   --ion-color-dark-shade: #1d2933;
   --ion-color-dark-tint: #394a5a;
+
+  /* Mint-Farbe als Variable */
+  --accent-mint: #a9dfbf;
+  --accent-mint-dark: #7ed6a7; /* dunkleres Mint für Hover */
 }
 
+.toggle-btn-group {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end; /* oder center/space-between nach Wunsch */
+  margin-bottom: 8px;
+}
+
+.toggle-btn-grid {
+  margin-bottom: 8px;
+}
+.toggle-btn-col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.toggle-btn {
+  flex-direction: column;
+  align-items: center;
+  --color: var(--accent-mint, #A9DFBF);
+  font-size: 13px;
+  min-width: 80px;
+  height: 56px;
+  text-align: center;
+  transition: --color 0.2s;
+}
+.toggle-btn:hover,
+.toggle-btn:focus {
+  --color: var(--accent-mint-dark);
+}
+
+.toggle-btn ion-icon {
+  font-size: 24px;
+  margin-bottom: 2px;
+}
+
+.toggle-btn span {
+  display: block;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+/* "Bitcoin kaufen"-Button mint einfärben 
 .success-btn {
-  --background: var(--status-positive);
+    background-color: none;
+  --background-hover: var(--accent-mint);
+  color: #22313F; 
+  font-weight: bold;
+  transition: --color 0.2s;
+}
+*/
+
+.success-btn:hover,
+.success-btn:focus {
+  --background: var(--accent-mint-dark);
 }
 
 .fail-text {

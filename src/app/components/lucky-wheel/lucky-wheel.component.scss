@@ -182,7 +182,6 @@
   --background: var(--white);
   --border-radius: 16px;
   box-shadow: 0 8px 25px rgba(169, 223, 191, 0.15);
-  border: 2px solid var(--accent-mint);
 
   ion-card-content {
     padding: 20px;
@@ -204,7 +203,6 @@
       &.wait-info {
         margin-top: 15px;
         padding-top: 15px;
-        border-top: 2px solid var(--accent-mint);
         font-weight: 600;
         color: var(--primary-dark);
         border-radius: 16px;
@@ -372,9 +370,9 @@
   }
 }
 
-@media (max-height: 700px) {
+@media (max-height: 900px) {
   .wheel-container {
-    height: calc(100vh - 80px);
+    height: calc(100vh);
     padding: 0 10px 10px 10px;
     min-height: 400px;
   }

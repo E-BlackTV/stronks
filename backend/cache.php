@@ -84,8 +84,9 @@ foreach ($symbols as $symbol) {
                 $row = $result->fetch_assoc();
                 $lastUpdated = strtotime($row['last_updated']);
                 if (time() - $lastUpdated < $cacheExpiry) {
-                    error_log("Cache HIT for $symbol | $range | $interval");
-                    continue;
+                    header('X-Cache: HIT');
+                    echo $row['data'];
+                    exit;
                 }
             }
 
