@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { map } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
 
 interface User {
   id: number;
@@ -18,6 +17,7 @@ export class AuthenticationService {
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser: Observable<User | null>;
   private readonly USER_KEY = 'currentUser';
+  private apiUrl = '/backend'; // Direkte URL statt environment
 
   constructor(private http: HttpClient, private router: Router) {
     const storedUser = localStorage.getItem(this.USER_KEY);
@@ -33,7 +33,7 @@ export class AuthenticationService {
 
   login(username: string, password: string): Observable<boolean> {
     return this.http
-      .post<any>(`${environment.apiUrl}/login.php`, {
+      .post<any>(`${this.apiUrl}/login.php`, {
         username,
         password,
       })
@@ -57,5 +57,9 @@ export class AuthenticationService {
 
   isLoggedIn(): boolean {
     return this.currentUserValue !== null;
+  }
+
+  getCurrentUser(): User | null {
+    return this.currentUserValue;
   }
 }
