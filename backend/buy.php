@@ -2,14 +2,16 @@
 // Clear any previous output
 if (ob_get_level()) ob_end_clean();
 
-// Specific origin instead of wildcard
-
-
-
-
-
 // Set content type
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 // Error reporting for debugging
 error_reporting(E_ALL);
@@ -28,18 +30,12 @@ try {
 
     if (!$data || 
         !isset($data->user_id) || 
-        !isset($data->investments) || 
-        !isset($data->shares) || 
+        !isset($data->asset_symbol) || 
+        !isset($data->quantity) || 
         !isset($data->amount) || 
-        !isset($data->purchase_price) ||
-        $data->shares <= 0) {  // Added validation for shares
+        !isset($data->current_price) ||
+        $data->quantity <= 0) {
         throw new Exception('Missing or invalid data');
-    }
-
-    // Optional: Calculate and verify shares
-    $calculated_shares = $data->amount / $data->purchase_price;
-    if (abs($calculated_shares - $data->shares) > 0.00001) { // Small difference allowed for floating point
-        throw new Exception('Share calculation mismatch');
     }
 
     // Check account balance
@@ -53,7 +49,6 @@ try {
     $result = $stmt->get_result();
     $user = $result->fetch_assoc();
 
-    // Changed to check against amount instead of investments
     if (!$user || $user['accountbalance'] < $data->amount) {
         throw new Exception('Insufficient funds');
     }
@@ -65,31 +60,54 @@ try {
         // Debug logging
         error_log('Received data: ' . print_r($data, true));
 
-        // Insert purchase into depot
-        $stmt = $conn->prepare("INSERT INTO depot (user_id, investments, shares, amount, purchase_price) VALUES (?, ?, ?, ?, ?)");
-        if (!$stmt) {
-            throw new Exception($conn->error);
-        }
-
-        // Debug logging
-        error_log('Shares value: ' . $data->shares);
+        // Check if asset exists in assets table
+        $assetStmt = $conn->prepare("SELECT * FROM assets WHERE symbol = ?");
+        $assetStmt->bind_param("s", $data->asset_symbol);
+        $assetStmt->execute();
+        $assetResult = $assetStmt->get_result();
         
-        $stmt->bind_param("isddd", 
-            $data->user_id, 
-            $data->investments,
-            $data->shares,      // Make sure this is being passed correctly
-            $data->amount,
-            $data->purchase_price
-        );
-
-        if (!$stmt->execute()) {
-            throw new Exception($stmt->error);
+        if ($assetResult->num_rows === 0) {
+            // Asset doesn't exist, create it
+            $insertAssetStmt = $conn->prepare("INSERT INTO assets (symbol, name, type) VALUES (?, ?, 'crypto')");
+            $assetName = str_replace('-USD', '', $data->asset_symbol);
+            $insertAssetStmt->bind_param("ss", $data->asset_symbol, $assetName);
+            $insertAssetStmt->execute();
         }
 
-        // Update account balance - changed to use amount
+        // Check if user already has this asset in portfolio
+        $portfolioStmt = $conn->prepare("SELECT * FROM portfolio WHERE user_id = ? AND asset_symbol = ?");
+        $portfolioStmt->bind_param("is", $data->user_id, $data->asset_symbol);
+        $portfolioStmt->execute();
+        $portfolioResult = $portfolioStmt->get_result();
+        $existingPortfolio = $portfolioResult->fetch_assoc();
+
+        if ($existingPortfolio) {
+            // Update existing portfolio position
+            $newQuantity = $existingPortfolio['quantity'] + $data->quantity;
+            $newTotalInvested = $existingPortfolio['total_invested'] + $data->amount;
+            $newAvgPrice = $newTotalInvested / $newQuantity;
+            
+            $updateStmt = $conn->prepare("UPDATE portfolio SET quantity = ?, avg_purchase_price = ?, total_invested = ? WHERE id = ?");
+            $updateStmt->bind_param("dddi", $newQuantity, $newAvgPrice, $newTotalInvested, $existingPortfolio['id']);
+            $updateStmt->execute();
+            $portfolio_id = $existingPortfolio['id'];
+        } else {
+            // Create new portfolio position
+            $insertStmt = $conn->prepare("INSERT INTO portfolio (user_id, asset_symbol, quantity, avg_purchase_price, total_invested) VALUES (?, ?, ?, ?, ?)");
+            $insertStmt->bind_param("isddd", $data->user_id, $data->asset_symbol, $data->quantity, $data->current_price, $data->amount);
+            $insertStmt->execute();
+            $portfolio_id = $conn->insert_id;
+        }
+
+        // Update account balance
         $stmt = $conn->prepare("UPDATE users SET accountbalance = accountbalance - ? WHERE id = ?");
         $stmt->bind_param("di", $data->amount, $data->user_id);
         $stmt->execute();
+
+        // Insert transaction record
+        $transactionStmt = $conn->prepare("INSERT INTO transactions (user_id, asset_symbol, type, quantity, price_per_unit, total_amount, portfolio_id) VALUES (?, ?, 'buy', ?, ?, ?, ?)");
+        $transactionStmt->bind_param("issddi", $data->user_id, $data->asset_symbol, $data->quantity, $data->current_price, $data->amount, $portfolio_id);
+        $transactionStmt->execute();
 
         $conn->commit();
         echo json_encode([

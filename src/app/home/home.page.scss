@@ -200,6 +200,32 @@ ion-note {
   }
 }
 
+// Trading-Buttons Styles
+.trading-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+
+  .buy-button {
+    --background: #28a745;
+    --background-hover: #218838;
+    --border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    height: 56px;
+  }
+
+  .sell-button {
+    --background: #dc3545;
+    --background-hover: #c82333;
+    --border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    height: 56px;
+  }
+}
+
 // Investment list scrolling
 .investments-scroll-container {
   height: 400px;
@@ -281,10 +307,20 @@ ion-note {
 // Chart container sizing
 .chart-controls {
   margin-bottom: 16px;
-  
 }
 
 canvas {
   width: 100% !important;
   height: 200px !important;
+}
+
+// Responsive Design für Trading-Buttons
+@media (max-width: 768px) {
+  .trading-buttons {
+    .buy-button,
+    .sell-button {
+      font-size: 1rem;
+      height: 48px;
+    }
+  }
 }

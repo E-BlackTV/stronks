@@ -1,2 +1,55 @@
 // For information on how to create your own theme, please see:
 // http://ionicframework.com/docs/theming/
+
+
+:root {
+    /* Hauptfarbe */
+    --primary: #30eb7e;
+  
+    /* Akzentfarben */
+    --accent-darkgreen: #145a32;
+    --accent-mint: #a9dfbf;
+    --accent-turquoise: #2dd4b3;
+    --accent-gold: #f4d03f;
+  
+    /* Sekundärfarben */
+    --secondary-navy: #22313f;
+    --secondary-lightgray: #f8f9f9;
+    --secondary-midgray: #b3b6b7;
+    --secondary-white: #ffffff;
+  
+    /* Zahlen & Status */
+    --status-positive: #32ff88;
+    --status-negative: #ff6a59;
+  }
+  
+  .success-btn{
+      --background: var(--status-positive);
+  }
+  
+  .fail-text {
+    color: var(--secondary-midgray);
+  }
+  
+  .danger-btn{
+    --background: var(--accent-turquoise);
+    color: var(--secondary-navy);
+  }
+  
+  .colorful{
+    color: var(--accent-mint);
+  }
+  .negative-color{
+    color: var(--status-negative);
+  }
+  .positive-color{
+    color: var(--status-positive);
+  }
+    
+  
+  .alignment-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  

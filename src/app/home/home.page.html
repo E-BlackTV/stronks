@@ -75,13 +75,6 @@
                     currency:'USD':'symbol':'1.2-2' }}
                   </small>
                 </div>
-                <ion-button
-                  class="danger-btn"
-                  size="small"
-                  (click)="sellInvestment(investment.id)"
-                >
-                  Verkaufen
-                </ion-button>
               </div>
             </ion-item>
           </ion-list>
@@ -100,8 +93,9 @@
       </ion-card-header>
 
       <ion-card-content>
-        <ion-button color="dark" expand="full" (click)="fetchData()">
-          Daten aktualisieren
+        <ion-button fill="clear" (click)="loadAllData()">
+          <ion-icon name="refresh" slot="start"></ion-icon>
+          Aktualisieren
         </ion-button>
         <div class="chart-controls">
           <ion-item>
@@ -138,33 +132,49 @@
           <canvas #lineChart></canvas>
         </div>
 
-        <!-- Kaufformular hinzufügen -->
-        <div class="buy-form">
-          <ion-item>
-            <ion-label position="floating">Investitionsbetrag ($)</ion-label>
-            <ion-input
-              type="number"
-              [(ngModel)]="investmentAmount"
-              (ionChange)="calculateShares()"
-              min="0"
-            ></ion-input>
-          </ion-item>
-
-          <ion-text color="medium" *ngIf="currentPrice">
-            <p>Aktueller Bitcoin-Preis: {{currentPrice | number:'1.2-2'}} $</p>
-            <p>Geschätzte Anteile: {{calculatedShares | number:'1.8-8'}}</p>
-          </ion-text>
-
+        <!-- Neue Trading-Buttons -->
+        <div class="trading-buttons">
           <ion-button
             class="success-btn"
-            expand="full"
-            (click)="buyBitcoin()"
-            [disabled]="!investmentAmount || !calculatedShares"
+            expand="block"
+            size="small"
+            (click)="openBuyPopup()"
+            class="buy-button"
           >
-            Bitcoin kaufen
+            <ion-icon name="add-circle" slot="start"></ion-icon>
+            Kaufen
+          </ion-button>
+
+          <ion-button
+            class="danger-btn"
+            expand="block"
+            size="small"
+            (click)="openSellPopup()"
+            class="sell-button"
+          >
+            <ion-icon name="remove-circle" slot="start"></ion-icon>
+            Verkaufen
           </ion-button>
         </div>
+        <app-lucky-wheel
+          [currentUser]="currentUser"
+          (winEvent)="onLuckyWheelWin()"
+        >
+        </app-lucky-wheel>
       </ion-card-content>
     </ion-card>
   </div>
 </ion-content>
+
+<!-- Trade Popup -->
+<app-trade-popup
+  [isOpen]="showTradePopup"
+  [action]="tradeAction"
+  [assetSymbol]="'BTC-USD'"
+  [assetName]="'Bitcoin'"
+  [currentPrice]="currentPrice"
+  [userBalance]="accountBalance"
+  [availableQuantity]="getBitcoinQuantity()"
+  (close)="closeTradePopup()"
+  (tradeCompleted)="onTradeCompleted($event)"
+></app-trade-popup>
