@@ -182,8 +182,8 @@ export class HomePage implements OnInit, OnDestroy {
 
   async ngOnInit() {
     await this.fetchAccountBalance();
-    await this.fetchAllCurrentPrices();
-    await this.fetchData();
+    await this.fetchData(); // Lädt auch currentPrice
+    await this.fetchAllCurrentPrices(); // Aktualisiert currentPrices
     await this.fetchUserInvestments(); // uses this.currentPrice
     await this.calculatePortfolioValue();
     this.showInvestments = false;
@@ -329,7 +329,6 @@ export class HomePage implements OnInit, OnDestroy {
     const mintColor = getComputedStyle(document.documentElement)
       .getPropertyValue('--accent-turquoise')
       .trim();
-
 
     this.chart = new Chart(this.lineChart.nativeElement, {
       type: 'line',
@@ -491,11 +490,25 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async fetchAllCurrentPrices() {
-    // Fetch current prices for all investment types
-    this.currentPrices['Bitcoin'] = this.currentPrice; // Bitcoin price from existing code
-    // Add API calls for other investment types
-    // Example:
-    // this.currentPrices['Tesla'] = await this.fetchStockPrice('TSLA');
+    try {
+      // Lade Bitcoin-Preis von der API
+      const response = await this.http
+        .get<any>(
+          `${environment.apiUrl}/cache.php?symbol=BTC-USD&range=1d&interval=5m`
+        )
+        .toPromise();
+
+      if (response && response.chart?.result?.[0]) {
+        const result = response.chart.result[0];
+        const prices = result.indicators?.quote[0]?.close || [];
+        if (prices.length > 0) {
+          this.currentPrice = prices[prices.length - 1];
+          this.currentPrices['Bitcoin'] = this.currentPrice;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current prices:', error);
+    }
   }
 
   async calculatePortfolioValue() {
@@ -601,10 +614,10 @@ export class HomePage implements OnInit, OnDestroy {
     this.authService.logout();
   }
 
-  toggleInvestments() {
+  async toggleInvestments() {
     this.showInvestments = !this.showInvestments;
     if (this.showInvestments) {
-      this.fetchUserInvestments();
+      await this.fetchUserInvestments();
     }
   }
 
