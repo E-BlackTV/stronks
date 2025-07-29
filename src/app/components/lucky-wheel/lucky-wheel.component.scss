@@ -3,16 +3,32 @@
   --overflow: hidden;
 }
 
+// Farbvariablen
+:root {
+  --primary: #27ae60; // Smaragdgrün
+  --primary-dark: #145a32; // Dunkelgrün
+  --accent-mint: #a9dfbf; // Mintgrün
+  --accent-turquoise: #1abc9c; // Türkis
+  --accent-gold: #f4d03f; // Goldgelb
+  --text-dark: #22313f; // Nachtblau
+  --bg-light: #f8f9f9; // Hellgrau
+  --border-gray: #b3b6b7; // Mittelgrau
+  --white: #ffffff; // Weiß
+  --positive: #27ae60; // Positiv (Gewinne)
+  --negative: #e74c3c; // Negativ (Verluste)
+}
+
 .wheel-container {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  height: calc(100vh - 120px); /* Abzüglich Header und Padding */
+  height: calc(100vh - 120px);
   min-height: 600px;
   max-height: 800px;
   padding: 0 20px 20px 20px;
   overflow: hidden;
+  background: var(--bg-light);
 }
 
 .wheel-section {
@@ -42,10 +58,11 @@
     }
 
     #spin {
-      background: #ccc !important;
-      color: #999 !important;
+      background: var(--border-gray) !important;
+      color: var(--text-dark) !important;
       cursor: not-allowed !important;
-      box-shadow: 0 0 0 6px #ccc, 0 0px 15px 5px rgba(0, 0, 0, 0.3) !important;
+      box-shadow: 0 0 0 6px var(--border-gray),
+        0 0px 15px 5px rgba(0, 0, 0, 0.3) !important;
     }
   }
 }
@@ -70,18 +87,26 @@
   width: 25%;
   height: 25%;
   margin: -12.5%;
-  background: #fff;
-  color: #333;
-  box-shadow: 0 0 0 6px currentColor, 0 0px 15px 5px rgba(0, 0, 0, 0.6);
+  background: var(--white);
+  color: var(--text-dark);
+  box-shadow: 0 0 0 6px var(--accent-turquoise),
+    0 0px 15px 5px rgba(26, 188, 156, 0.4);
   border-radius: 50%;
   transition: all 0.3s ease;
   font-weight: bold;
 
+  &:hover {
+    background: var(--accent-turquoise);
+    color: var(--white);
+    box-shadow: 0 0 0 6px var(--primary-dark),
+      0 0px 20px 8px rgba(26, 188, 156, 0.6);
+  }
+
   &.disabled {
     cursor: not-allowed;
     opacity: 0.6;
-    background: #ccc;
-    color: #999;
+    background: var(--border-gray);
+    color: var(--text-dark);
   }
 }
 
@@ -154,32 +179,41 @@
 }
 
 .info-card {
-  --background: rgba(255, 255, 255, 0.95);
-  --border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  border: none;
+  --background: var(--white);
+  --border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(169, 223, 191, 0.15);
+  border: 2px solid var(--accent-mint);
 
   ion-card-content {
-    padding: 15px;
+    padding: 20px;
+    --border-radius: 16px;
 
     p {
-      margin: 6px 0;
+      margin: 8px 0;
       font-size: 14px;
-      color: #666;
+      color: var(--text-dark);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      font-weight: 500;
+
+      ion-icon {
+        font-size: 18px;
+      }
 
       &.wait-info {
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid #eee;
-        font-weight: 500;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px solid var(--accent-mint);
+        font-weight: 600;
+        color: var(--primary-dark);
+        border-radius: 16px;
 
         .countdown {
-          color: #6c757d !important;
-          font-size: 16px;
+          color: var(--accent-gold) !important;
+          font-size: 18px;
           font-weight: bold;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
       }
     }
@@ -193,30 +227,31 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(34, 49, 63, 0.9);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
   padding: 20px;
+  backdrop-filter: blur(10px);
 }
 
 .result-card {
-  --background: rgba(255, 255, 255, 0.95);
+  --background: var(--white);
   --border-radius: 24px;
   text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.2);
-  border: none;
-  backdrop-filter: blur(20px);
+  box-shadow: 0 25px 50px rgba(244, 208, 63, 0.2);
+  border: 3px solid var(--accent-gold);
   overflow: hidden;
   max-width: 400px;
   width: 100%;
+  animation: slideIn 0.5s ease-out;
 
   ion-card-header {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #f39c12 100%);
+    color: var(--text-dark);
     border-radius: 0;
-    padding: 24px 20px;
+    padding: 30px 20px;
     position: relative;
 
     &::before {
@@ -229,7 +264,7 @@
       background: linear-gradient(
         45deg,
         transparent 30%,
-        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.2) 50%,
         transparent 70%
       );
       animation: shimmer 2s infinite;
@@ -237,12 +272,13 @@
   }
 
   ion-card-title {
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 28px;
+    font-weight: 800;
     text-shadow: none;
     letter-spacing: 0.5px;
     position: relative;
     z-index: 1;
+    color: var(--text-dark);
   }
 }
 
@@ -255,25 +291,40 @@
   }
 }
 
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .prize-display {
-  padding: 20px 0;
+  padding: 25px 0;
 
   .prize-icon {
-    font-size: 48px;
-    margin-bottom: 15px;
+    font-size: 56px;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
   }
 
   h2 {
-    font-size: 28px;
-    font-weight: bold;
-    margin: 10px 0;
-    color: #333;
+    font-size: 32px;
+    font-weight: 800;
+    margin: 15px 0;
+    color: var(--text-dark);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   p {
-    font-size: 16px;
-    color: #666;
-    margin: 0 0 20px 0;
+    font-size: 18px;
+    color: var(--text-dark);
+    margin: 0 0 25px 0;
+    font-weight: 500;
+    line-height: 1.5;
   }
 }
 
@@ -300,23 +351,23 @@
 
   .info-card {
     ion-card-content {
-      padding: 12px;
+      padding: 15px;
     }
   }
 
   .prize-display {
-    padding: 16px 0;
+    padding: 20px 0;
 
     .prize-icon {
-      font-size: 36px;
+      font-size: 48px;
     }
 
     h2 {
-      font-size: 24px;
+      font-size: 28px;
     }
 
     p {
-      font-size: 14px;
+      font-size: 16px;
     }
   }
 }

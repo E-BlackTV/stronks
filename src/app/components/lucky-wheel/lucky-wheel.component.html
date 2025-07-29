@@ -62,16 +62,21 @@
           <ion-icon
             [name]="spinResult.type === 'btc' ? 'logo-bitcoin' : 'cash-outline'"
             class="prize-icon"
-            [style.color]="spinResult.color"
+            [style.color]="spinResult.type === 'euro' ? '#27AE60' : '#F4D03F'"
           >
           </ion-icon>
           <h2>{{ spinResult.name }}</h2>
           <p *ngIf="spinResult.type === 'euro'">
-            {{ spinResult.value | currency : "EUR" : "symbol" : "1.2-2" }}
-            wurden Ihrem Konto gutgeschrieben!
+            {{
+              getActualPrizeValue(spinResult)
+                | currency : "EUR" : "symbol" : "1.2-2"
+            }}
+            ({{ spinResult.percentage }}% Ihres Vermögens) wurden Ihrem Konto
+            gutgeschrieben!
           </p>
           <p *ngIf="spinResult.type === 'btc'">
-            {{ spinResult.value }} BTC wurden Ihrem Portfolio hinzugefügt!
+            {{ getActualPrizeValue(spinResult) }} BTC wurden Ihrem Portfolio
+            hinzugefügt!
           </p>
           <ion-button color="success" expand="full" (click)="dismiss()">
             <ion-icon name="checkmark"></ion-icon>

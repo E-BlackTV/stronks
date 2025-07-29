@@ -11,12 +11,12 @@ import { ModalController, ToastController } from '@ionic/angular';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-const COLORS = ['#f82', '#0bf', '#fb0', '#0fb', '#b0f', '#f0b', '#bf0'];
+const COLORS = ['#27AE60', '#1ABC9C'];
 
 interface Prize {
   id: number;
   name: string;
-  value: number;
+  percentage: number; // Prozentsatz des Vermögens
   type: 'euro' | 'btc';
   probability: number;
   color: string;
@@ -32,7 +32,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log('Values', values);
     this.sectors = values.map((opts, i) => {
       return {
-        color: COLORS[(i >= COLORS.length ? i + 1 : i) % COLORS.length],
+        color: COLORS[i % COLORS.length],
         label: opts,
       };
     });
@@ -45,7 +45,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('wheel') wheel!: ElementRef<HTMLCanvasElement>;
   @ViewChild('spin') spinButton!: ElementRef;
-  colors = ['#f82', '#0bf', '#fb0', '#0fb', '#b0f', '#f0b', '#bf0'];
+  colors = ['#27AE60', '#1ABC9C'];
   sectors: any[] = [];
 
   rand = (m: number, M: number) => Math.random() * (M - m) + m;
@@ -96,82 +96,76 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Exakt wie im StackBlitz-Projekt
+    // Prozentuale Gewinne basierend auf Vermögen
     this.prizes = [
       {
         id: 1,
-        name: '100€',
-        value: 100,
+        name: 'MEGA JACKPOT!',
+        percentage: 50, // 50% des Vermögens
         type: 'euro',
-        probability: 5,
+        probability: 1, // Sehr selten
         color: '#3880ff',
       },
       {
         id: 2,
-        name: '5€',
-        value: 5,
+        name: 'Kleiner Gewinn',
+        percentage: 2, // 2% des Vermögens
         type: 'euro',
-        probability: 25,
+        probability: 35, // Häufig
         color: '#2dd36f',
       },
       {
         id: 3,
-        name: '25€',
-        value: 25,
+        name: 'Mittlerer Gewinn',
+        percentage: 8, // 8% des Vermögens
         type: 'euro',
-        probability: 15,
+        probability: 20, // Mittel
         color: '#3880ff',
       },
       {
         id: 4,
-        name: '10€',
-        value: 10,
+        name: 'Kleiner Bonus',
+        percentage: 3, // 3% des Vermögens
         type: 'euro',
-        probability: 20,
+        probability: 25, // Häufig
         color: '#2dd36f',
       },
       {
         id: 5,
-        name: '50€',
-        value: 50,
+        name: 'Großer Gewinn',
+        percentage: 15, // 15% des Vermögens
         type: 'euro',
-        probability: 10,
+        probability: 10, // Selten
         color: '#3880ff',
       },
       {
         id: 6,
-        name: '15€',
-        value: 15,
+        name: 'Bonus',
+        percentage: 5, // 5% des Vermögens
         type: 'euro',
-        probability: 18,
+        probability: 15, // Mittel
         color: '#2dd36f',
       },
       {
         id: 7,
-        name: '30€',
-        value: 30,
+        name: 'Guter Gewinn',
+        percentage: 10, // 10% des Vermögens
         type: 'euro',
-        probability: 12,
+        probability: 12, // Selten
         color: '#3880ff',
       },
       {
         id: 8,
-        name: '20€',
-        value: 20,
+        name: 'Kleiner Gewinn',
+        percentage: 4, // 4% des Vermögens
         type: 'euro',
-        probability: 15,
+        probability: 22, // Häufig
         color: '#2dd36f',
       },
     ];
 
-    // Convert prizes to sectors for the wheel
-    this.sectors = this.prizes.map((prize, i) => {
-      return {
-        color: COLORS[(i >= COLORS.length ? i + 1 : i) % COLORS.length],
-        label: prize.name,
-        prize: prize, // Speichere das komplette Prize-Objekt
-      };
-    });
+    // Lade aktuelles Vermögen und initialisiere Sektoren
+    this.loadCurrentBalanceAndUpdateWheel();
 
     console.log('Sektoren initialisiert:', this.sectors.length);
 
@@ -185,7 +179,6 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     // Warte kurz bis DOM vollständig geladen ist
     setTimeout(() => {
-      this.createWheel();
       // Starte Animation-Loop nur wenn Sektoren verfügbar sind
       if (this.sectors.length > 0) {
         this.startAnimationLoop();
@@ -387,10 +380,16 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
       if (userData) {
         const currentUser = JSON.parse(userData);
 
+        // Berechne den tatsächlichen Gewinn basierend auf dem aktuellen Vermögen
+        const currentBalance = currentUser.balance || 10000; // Fallback auf 10000
+        const actualPrizeValue = Math.round(
+          (currentBalance * prize.percentage) / 100
+        );
+
         this.http
           .post(`${environment.apiUrl}/lucky-wheel.php?action=spin_wheel`, {
             user_id: currentUser.id,
-            prize_value: prize.value,
+            prize_value: actualPrizeValue,
           })
           .subscribe({
             next: (response: any) => {
@@ -427,12 +426,20 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   showResult(prize: Prize) {
+    // Lade aktuelles Vermögen für die Berechnung
+    const userData = localStorage.getItem('currentUser');
+    const currentUser = userData ? JSON.parse(userData) : null;
+    const currentBalance = currentUser?.balance || 10000;
+    const actualPrizeValue = Math.round(
+      (currentBalance * prize.percentage) / 100
+    );
+
     let message = `Glückwunsch! Sie haben ${prize.name} gewonnen!`;
 
     if (prize.type === 'euro') {
-      message += ` ${prize.value}€ wurden Ihrem Konto gutgeschrieben!`;
+      message += ` ${actualPrizeValue}€ (${prize.percentage}% Ihres Vermögens) wurden Ihrem Konto gutgeschrieben!`;
     } else if (prize.type === 'btc') {
-      message += ` ${prize.value} BTC wurden Ihrem Portfolio hinzugefügt!`;
+      message += ` ${actualPrizeValue} BTC wurden Ihrem Portfolio hinzugefügt!`;
     }
 
     this.showToast(message, 'success');
@@ -451,6 +458,90 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   dismiss() {
     this.modalController.dismiss();
+  }
+
+  getActualPrizeValue(prize: Prize): number {
+    const userData = localStorage.getItem('currentUser');
+    const currentUser = userData ? JSON.parse(userData) : null;
+    const currentBalance = currentUser?.balance || 10000;
+    return Math.round((currentBalance * prize.percentage) / 100);
+  }
+
+  formatPrizeLabel(prize: Prize): string {
+    const actualValue = this.getActualPrizeValue(prize);
+
+    if (actualValue >= 1000000) {
+      return `${(actualValue / 1000000).toFixed(1)}Mil`;
+    } else if (actualValue >= 1000) {
+      return `${(actualValue / 1000).toFixed(1)}K`;
+    } else {
+      return `${actualValue}€`;
+    }
+  }
+
+  loadCurrentBalanceAndUpdateWheel() {
+    try {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        const currentUser = JSON.parse(userData);
+
+        // Lade aktuelles Vermögen von der API
+        this.http
+          .get(
+            `${environment.apiUrl}/get_balance.php?user_id=${currentUser.id}`
+          )
+          .subscribe({
+            next: (response: any) => {
+              if (response.success) {
+                // Aktualisiere das Vermögen im localStorage
+                currentUser.balance = response.balance;
+                localStorage.setItem(
+                  'currentUser',
+                  JSON.stringify(currentUser)
+                );
+
+                // Aktualisiere die Sektoren mit dem aktuellen Vermögen
+                this.updateWheelLabels();
+                console.log('Vermögen geladen:', response.balance);
+              } else {
+                console.error(
+                  'Fehler beim Laden des Vermögens:',
+                  response.message
+                );
+                // Fallback auf localStorage oder Standardwert
+                this.updateWheelLabels();
+              }
+            },
+            error: (error) => {
+              console.error('Fehler beim Laden des Vermögens:', error);
+              // Fallback auf localStorage oder Standardwert
+              this.updateWheelLabels();
+            },
+          });
+      } else {
+        // Kein Benutzer gefunden, verwende Standardwert
+        this.updateWheelLabels();
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Benutzers:', error);
+      this.updateWheelLabels();
+    }
+  }
+
+  updateWheelLabels() {
+    // Aktualisiere die Labels basierend auf dem aktuellen Vermögen
+    this.sectors = this.prizes.map((prize, i) => {
+      return {
+        color: COLORS[i % COLORS.length],
+        label: this.formatPrizeLabel(prize),
+        prize: prize,
+      };
+    });
+
+    // Zeichne das Rad neu
+    if (this.wheel) {
+      this.createWheel();
+    }
   }
 
   // Daily Spin Logic
