@@ -85,8 +85,82 @@ try {
         } else {
             throw new Exception('Invalid action: ' . $action);
         }
+    } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $action = $_GET['action'] ?? '';
+        
+        if ($action === 'check_spin') {
+            $userId = filter_var($_GET['user_id'] ?? '', FILTER_VALIDATE_INT);
+            
+            if (!$userId) {
+                throw new Exception('Invalid user_id parameter');
+            }
+
+            // Check if user exists and get last spin time
+            $stmt = $conn->prepare("
+                SELECT lws.last_spin, 
+                       TIMESTAMPDIFF(HOUR, lws.last_spin, NOW()) as hours_since_spin
+                FROM lucky_wheel_spins lws 
+                WHERE lws.user_id = ?
+            ");
+            
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            
+            $stmt->bind_param("i", $userId);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Execute failed: " . $stmt->error);
+            }
+            
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            
+            $lastSpin = $row ? $row['last_spin'] : null;
+            $hoursSinceLastSpin = $row ? $row['hours_since_spin'] : null;
+            $now = new DateTime();
+            
+            if ($lastSpin && $hoursSinceLastSpin !== null) {
+                $lastSpinTime = new DateTime($lastSpin);
+                
+                if ($hoursSinceLastSpin < 24) {
+                    // Calculate next available spin time
+                    $nextSpinTime = clone $lastSpinTime;
+                    $nextSpinTime->add(new DateInterval('PT24H'));
+                    
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        "success" => true,
+                        "can_spin" => false,
+                        "last_spin" => $lastSpin,
+                        "next_spin" => $nextSpinTime->format('Y-m-d H:i:s'),
+                        "hours_remaining" => 24 - $hoursSinceLastSpin,
+                        "message" => "Sie müssen noch " . (24 - $hoursSinceLastSpin) . " Stunden warten"
+                    ]);
+                } else {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        "success" => true,
+                        "can_spin" => true,
+                        "last_spin" => $lastSpin,
+                        "message" => "Sie können jetzt spinnen!"
+                    ]);
+                }
+            } else {
+                // User has never spun before
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    "success" => true,
+                    "can_spin" => true,
+                    "last_spin" => null,
+                    "message" => "Willkommen! Sie können jetzt spinnen!"
+                ]);
+            }
+        } else {
+            throw new Exception('Invalid action: ' . $action);
+        }
     } else {
-        throw new Exception('Only POST method allowed');
+        throw new Exception('Only GET and POST methods allowed');
     }
 
 } catch (Exception $e) {

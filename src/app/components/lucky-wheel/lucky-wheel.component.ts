@@ -81,6 +81,14 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   prizes: Prize[] = [];
   spinResult: Prize | null = null;
 
+  // Daily Spin Logic
+  lastSpinTime: Date | null = null;
+  nextSpinTime: Date | null = null;
+  timeUntilNextSpin: string = '';
+  isSpinBlocked = false;
+  private spinCheckInterval: any;
+  private countdownInterval: any;
+
   constructor(
     private modalController: ModalController,
     private toastController: ToastController,
@@ -166,6 +174,12 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     console.log('Sektoren initialisiert:', this.sectors.length);
+
+    // Prüfe Daily Spin Verfügbarkeit
+    this.checkDailySpinAvailability();
+
+    // Starte Timer für Spin-Verfügbarkeit
+    this.startSpinCheckTimer();
   }
 
   ngAfterViewInit(): void {
@@ -181,6 +195,12 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopAnimationLoop();
+    if (this.spinCheckInterval) {
+      clearInterval(this.spinCheckInterval);
+    }
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
   }
 
   private startAnimationLoop(): void {
@@ -247,6 +267,17 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   spinner() {
+    // Prüfe Daily Spin Verfügbarkeit
+    if (this.isSpinBlocked) {
+      this.showToast(
+        'Bitte warten Sie noch ' +
+          this.timeUntilNextSpin +
+          ' bis zum nächsten Spin.',
+        'medium'
+      );
+      return;
+    }
+
     if (!this.angVel && this.canSpin && !this.isSpinning) {
       this.isSpinning = true;
       this.angVel = this.rand(0.25, 0.35);
@@ -331,6 +362,13 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
 
       // Zeige Ergebnis
       this.spinResult = selectedPrize;
+
+      // Blockiere Spin für 24h
+      this.isSpinBlocked = true;
+      this.canSpin = false;
+      this.lastSpinTime = new Date();
+      this.nextSpinTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h von jetzt
+      this.updateTimeUntilNextSpin();
     } else {
       this.showToast('Fehler beim Verarbeiten des Gewinns', 'danger');
     }
@@ -413,5 +451,105 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   dismiss() {
     this.modalController.dismiss();
+  }
+
+  // Daily Spin Logic
+  private checkDailySpinAvailability() {
+    try {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        const currentUser = JSON.parse(userData);
+
+        // Prüfe letzten Spin in der Datenbank
+        this.http
+          .get(
+            `${environment.apiUrl}/lucky-wheel.php?action=check_spin&user_id=${currentUser.id}`
+          )
+          .subscribe({
+            next: (response: any) => {
+              if (response.success) {
+                if (response.can_spin) {
+                  this.isSpinBlocked = false;
+                  this.canSpin = true;
+                  this.lastSpinTime = null;
+                  this.nextSpinTime = null;
+                  this.timeUntilNextSpin = '';
+                } else {
+                  this.isSpinBlocked = true;
+                  this.canSpin = false;
+                  this.lastSpinTime = new Date(response.last_spin);
+                  this.nextSpinTime = new Date(response.next_spin);
+                  this.updateTimeUntilNextSpin();
+                }
+              } else {
+                console.error(
+                  'Fehler beim Prüfen der Spin-Verfügbarkeit:',
+                  response.message
+                );
+                this.showToast(
+                  'Fehler beim Prüfen der Spin-Verfügbarkeit',
+                  'danger'
+                );
+              }
+            },
+            error: (error) => {
+              console.error(
+                'Fehler beim Prüfen der Spin-Verfügbarkeit:',
+                error
+              );
+              this.showToast(
+                'Fehler beim Prüfen der Spin-Verfügbarkeit',
+                'danger'
+              );
+            },
+          });
+      } else {
+        console.warn('Kein Benutzer gefunden');
+        this.showToast('Bitte melden Sie sich an', 'warning');
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Benutzers:', error);
+      this.showToast('Fehler beim Laden des Benutzers', 'danger');
+    }
+  }
+
+  private startSpinCheckTimer() {
+    // Starte live Countdown Timer (jede Sekunde)
+    this.countdownInterval = setInterval(() => {
+      if (this.isSpinBlocked) {
+        this.updateTimeUntilNextSpin();
+      }
+    }, 1000); // Jede Sekunde
+
+    // Prüfe Spin-Verfügbarkeit alle 30 Sekunden
+    this.spinCheckInterval = setInterval(() => {
+      if (this.isSpinBlocked) {
+        // Prüfe ob 24h vergangen sind
+        if (this.nextSpinTime && new Date() >= this.nextSpinTime) {
+          this.checkDailySpinAvailability();
+        }
+      }
+    }, 30000); // 30 Sekunden
+  }
+
+  private updateTimeUntilNextSpin() {
+    if (this.nextSpinTime) {
+      const now = new Date();
+      const timeDiff = this.nextSpinTime.getTime() - now.getTime();
+
+      if (timeDiff <= 0) {
+        this.timeUntilNextSpin = 'Jetzt verfügbar!';
+        this.isSpinBlocked = false;
+        this.canSpin = true;
+      } else {
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+        this.timeUntilNextSpin = `${hours.toString().padStart(2, '0')}:${minutes
+          .toString()
+          .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }
   }
 }
