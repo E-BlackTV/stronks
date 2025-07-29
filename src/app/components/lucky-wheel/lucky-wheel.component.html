@@ -1,6 +1,6 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Glücksrad</ion-title>
+    <ion-title>Daily Reward - Glücksrad</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="dismiss()">
         <ion-icon name="close"></ion-icon>
@@ -9,11 +9,42 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding no-scroll">
   <div class="wheel-container">
-    <div id="wheelOfFortune">
-      <canvas #wheel id="wheel" width="500" height="500"></canvas>
-      <div #spin id="spin" (click)="spinner()">SPIN</div>
+    <!-- Wheel und Spin Button - immer sichtbar -->
+    <div class="wheel-section">
+      <div id="wheelOfFortune" [class.disabled]="isSpinBlocked">
+        <canvas #wheel id="wheel" width="320" height="320"></canvas>
+        <div
+          #spin
+          id="spin"
+          (click)="spinner()"
+          [class.disabled]="!canSpin || isSpinning || isSpinBlocked"
+        >
+          {{ isSpinning ? "SPINNING..." : "SPIN" }}
+        </div>
+      </div>
+
+      <!-- Spin Info -->
+      <div class="spin-info">
+        <ion-card class="info-card">
+          <ion-card-content>
+            <p>
+              <ion-icon name="gift-outline" color="success"></ion-icon> Täglich
+              ein kostenloser Spin!
+            </p>
+            <p>
+              <ion-icon name="trophy-outline" color="warning"></ion-icon>
+              Gewinne bis zu 100€!
+            </p>
+            <p *ngIf="isSpinBlocked" class="wait-info">
+              <ion-icon name="time-outline" color="medium"></ion-icon>
+              Nächster Spin verfügbar in:
+              <strong class="countdown">{{ timeUntilNextSpin }}</strong>
+            </p>
+          </ion-card-content>
+        </ion-card>
+      </div>
     </div>
   </div>
 
@@ -31,17 +62,26 @@
           <ion-icon
             [name]="spinResult.type === 'btc' ? 'logo-bitcoin' : 'cash-outline'"
             class="prize-icon"
-            [style.color]="spinResult.color"
+            [style.color]="spinResult.type === 'euro' ? '#27AE60' : '#F4D03F'"
           >
           </ion-icon>
           <h2>{{ spinResult.name }}</h2>
           <p *ngIf="spinResult.type === 'euro'">
-            {{ spinResult.value | currency : "EUR" : "symbol" : "1.2-2" }}
-            wurden Ihrem Konto gutgeschrieben!
+            {{
+              getActualPrizeValue(spinResult)
+                | currency : "EUR" : "symbol" : "1.2-2"
+            }}
+            ({{ spinResult.percentage }}% Ihres Vermögens) wurden Ihrem Konto
+            gutgeschrieben!
           </p>
           <p *ngIf="spinResult.type === 'btc'">
-            {{ spinResult.value }} BTC wurden Ihrem Portfolio hinzugefügt!
+            {{ getActualPrizeValue(spinResult) }} BTC wurden Ihrem Portfolio
+            hinzugefügt!
           </p>
+          <ion-button color="success" expand="full" (click)="dismiss()">
+            <ion-icon name="checkmark"></ion-icon>
+            Schließen
+          </ion-button>
         </div>
       </ion-card-content>
     </ion-card>
