@@ -55,7 +55,7 @@
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: var(--secondary-navy);
-    font-size: 2rem;
+    font-size: 24px;
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -65,6 +65,8 @@
     justify-content: center;
     border-radius: 50%;
     transition: background-color 0.2s;
+    line-height: 1;
+    margin: 0;
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.4);

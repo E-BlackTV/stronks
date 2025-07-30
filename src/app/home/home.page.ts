@@ -8,6 +8,7 @@ import { TradingService } from '../services/trading.service';
 import { ModalController, ToastController } from '@ionic/angular';
 import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
 import { TradePopupComponent } from '../components/trade-popup/trade-popup.component';
+import { environment } from '../../environments/environment';
 
 interface PurchaseResponse {
   success: boolean;
@@ -173,6 +174,11 @@ export class HomePage implements OnInit, OnDestroy {
   showTradePopup = false;
   tradeAction: 'buy' | 'sell' = 'buy';
   currentUser: any;
+  
+  // Crypto properties
+  showCryptoList: boolean = false;
+  cryptoAssets: CryptoAsset[] = [];
+  investmentAmount: number = 0;
 
   constructor(
     private http: HttpClient,
@@ -1018,6 +1024,14 @@ export class HomePage implements OnInit, OnDestroy {
         color: 'danger',
       });
       toast.present();
+    }
+  }
+
+  calculateShares() {
+    if (this.selectedCrypto && this.investmentAmount > 0) {
+      this.calculatedShares = this.investmentAmount / this.selectedCrypto.price;
+    } else {
+      this.calculatedShares = 0;
     }
   }
 }

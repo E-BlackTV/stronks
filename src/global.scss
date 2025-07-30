@@ -36,3 +36,42 @@
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
 
+/* Toolbar-Element ausblenden */
+.toolbar-container {
+  display: none !important;
+}
+
+/* Close-Button zentrieren */
+.close-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Close-Buttons in allen Komponenten zentrieren */
+ion-button ion-icon[name="close"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+}
+
+/* Toolbar-Buttons zentrieren */
+ion-buttons[slot="end"] ion-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+
