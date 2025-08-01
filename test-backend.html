@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Backend Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #result {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background: #f9f9f9;
+      }
+      .error {
+        color: red;
+      }
+      .success {
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Backend Connection Test</h1>
+    <button onclick="testCORS()">Test CORS</button>
+    <button onclick="testRegister()">Test Register</button>
+    <button onclick="testLogin()">Test Login</button>
+    <div id="result"></div>
+
+    <script>
+      function testCORS() {
+        document.getElementById("result").innerHTML = "<p>Testing CORS...</p>";
+
+        fetch("https://web053.wifiooe.at/backend/test-cors.php", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => {
+            console.log("Response status:", response.status);
+            console.log("Response headers:", response.headers);
+            return response.json();
+          })
+          .then((data) => {
+            document.getElementById("result").innerHTML =
+              '<pre class="success">' +
+              JSON.stringify(data, null, 2) +
+              "</pre>";
+          })
+          .catch((error) => {
+            document.getElementById("result").innerHTML =
+              '<pre class="error">Error: ' + error.message + "</pre>";
+            console.error("Error details:", error);
+          });
+      }
+
+      function testRegister() {
+        document.getElementById("result").innerHTML =
+          "<p>Testing Register...</p>";
+
+        fetch("https://web053.wifiooe.at/backend/register.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: "testuser" + Date.now(),
+            password: "testpass",
+          }),
+        })
+          .then((response) => {
+            console.log("Response status:", response.status);
+            return response.json();
+          })
+          .then((data) => {
+            document.getElementById("result").innerHTML =
+              '<pre class="success">' +
+              JSON.stringify(data, null, 2) +
+              "</pre>";
+          })
+          .catch((error) => {
+            document.getElementById("result").innerHTML =
+              '<pre class="error">Error: ' + error.message + "</pre>";
+            console.error("Error details:", error);
+          });
+      }
+
+      function testLogin() {
+        document.getElementById("result").innerHTML = "<p>Testing Login...</p>";
+
+        fetch("https://web053.wifiooe.at/backend/login.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: "testuser",
+            password: "testpass",
+          }),
+        })
+          .then((response) => {
+            console.log("Response status:", response.status);
+            return response.json();
+          })
+          .then((data) => {
+            document.getElementById("result").innerHTML =
+              '<pre class="success">' +
+              JSON.stringify(data, null, 2) +
+              "</pre>";
+          })
+          .catch((error) => {
+            document.getElementById("result").innerHTML =
+              '<pre class="error">Error: ' + error.message + "</pre>";
+            console.error("Error details:", error);
+          });
+      }
+    </script>
+  </body>
+</html>

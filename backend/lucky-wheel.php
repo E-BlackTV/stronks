@@ -4,7 +4,10 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 try {
-    $conn = new mysqli("localhost", "root", "", "ionic_app");
+    require_once 'config.php';
+setCORSHeaders();
+
+$conn = getDBConnection();
 
     if ($conn->connect_error) {
         throw new Exception("Connection failed: " . $conn->connect_error);

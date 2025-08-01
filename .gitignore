@@ -97,4 +97,6 @@ src/environments/environment.prod.ts
 
 
 /android
-/ios
+/ios 
+/capacitor.config.ts
+

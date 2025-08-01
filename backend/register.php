@@ -1,24 +1,13 @@
 <?php
 session_start();
-
-header('Content-Type: application/json');
-
-// Preflight OPTIONS handler
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+require_once 'config.php';
+setCORSHeaders();
 
 ini_set('display_errors', 0); // Disable error display in production
 error_reporting(E_ALL);
 
-$servername = "localhost";
-$username = "root";
-$password = "";
-$database = "ionic_app";
-
 // Create connection
-$conn = new mysqli($servername, $username, $password, $database);
+$conn = getDBConnection();
 
 if ($conn->connect_error) {
     http_response_code(500);

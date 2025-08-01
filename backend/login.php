@@ -1,12 +1,12 @@
 <?php
-
-header('Content-Type: application/json');
+require_once 'config.php';
+setCORSHeaders();
 
 $data = json_decode(file_get_contents("php://input"), true);
 $username = $data["username"];
 $password = $data["password"];
 
-$conn = new mysqli("localhost", "root", "", "ionic_app");
+$conn = getDBConnection();
 
 if ($conn->connect_error) {
     die(json_encode(["success" => false, "message" => "Connection failed"]));
