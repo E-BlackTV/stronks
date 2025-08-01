@@ -17,7 +17,7 @@ export class AuthenticationService {
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser: Observable<User | null>;
   private readonly USER_KEY = 'currentUser';
-  private apiUrl = '/backend'; // Direkte URL statt environment
+  private apiUrl = '/backend'; // Proxy über Angular Dev Server
 
   constructor(private http: HttpClient, private router: Router) {
     const storedUser = localStorage.getItem(this.USER_KEY);

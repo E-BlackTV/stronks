@@ -1,11 +1,11 @@
 {
   "/backend/*": {
-    "target": "http://localhost/stronks/backend",
-    "secure": false,
+    "target": "https://web053.wifiooe.at",
+    "secure": true,
     "changeOrigin": true,
     "logLevel": "debug",
     "pathRewrite": {
-      "^/backend": ""
+      "^/backend": "/backend"
     }
   }
 }
