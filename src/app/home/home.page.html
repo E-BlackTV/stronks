@@ -124,7 +124,7 @@
             <ion-badge color="success" slot="end">
               {{ asset.price | currency:'USD':'symbol':'1.2-2' }}
             </ion-badge>
-            <ion-button size="small" color="primary" slot="end">
+            <ion-button size="small" color="primary" slot="end" (click)="selectCrypto(asset)">
               Auswählen
             </ion-button>
           </ion-item>
@@ -136,7 +136,7 @@
     <!-- Bitcoin Card -->
     <ion-card class="bitcoin-card">
       <ion-card-header>
-        <ion-card-subtitle>Bitcoin</ion-card-subtitle>
+        <ion-card-subtitle>{{ selectedCryptoName }}</ion-card-subtitle>
         <ion-card-title class="bitcoin-price">
           {{ currentPrice | currency:'USD':'symbol':'1.2-2' }}
         </ion-card-title>
@@ -144,7 +144,7 @@
       </ion-card-header>
 
       <ion-card-content>
-        <ion-button fill="clear" (click)="loadAllData()">
+        <ion-button fill="clear" (click)="fetchDataForSelectedCrypto()">
           <ion-icon name="refresh" slot="start"></ion-icon>
           Aktualisieren
         </ion-button>
@@ -215,11 +215,11 @@
 <app-trade-popup
   [isOpen]="showTradePopup"
   [action]="tradeAction"
-  [assetSymbol]="'BTC-USD'"
-  [assetName]="'Bitcoin'"
+  [assetSymbol]="selectedCryptoSymbol"
+  [assetName]="selectedCryptoName"
   [currentPrice]="currentPrice"
   [userBalance]="accountBalance"
-  [availableQuantity]="getBitcoinQuantity()"
+  [availableQuantity]="getSelectedCryptoQuantity()"
   (close)="closeTradePopup()"
   (tradeCompleted)="onTradeCompleted($event)"
 ></app-trade-popup>

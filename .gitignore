@@ -94,3 +94,7 @@ config.json
 Thumbs.db
 backend/config.php
 src/environments/environment.prod.ts
+
+
+/android
+/ios

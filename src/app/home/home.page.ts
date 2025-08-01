@@ -87,6 +87,8 @@ export class HomePage implements OnInit, OnDestroy {
   currentPrice: number = 0;
   calculatedShares: number = 0;
   selectedCrypto: CryptoAsset | null = null;
+  selectedCryptoSymbol: string = 'BTC-USD'; // Add this property to track selected crypto
+  selectedCryptoName: string = 'Bitcoin'; // Add this property to track selected crypto name
 
   accountBalance: number = 0;
   portfolioValue: number = 0;
@@ -200,6 +202,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.initializeData();
+    this.toggleInvestments();
   }
 
   async initializeData() {
@@ -216,6 +219,7 @@ export class HomePage implements OnInit, OnDestroy {
       } else {
         this.currentUser = user;
         this.loadAllData();
+        this.loadPortfolio(); // Load portfolio on init
       }
     } catch (error) {
       console.error('Fehler beim Initialisieren:', error);
@@ -225,6 +229,7 @@ export class HomePage implements OnInit, OnDestroy {
   async loadAllData() {
     await this.calculatePortfolioValue(); // Dies lädt auch die Balance und userInvestments
     await this.fetchAllCurrentPrices();
+    await this.fetchDataForSelectedCrypto();
   }
 
   ngOnDestroy() {
@@ -234,7 +239,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   ionViewDidEnter() {
-    this.fetchData();
+    this.fetchDataForSelectedCrypto();
   }
 
   // Trading-Funktionen
@@ -395,7 +400,7 @@ export class HomePage implements OnInit, OnDestroy {
         method: 'GET',
         url: '/backend/cache.php',
         params: {
-          symbol: 'BTC-USD',
+          symbol: this.selectedCryptoSymbol,
           range: this.selectedRange,
           interval: this.selectedInterval,
         },
@@ -596,7 +601,7 @@ export class HomePage implements OnInit, OnDestroy {
 
     try {
       this.http
-        .get<any>('/backend/cache.php?symbol=BTC-USD&range=1d&interval=5m')
+        .get<any>(`/backend/cache.php?symbol=${this.selectedCryptoSymbol}&range=1d&interval=5m`)
         .subscribe({
           next: (response) => {
             if (response && response.chart?.result?.[0]) {
@@ -604,7 +609,7 @@ export class HomePage implements OnInit, OnDestroy {
               const prices = result.indicators?.quote[0]?.close || [];
               if (prices.length > 0) {
                 this.currentPrice = prices[prices.length - 1];
-                this.currentPrices['Bitcoin'] = this.currentPrice;
+                this.currentPrices[this.selectedCryptoName] = this.currentPrice;
               }
             }
           },
@@ -643,7 +648,7 @@ export class HomePage implements OnInit, OnDestroy {
             this.userInvestments = response.portfolio.map((item) => ({
               id: item.id,
               asset_symbol: item.asset_symbol,
-              investments: item.asset_name,
+              investments: item.asset_name || this.getAssetNameFromSymbol(item.asset_symbol),
               calculatedShares: item.quantity,
               currentValue: item.current_value,
               purchase_price: item.avg_purchase_price,
@@ -708,12 +713,12 @@ export class HomePage implements OnInit, OnDestroy {
     ) {
       this.selectedInterval = this.getAvailableIntervals()[0].value;
     }
-    this.fetchData();
+    this.fetchDataForSelectedCrypto();
   }
 
   onIntervalChange(event: any) {
     this.selectedInterval = event.detail.value;
-    this.fetchData();
+    this.fetchDataForSelectedCrypto();
   }
 
   async openLuckyWheel() {
@@ -757,7 +762,7 @@ export class HomePage implements OnInit, OnDestroy {
             this.userInvestments = response.portfolio.map((item) => ({
               id: item.id,
               asset_symbol: item.asset_symbol,
-              investments: item.asset_name,
+              investments: item.asset_name || this.getAssetNameFromSymbol(item.asset_symbol),
               calculatedShares: item.quantity,
               currentValue: item.current_value,
               purchase_price: item.avg_purchase_price,
@@ -808,7 +813,7 @@ export class HomePage implements OnInit, OnDestroy {
             this.userInvestments = response.portfolio.map((item) => ({
               id: item.id,
               asset_symbol: item.asset_symbol,
-              investments: item.asset_name,
+              investments: item.asset_name || this.getAssetNameFromSymbol(item.asset_symbol),
               calculatedShares: item.quantity,
               currentValue: item.current_value,
               purchase_price: item.avg_purchase_price,
@@ -1034,4 +1039,274 @@ export class HomePage implements OnInit, OnDestroy {
       this.calculatedShares = 0;
     }
   }
+
+  // Add method to handle crypto selection
+  async selectCrypto(asset: CryptoAsset) {
+    this.selectedCrypto = asset;
+    this.selectedCryptoSymbol = `${asset.symbol}-USD`;
+    this.selectedCryptoName = asset.name;
+    
+    // Update the chart and data for the selected crypto
+    await this.fetchDataForSelectedCrypto();
+    
+    console.log('Selected crypto:', {
+      name: this.selectedCryptoName,
+      symbol: this.selectedCryptoSymbol,
+      price: asset.price
+    });
+  }
+
+  // Add method to fetch data for the selected crypto
+  async fetchDataForSelectedCrypto() {
+    try {
+      const selectedIntervalOption = this.intervalOptions.find(
+        (option) => option.value === this.selectedInterval
+      );
+
+      if (!selectedIntervalOption) {
+        console.error('No valid interval selected');
+        return;
+      }
+
+      const options = {
+        method: 'GET',
+        url: '/backend/cache.php',
+        params: {
+          symbol: this.selectedCryptoSymbol,
+          range: this.selectedRange,
+          interval: this.selectedInterval,
+        },
+      };
+
+      const response = await axios.request(options);
+      console.log('API Response for selected crypto:', response.data);
+
+      if (response.data.error) {
+        console.error('API Error:', response.data.error);
+        return;
+      }
+
+      const data = response.data;
+      if (!data.chart?.result?.[0]) {
+        console.error('Unexpected data format:', data);
+        return;
+      }
+
+      const result = data.chart.result[0];
+      const prices = result.indicators?.quote[0]?.close || [];
+      const timestamps = result.timestamp || [];
+      const volumes = result.indicators?.quote[0]?.volume || [];
+
+      const labels = timestamps.map((timestamp: number) => {
+        const date = new Date(timestamp * 1000);
+        switch (this.selectedRange) {
+          case TimeRange.DAY:
+            return date.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          case TimeRange.WEEK:
+            return date.toLocaleDateString([], { weekday: 'short' });
+          case TimeRange.MONTH:
+            return date.toLocaleDateString([], {
+              day: 'numeric',
+              month: 'short',
+            });
+          case TimeRange.THREE_MONTHS:
+          case TimeRange.SIX_MONTHS:
+            return date.toLocaleDateString([], {
+              month: 'short',
+              day: 'numeric',
+            });
+          case TimeRange.YEAR:
+          case TimeRange.FIVE_YEARS:
+            return date.toLocaleDateString([], {
+              month: 'short',
+              year: '2-digit',
+            });
+          default:
+            return date.toLocaleDateString();
+        }
+      });
+
+      this.createChartForSelectedCrypto(prices, labels);
+
+      this.currentPrice = prices[prices.length - 1] || 0;
+      await this.calculatePortfolioValue();
+
+      this.tableData = timestamps.map((timestamp: number, index: number) => ({
+        date: labels[index],
+        price: prices[index]?.toFixed(2) || 'N/A',
+        volume: volumes[index]?.toLocaleString() || 'N/A',
+      }));
+
+      console.log('Chart data updated for selected crypto:', {
+        crypto: this.selectedCryptoName,
+        symbol: this.selectedCryptoSymbol,
+        range: this.selectedRange,
+        interval: this.selectedInterval,
+        dataPoints: prices.length,
+        currentPrice: this.currentPrice,
+      });
+    } catch (error) {
+      console.error('Error fetching data for selected crypto:', error);
+    }
+  }
+
+  // Add method to create chart for selected crypto
+  createChartForSelectedCrypto(prices: number[], labels: string[]) {
+    if (this.chart) {
+      this.chart.destroy();
+    }
+
+    if (!this.lineChart?.nativeElement) {
+      console.error('Canvas element not found!');
+      return;
+    }
+
+    const mintColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--accent-turquoise')
+      .trim();
+
+    this.chart = new Chart(this.lineChart.nativeElement, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: `${this.selectedCryptoName} Preis (USD)`,
+            data: prices,
+            borderColor: mintColor,
+            backgroundColor: mintColor + '33',
+            fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            borderWidth: 2,
+            tension: 0.4,
+            cubicInterpolationMode: 'monotone',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animations: {
+          tension: {
+            duration: 1000,
+            easing: 'linear',
+            from: 0.8,
+            to: 0.4,
+            loop: false,
+          },
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              font: {
+                size: 14,
+                weight: 'bold',
+              },
+              padding: 20,
+            },
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleFont: {
+              size: 16,
+              weight: 'bold',
+            },
+            bodyFont: {
+              size: 14,
+            },
+            padding: 12,
+            displayColors: false,
+            callbacks: {
+              label: function (context) {
+                return `Price: $${context.parsed.y.toFixed(2)}`;
+              },
+            },
+          },
+        },
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        hover: {
+          mode: 'index',
+          intersect: false,
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false,
+            },
+            ticks: {
+              font: {
+                size: 12,
+              },
+              maxRotation: 45,
+              minRotation: 45,
+            },
+          },
+          y: {
+            position: 'right',
+            grid: {
+              color: 'rgba(200, 200, 200, 0.2)',
+            },
+            ticks: {
+              font: {
+                size: 12,
+                weight: 'bold',
+              },
+              callback: function (value) {
+                return '$' + value.toLocaleString();
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // Add method to get quantity for selected crypto
+  getSelectedCryptoQuantity(): number {
+    // Berechne die verfügbare Menge für die ausgewählte Kryptowährung aus dem Portfolio
+    let totalQuantity = 0;
+
+    // Verwende das neue Portfolio-System
+    if (this.userInvestments && this.userInvestments.length > 0) {
+      const selectedCryptoInvestments = this.userInvestments.filter(
+        (inv) => inv.asset_symbol === this.selectedCryptoSymbol || inv.investments === this.selectedCryptoName
+      );
+      selectedCryptoInvestments.forEach((inv) => {
+        // Verwende quantity aus dem neuen Portfolio-System
+        totalQuantity += inv.quantity || inv.calculatedShares || 0;
+      });
+    }
+
+    return totalQuantity;
+  }
+
+  // Add method to get asset name from symbol
+  getAssetNameFromSymbol(symbol: string): string {
+    const symbolMap: { [key: string]: string } = {
+      'BTC-USD': 'Bitcoin',
+      'ETH-USD': 'Ethereum',
+      'SOL-USD': 'Solana',
+      'DOGE-USD': 'Dogecoin',
+      'BNB-USD': 'Binance Coin',
+      'ADA-USD': 'Cardano',
+      'XRP-USD': 'Ripple',
+      'AVAX-USD': 'Avalanche',
+      'DOT-USD': 'Polkadot',
+      'MATIC-USD': 'Polygon'
+    };
+    
+    return symbolMap[symbol] || symbol;
+  }
 }
+
