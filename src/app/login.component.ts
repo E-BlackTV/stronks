@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+  styleUrls: ['./login.component.css'],
 })
 export class LoginComponent {
   loginForm: FormGroup;
@@ -25,20 +25,28 @@ export class LoginComponent {
 
   onLogin() {
     if (this.loginForm.valid) {
-      this.http.post<{ success: boolean; message: string }>(
-        'http://localhost:3000/login',
-        this.loginForm.value
-      ).subscribe(response => {
-        if (response.success) {
-          // Weiterleitung zur Startseite
-          this.router.navigate(['/home']);
-        } else {
-          // Fehlermeldung anzeigen
-          alert(response.message);
-        }
-      }, error => {
-        console.error('Fehler bei der Anfrage', error);
-      });
+      this.http
+        .post<any>(
+          '/backend/login.php', // Proxy über Angular Dev Server
+          {
+            username: this.username,
+            password: this.password,
+          }
+        )
+        .subscribe(
+          (response) => {
+            if (response.success) {
+              // Weiterleitung zur Startseite
+              this.router.navigate(['/home']);
+            } else {
+              // Fehlermeldung anzeigen
+              alert(response.message);
+            }
+          },
+          (error) => {
+            console.error('Fehler bei der Anfrage', error);
+          }
+        );
     }
   }
 }

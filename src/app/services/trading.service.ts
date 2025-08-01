@@ -81,7 +81,7 @@ export interface TransactionsResponse {
   providedIn: 'root',
 })
 export class TradingService {
-  private apiUrl = '/backend';
+  private apiUrl = '/backend'; // Proxy über Angular Dev Server
 
   constructor(private http: HttpClient) {}
 

@@ -32,12 +32,10 @@ header('Content-Type: application/json');
 if (ob_get_level()) ob_end_clean();
 
 // Database connection
-$servername = "localhost";
-$username = "root";
-$password = "";
-$database = "ionic_app";
+require_once 'config.php';
+setCORSHeaders();
 
-$conn = new mysqli($servername, $username, $password, $database);
+$conn = getDBConnection();
 
 if ($conn->connect_error) {
     error_log("Database connection failed: " . $conn->connect_error);

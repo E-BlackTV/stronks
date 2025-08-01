@@ -12,10 +12,10 @@ interface WheelResponse {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LuckyWheelService {
-  private apiUrl = `${environment.apiUrl}/lucky-wheel.php`;
+  private apiUrl = '/backend/lucky-wheel.php'; // Proxy über Angular Dev Server
 
   constructor(private http: HttpClient) {}
 
@@ -24,33 +24,37 @@ export class LuckyWheelService {
       return throwError(() => new Error('User ID is required'));
     }
 
-    return this.http.post<WheelResponse>(this.apiUrl, { 
-      user_id: userId,
-      timestamp: Date.now(), // Füge Zeitstempel für zusätzliche Sicherheit hinzu
-      action: 'spin'
-    }).pipe(
-      tap(response => {
-        if (!response.success) {
-          throw new Error(response.message || 'Spin failed');
-        }
-      }),
-      catchError(this.handleError)
-    );
+    return this.http
+      .post<WheelResponse>(this.apiUrl, {
+        user_id: userId,
+        timestamp: Date.now(), // Füge Zeitstempel für zusätzliche Sicherheit hinzu
+        action: 'spin',
+      })
+      .pipe(
+        tap((response) => {
+          if (!response.success) {
+            throw new Error(response.message || 'Spin failed');
+          }
+        }),
+        catchError(this.handleError)
+      );
   }
 
-  checkLastSpin(userId: number): Observable<{canSpin: boolean}> {
+  checkLastSpin(userId: number): Observable<{ canSpin: boolean }> {
     if (!userId) {
       return throwError(() => new Error('User ID is required'));
     }
 
-    return this.http.get<{canSpin: boolean}>(`${this.apiUrl}?user_id=${userId}&action=check`).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<{ canSpin: boolean }>(
+        `${this.apiUrl}?user_id=${userId}&action=check`
+      )
+      .pipe(catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'An error occurred';
-    
+
     if (error.error instanceof ErrorEvent) {
       // Client-side error
       errorMessage = `Error: ${error.error.message}`;
@@ -58,7 +62,7 @@ export class LuckyWheelService {
       // Server-side error
       errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
     }
-    
+
     console.error(errorMessage);
     return throwError(() => new Error(errorMessage));
   }

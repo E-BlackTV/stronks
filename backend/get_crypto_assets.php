@@ -1,6 +1,9 @@
 <?php
 header('Content-Type: application/json');
-$conn = new mysqli("localhost", "root", "", "ionic_app");
+require_once 'config.php';
+setCORSHeaders();
+
+$conn = getDBConnection();
 
 if ($conn->connect_error) {
     echo json_encode(['success' => false, 'message' => 'DB error']);

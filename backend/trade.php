@@ -1,22 +1,12 @@
 <?php
-// CORS-Headers nur setzen, wenn sie noch nicht gesetzt wurden
-if (!headers_sent()) {
-    header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 try {
-    $conn = new mysqli("localhost", "root", "", "ionic_app");
+    require_once 'config.php';
+    setCORSHeaders();
+
+    $conn = getDBConnection();
     
     if ($conn->connect_error) {
         throw new Exception("Connection failed: " . $conn->connect_error);
