@@ -26,8 +26,6 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 error_log("Starting cache.php request");
 
-header('Content-Type: application/json');
-
 // Clear output buffer
 if (ob_get_level()) ob_end_clean();
 
@@ -48,7 +46,7 @@ if ($conn->connect_error) {
     exit;
 }
 
-// Cache-Ablaufzeit in Sekunden (z. B. 3600 = 1 Stunde)
+// Cache-Ablaufzeit in Sekunden (z. B. 3600 = 1 Stunde)
 $cacheExpiry = 36000000;
 
 // Liste aller zu cachenden Symbole

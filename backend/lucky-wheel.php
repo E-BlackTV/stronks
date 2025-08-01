@@ -5,9 +5,9 @@ ini_set('display_errors', 1);
 
 try {
     require_once 'config.php';
-setCORSHeaders();
+    setCORSHeaders();
 
-$conn = getDBConnection();
+    $conn = getDBConnection();
 
     if ($conn->connect_error) {
         throw new Exception("Connection failed: " . $conn->connect_error);
@@ -73,7 +73,6 @@ $conn = getDBConnection();
 
                 $conn->commit();
 
-                header('Content-Type: application/json; charset=utf-8');
                 echo json_encode([
                     "success" => true,
                     "message" => "Gewinn erfolgreich hinzugefügt!",
@@ -131,7 +130,6 @@ $conn = getDBConnection();
                     $nextSpinTime = clone $lastSpinTime;
                     $nextSpinTime->add(new DateInterval('PT24H'));
                     
-                    header('Content-Type: application/json; charset=utf-8');
                     echo json_encode([
                         "success" => true,
                         "can_spin" => false,
@@ -141,7 +139,6 @@ $conn = getDBConnection();
                         "message" => "Sie müssen noch " . (24 - $hoursSinceLastSpin) . " Stunden warten"
                     ]);
                 } else {
-                    header('Content-Type: application/json; charset=utf-8');
                     echo json_encode([
                         "success" => true,
                         "can_spin" => true,
@@ -151,7 +148,6 @@ $conn = getDBConnection();
                 }
             } else {
                 // User has never spun before
-                header('Content-Type: application/json; charset=utf-8');
                 echo json_encode([
                     "success" => true,
                     "can_spin" => true,
@@ -168,7 +164,6 @@ $conn = getDBConnection();
 
 } catch (Exception $e) {
     error_log("Lucky wheel error: " . $e->getMessage());
-    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'success' => false, 
         'message' => 'Fehler: ' . $e->getMessage(),
@@ -183,3 +178,4 @@ $conn = getDBConnection();
         $conn->close();
     }
 }
+?>

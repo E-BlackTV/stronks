@@ -81,7 +81,7 @@ export interface TransactionsResponse {
   providedIn: 'root',
 })
 export class TradingService {
-  private apiUrl = '/backend'; // Proxy über Angular Dev Server
+  private apiUrl = 'https://web053.wifiooe.at/backend'; // Direkte Server-Verbindung
 
   constructor(private http: HttpClient) {}
 

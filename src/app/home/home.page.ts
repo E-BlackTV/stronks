@@ -169,12 +169,12 @@ export class HomePage implements OnInit, OnDestroy {
 
   showInvestments: boolean = false;
   userInvestments: any[] = [];
-  
+
   // Trading-Popup
   showTradePopup = false;
   tradeAction: 'buy' | 'sell' = 'buy';
   currentUser: any;
-  
+
   // Crypto properties
   showCryptoList: boolean = false;
   cryptoAssets: CryptoAsset[] = [];
@@ -342,34 +342,38 @@ export class HomePage implements OnInit, OnDestroy {
       const user = this.authService.getCurrentUser();
       if (user) {
         // Balance direkt von der API abrufen
-        this.http.get(`/backend/get_balance.php?user_id=${user.id}`).subscribe({
-          next: (response: any) => {
-            if (response.success) {
-              this.accountBalance = response.balance;
-              console.log(
-                'Account balance loaded from API:',
-                this.accountBalance
-              );
-
-              // Aktualisiere auch den localStorage
-              const currentUser = this.authService.getCurrentUser();
-              if (currentUser) {
-                currentUser.accountbalance = this.accountBalance;
-                localStorage.setItem(
-                  'currentUser',
-                  JSON.stringify(currentUser)
+        this.http
+          .get(
+            `https://web053.wifiooe.at/backend/get_balance.php?user_id=${user.id}`
+          )
+          .subscribe({
+            next: (response: any) => {
+              if (response.success) {
+                this.accountBalance = response.balance;
+                console.log(
+                  'Account balance loaded from API:',
+                  this.accountBalance
                 );
+
+                // Aktualisiere auch den localStorage
+                const currentUser = this.authService.getCurrentUser();
+                if (currentUser) {
+                  currentUser.accountbalance = this.accountBalance;
+                  localStorage.setItem(
+                    'currentUser',
+                    JSON.stringify(currentUser)
+                  );
+                }
+              } else {
+                console.error('Error loading balance:', response.message);
               }
-            } else {
-              console.error('Error loading balance:', response.message);
-            }
-          },
-          error: (error) => {
-            console.error('Error fetching balance from API:', error);
-            // Fallback auf localStorage
-            this.accountBalance = user.accountbalance || 0;
-          },
-        });
+            },
+            error: (error) => {
+              console.error('Error fetching balance from API:', error);
+              // Fallback auf localStorage
+              this.accountBalance = user.accountbalance || 0;
+            },
+          });
       } else {
         console.error('No user found');
         this.accountBalance = 0;
@@ -393,7 +397,7 @@ export class HomePage implements OnInit, OnDestroy {
 
       const options = {
         method: 'GET',
-        url: '/backend/cache.php',
+        url: 'https://web053.wifiooe.at/backend/cache.php',
         params: {
           symbol: 'BTC-USD',
           range: this.selectedRange,
@@ -593,10 +597,11 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async fetchAllCurrentPrices() {
-
     try {
       this.http
-        .get<any>('/backend/cache.php?symbol=BTC-USD&range=1d&interval=5m')
+        .get<any>(
+          'https://web053.wifiooe.at/backend/cache.php?symbol=BTC-USD&range=1d&interval=5m'
+        )
         .subscribe({
           next: (response) => {
             if (response && response.chart?.result?.[0]) {

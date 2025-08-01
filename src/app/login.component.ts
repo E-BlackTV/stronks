@@ -27,7 +27,7 @@ export class LoginComponent {
     if (this.loginForm.valid) {
       this.http
         .post<any>(
-          '/backend/login.php', // Proxy über Angular Dev Server
+          'https://web053.wifiooe.at/backend/login.php', // Direkte Server-Verbindung
           {
             username: this.username,
             password: this.password,

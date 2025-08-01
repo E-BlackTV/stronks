@@ -15,7 +15,7 @@ interface WheelResponse {
   providedIn: 'root',
 })
 export class LuckyWheelService {
-  private apiUrl = '/backend/lucky-wheel.php'; // Proxy über Angular Dev Server
+  private apiUrl = `https://web053.wifiooe.at/backend/lucky-wheel.php`; // Direkte Server-Verbindung
 
   constructor(private http: HttpClient) {}
 

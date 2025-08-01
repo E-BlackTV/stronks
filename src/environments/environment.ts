@@ -4,5 +4,5 @@ export const environment = {
   production: false,
   rapidApiKey: raw.rapidApiKey,
   rapidApiHost: raw.rapidApiHost,
-  apiUrl: '/backend', // Proxy über Angular Dev Server
+  apiUrl: 'https://web053.wifiooe.at/backend', // Direkte Server-Verbindung
 };

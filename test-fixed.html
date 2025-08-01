@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Fixed CORS Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f0f0f0;
+      }
+      button {
+        margin: 10px;
+        padding: 15px 20px;
+        font-size: 16px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        width: 100%;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      #result {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        background: white;
+        border-radius: 5px;
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .error {
+        color: red;
+      }
+      .success {
+        color: green;
+      }
+      .info {
+        color: blue;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔧 Fixed CORS Test</h1>
+    <p>Teste die behobenen CORS-Probleme</p>
+
+    <button onclick="testLogin()">🔐 Test Login</button>
+    <button onclick="testRegister()">📝 Test Register</button>
+    <button onclick="testCrypto()">💰 Test Crypto Data</button>
+    <button onclick="testPortfolio()">📊 Test Portfolio</button>
+    <button onclick="clearLog()">🗑️ Clear Log</button>
+
+    <div id="result">Debug Log wird hier angezeigt...</div>
+
+    <script>
+      let logContent = "";
+
+      function log(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `[${timestamp}] ${message}\n`;
+        logContent += logEntry;
+
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = logContent;
+        resultDiv.scrollTop = resultDiv.scrollHeight;
+
+        console.log(message);
+      }
+
+      function testLogin() {
+        log("🔍 Testing login...", "info");
+
+        fetch("https://web053.wifiooe.at/backend/login.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: "testuser",
+            password: "testpass",
+          }),
+        })
+          .then((response) => {
+            log(`📡 Login response status: ${response.status}`, "info");
+            return response.text();
+          })
+          .then((data) => {
+            log(`📄 Raw login response: ${data}`, "info");
+            try {
+              const jsonData = JSON.parse(data);
+              log(
+                `✅ Login test response: ${JSON.stringify(jsonData)}`,
+                "success"
+              );
+            } catch (e) {
+              log(`❌ Invalid JSON response: ${e.message}`, "error");
+            }
+          })
+          .catch((error) => {
+            log(`❌ Login test failed: ${error.message}`, "error");
+            log(`❌ Error type: ${error.name}`, "error");
+          });
+      }
+
+      function testRegister() {
+        log("🔍 Testing register...", "info");
+
+        fetch("https://web053.wifiooe.at/backend/register.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: "testuser" + Date.now(),
+            password: "testpass",
+          }),
+        })
+          .then((response) => {
+            log(`📡 Register response status: ${response.status}`, "info");
+            return response.text();
+          })
+          .then((data) => {
+            log(`📄 Raw register response: ${data}`, "info");
+            try {
+              const jsonData = JSON.parse(data);
+              log(
+                `✅ Register test response: ${JSON.stringify(jsonData)}`,
+                "success"
+              );
+            } catch (e) {
+              log(`❌ Invalid JSON response: ${e.message}`, "error");
+            }
+          })
+          .catch((error) => {
+            log(`❌ Register test failed: ${error.message}`, "error");
+            log(`❌ Error type: ${error.name}`, "error");
+          });
+      }
+
+      function testCrypto() {
+        log("🔍 Testing crypto data...", "info");
+
+        fetch(
+          "https://web053.wifiooe.at/backend/cache.php?symbol=BTC-USD&range=1d&interval=5m",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        )
+          .then((response) => {
+            log(`📡 Crypto response status: ${response.status}`, "info");
+            return response.text();
+          })
+          .then((data) => {
+            log(`📄 Raw crypto response length: ${data.length}`, "info");
+            try {
+              const jsonData = JSON.parse(data);
+              log(
+                `✅ Crypto test response: ${JSON.stringify(jsonData).substring(
+                  0,
+                  200
+                )}...`,
+                "success"
+              );
+            } catch (e) {
+              log(`❌ Invalid JSON response: ${e.message}`, "error");
+            }
+          })
+          .catch((error) => {
+            log(`❌ Crypto test failed: ${error.message}`, "error");
+            log(`❌ Error type: ${error.name}`, "error");
+          });
+      }
+
+      function testPortfolio() {
+        log("🔍 Testing portfolio...", "info");
+
+        fetch(
+          "https://web053.wifiooe.at/backend/get_portfolio_new.php?user_id=1",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        )
+          .then((response) => {
+            log(`📡 Portfolio response status: ${response.status}`, "info");
+            return response.text();
+          })
+          .then((data) => {
+            log(`📄 Raw portfolio response: ${data}`, "info");
+            try {
+              const jsonData = JSON.parse(data);
+              log(
+                `✅ Portfolio test response: ${JSON.stringify(jsonData)}`,
+                "success"
+              );
+            } catch (e) {
+              log(`❌ Invalid JSON response: ${e.message}`, "error");
+            }
+          })
+          .catch((error) => {
+            log(`❌ Portfolio test failed: ${error.message}`, "error");
+            log(`❌ Error type: ${error.name}`, "error");
+          });
+      }
+
+      function clearLog() {
+        logContent = "";
+        document.getElementById("result").innerHTML =
+          "Debug Log wurde geleert...";
+      }
+
+      // Auto-test beim Laden
+      window.onload = function () {
+        log("🚀 Fixed CORS Test gestartet", "info");
+        log("📱 User Agent: " + navigator.userAgent, "info");
+        log("🌐 Location: " + window.location.href, "info");
+      };
+    </script>
+  </body>
+</html>
