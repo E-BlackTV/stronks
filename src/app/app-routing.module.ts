@@ -11,6 +11,7 @@ const routes: Routes = [
   },
   {
     path: 'wallet',
+    canActivate: [AuthGuard],
     loadChildren: () =>
       import('./tabs/tabs.module').then((m) => m.TabsPageModule),
   },
@@ -19,6 +20,16 @@ const routes: Routes = [
     loadChildren: () =>
       import('./home/home.module').then((m) => m.HomePageModule),
     canActivate: [AuthGuard],
+  },
+  {
+    path: 'asset/:symbol',
+    canActivate: [AuthGuard],
+    loadChildren: () => import('./pages/asset-detail/asset-detail.module').then(m => m.AssetDetailPageModule)
+  },
+  {
+    path: 'rewards',
+    canActivate: [AuthGuard],
+    loadChildren: () => import('./pages/rewards/rewards.module').then(m => m.RewardsPageModule)
   },
   {
     path: 'login',

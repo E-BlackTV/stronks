@@ -1,0 +1,116 @@
+:host {
+  --menu-width: 280px;
+  --menu-width-collapsed: 84px;
+}
+
+.app-menu {
+  --ion-background-color: var(--secondary-navy);
+  --ion-text-color: var(--secondary-white);
+  /* Kritisch: echte Breite des Menüs über CSS-Variablen von Ion Menu steuern */
+  --width: var(--menu-width);
+  --min-width: var(--menu-width);
+  --max-width: var(--menu-width);
+  transition: none; /* Ion Menu animiert intern */
+}
+
+.app-menu.collapsed {
+  --width: var(--menu-width-collapsed);
+  --min-width: var(--menu-width-collapsed);
+  --max-width: var(--menu-width-collapsed);
+}
+
+.menu-toolbar {
+  --background: var(--secondary-navy);
+  --color: var(--secondary-white);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-text {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--secondary-white);
+}
+
+.menu-list {
+  background: transparent;
+}
+.menu-list ion-item {
+  --background: transparent;
+  --color: var(--secondary-white);
+  --border-color: transparent;
+  margin: 2px 8px;
+  border-radius: 10px;
+}
+.menu-list ion-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.menu-list ion-icon {
+  color: var(--secondary-white);
+  opacity: 0.9;
+}
+
+.menu-footer {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+}
+.menu-footer ion-button {
+  --border-radius: 10px;
+}
+
+.menu-balance {
+  padding: 12px 16px;
+}
+.balance-card {
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.balance-amount {
+  font-weight: 700;
+  color: #1f2937;
+}
+.balance-label {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #6b7280;
+}
+.add-funds {
+  --background: #5b6fe6;
+  --border-radius: 10px;
+}
+
+/* Collapsed tweaks */
+.app-menu.collapsed .menu-balance {
+  padding: 12px 8px;
+}
+.app-menu.collapsed .balance-card {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+.app-menu.collapsed .balance-label,
+.app-menu.collapsed .add-funds,
+.app-menu.collapsed ion-label,
+.app-menu.collapsed .menu-footer span {
+  display: none;
+}
+
+ion-split-pane {
+  --side-width: var(--menu-width);
+  --side-width-lg: var(--menu-width);
+}
+ion-split-pane.menu-collapsed {
+  --side-width: var(--menu-width-collapsed);
+  --side-width-lg: var(--menu-width-collapsed);
+}

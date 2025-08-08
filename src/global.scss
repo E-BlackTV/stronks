@@ -42,6 +42,7 @@
   margin-bottom: 1rem; /* Abstand zum nächsten Feld */
 }
 
+
 .form-group label {
   width: 100%; /* Label nimmt die volle Breite ein */
   margin-bottom: 0.3rem; /* Abstand zwischen Label und Input */
@@ -82,9 +83,11 @@
 }
 
 ion-item {
+
   --color: var(--secondary-white);
-  --border-color: var(--secondary-midgray);
+  --border-color: rgba(255, 255, 255, 0.08);
   --highlight-color: var(--primary);
+  border-radius: 12px;
 }
 
 ion-input {
@@ -99,25 +102,73 @@ ion-label {
 ion-button {
   --background: var(--primary);
   --color: var(--secondary-white);
-  --border-radius: 10px;
-  --box-shadow: 0 4px 15px rgba(48, 235, 126, 0.4);
+  --border-radius: 12px;
+  --box-shadow: 0 6px 18px rgba(48, 235, 126, 0.35);
+  transition: transform 0.08s ease, filter 0.12s ease;
+}
+ion-button:hover {
+  filter: brightness(1.05);
+}
+ion-button:active {
+  transform: translateY(1px);
 }
 
 ion-toolbar {
-  --background: var(--primary);
+  --background: linear-gradient(
+    90deg,
+    rgba(48, 235, 126, 1) 0%,
+    rgba(45, 212, 179, 1) 100%
+  );
   --color: var(--secondary-white);
+}
+
+// Typografie
+h1,
+h2,
+h3,
+h4,
+h5 {
+  color: var(--secondary-white);
+  letter-spacing: 0.2px;
+}
+
+// Layout-Container
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+// Listen und Karten-Abstände
+.list-tight ion-item {
+  margin-bottom: 8px;
+}
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1200px) {
+  .cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 // Dark Mode Unterstützung
 @media (prefers-color-scheme: dark) {
   :root {
     --primary: #30eb7e;
-    --secondary-navy: #1a1a2e;
-    --secondary-white: #ffffff;
-    --secondary-midgray: #888888;
-    --secondary-lightgray: #2a2a3e;
-    --status-negative: #ff4757;
-    --status-positive: #2ed573;
+    --secondary-navy: #111827;
+    --secondary-white: #e5e7eb;
+    --secondary-midgray: #9ca3af;
+    --secondary-lightgray: #1f2937;
+    --status-negative: #ef4444;
+    --status-positive: #10b981;
   }
 }
 

@@ -23,7 +23,7 @@ export class LuckyWheelService {
     private firebaseAdminService: FirebaseAdminService
   ) {}
 
-  spinWheel(userId: string): Observable<WheelResponse> {
+  spinWheel(userId: string, forcedPercentage?: number): Observable<WheelResponse> {
     if (!userId) {
       return throwError(() => new Error('User ID is required'));
     }
@@ -45,10 +45,12 @@ export class LuckyWheelService {
         // 2) Lade aktuelles Guthaben
         return this.firestoreService.getUserBalance(userId).pipe(
           switchMap((balance) => {
-            // 3) Gewinn 1-10%
-            const prizePercentage = Math.random() * 9 + 1; // 1-10%
-            const prizeAmount = Math.round((balance * prizePercentage) / 100);
-            const newBalance = balance + prizeAmount;
+            // 3) Gewinn-Prozentsatz (erzwingbar)
+            const rawPercentage = typeof forcedPercentage === 'number' ? forcedPercentage : Math.random() * 9 + 1; // 1-10%
+            const prizePercentage = Math.max(0, rawPercentage);
+            const rawPrize = balance * (prizePercentage / 100);
+            const prizeAmount = Math.round(rawPrize * 100) / 100; // auf 2 Nachkommastellen
+            const newBalance = Math.round((balance + prizeAmount) * 100) / 100;
 
             // 4) Update Balance und Spin speichern
             return this.firestoreService.updateUserBalance(userId, newBalance).pipe(

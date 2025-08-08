@@ -1,14 +1,14 @@
 import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
-import axios from 'axios';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { interval, Subscription } from 'rxjs';
+import { interval, Subscription, firstValueFrom } from 'rxjs';
 import { FirebaseAdminService } from '../services/firebase-admin.service';
 import { TradingService } from '../services/trading.service';
 import { ModalController, ToastController } from '@ionic/angular';
 import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
 import { TradePopupComponent } from '../components/trade-popup/trade-popup.component';
 import { environment } from '../../environments/environment';
+import { MarketDataService } from '../services/market-data.service';
 
 interface PurchaseResponse {
   success: boolean;
@@ -187,7 +187,8 @@ export class HomePage implements OnInit, OnDestroy {
     private firebaseService: FirebaseAdminService,
     private tradingService: TradingService,
     private modalController: ModalController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private marketData: MarketDataService
   ) {
     Chart.register(...registerables);
     this.refreshSubscription = interval(10000).subscribe(() => {
@@ -612,7 +613,6 @@ export class HomePage implements OnInit, OnDestroy {
       this.tradingService.getPortfolio(user.id).subscribe({
         next: (response) => {
           if (response.success) {
-            // Berechne Portfolio-Werte: Cash + aktueller Wert der Assets
             let assetsCurrentValue = 0;
             let totalInvested = 0;
             let totalProfitLoss = 0;
@@ -621,21 +621,18 @@ export class HomePage implements OnInit, OnDestroy {
               response.assets.forEach((asset: any) => {
                 const currentValue = asset.quantity * (asset.currentPrice || 0);
                 const profitLoss = currentValue - asset.totalInvested;
-                
                 assetsCurrentValue += currentValue;
                 totalInvested += asset.totalInvested;
                 totalProfitLoss += profitLoss;
               });
             }
 
-            // Cash aus dem User-Dokument laden (bereits separat geladen), fallback 0
-            const cashBalance = this.accountBalance || 0;
+            const cashBalance = response.cashBalance ?? this.accountBalance ?? 0;
             this.portfolioValue = cashBalance + assetsCurrentValue;
             this.initialInvestment = totalInvested;
             this.profitLoss = totalProfitLoss;
             this.profitLossPercentage = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
 
-            // Aktualisiere auch die userInvestments
             this.userInvestments = response.assets?.map((asset: any) => ({
               id: asset.symbol,
               asset_symbol: asset.symbol,
@@ -1090,26 +1087,18 @@ export class HomePage implements OnInit, OnDestroy {
         console.error('No valid interval selected');
         return;
       }
-
-      const options = {
-        method: 'GET',
-        url: '/backend/cache.php',
-        params: {
-          symbol: this.selectedCryptoSymbol,
-          range: this.selectedRange,
-          interval: this.selectedInterval,
-        },
-      };
-
-      const response = await axios.request(options);
-      console.log('API Response for selected crypto:', response.data);
-
-      if (response.data.error) {
-        console.error('API Error:', response.data.error);
+      const resp = await firstValueFrom(
+        this.marketData.fetchCryptoChart(
+          this.selectedCryptoSymbol,
+          this.selectedRange,
+          this.selectedInterval
+        )
+      );
+      if (!resp || !resp.data) {
+        console.error('Keine Marktdaten empfangen');
         return;
       }
-
-      const data = response.data;
+      const data = resp.data;
       if (!data.chart?.result?.[0]) {
         console.error('Unexpected data format:', data);
         return;
