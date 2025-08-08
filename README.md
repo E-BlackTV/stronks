@@ -1,85 +1,147 @@
-# 📱 Ionic App Projekt: Trainings-Übungs/Game App
+# Stronks - Trading App
 
-## 🛠️ Autoren: Emirhan Sahin & Julian Kuhl
+Eine moderne Trading-App mit Angular, Ionic und Firebase.
 
----
+## 🚀 Schnellstart
 
-## Anforderungen
+### Voraussetzungen
 
-### Priorisierung
-- **Must-Have**: 
-  - Wallet mit aktuellen Aktien- und Crypto-Daten
-  - Favoritenleiste
-  - Top-Gewinner und Verlierer
-  - Sortierbare Marktübersicht
-  - Casino-Seite für Gamification
-  - Einstellungen für Kontoverwaltung und Währungsumstellung
-- **Nice-to-Have**:
-  - Dark-Mode
-  - Push-Benachrichtigungen für Kursänderungen
-  - Interaktive Casino-Spiele
-- **Optional**:
-  - Integration von KI-gestützten Marktprognosen
+- Node.js (Version 16 oder höher)
+- npm oder yarn
+- Angular CLI
+- Ionic CLI
 
----
+### Installation
 
-## Spezifikationen
+1. **Repository klonen**
 
-### Allgemein
-- **Technologie**: Ionic Framework (Angular)
-- **Zielplattform**: iOS, Android
-- **Backend**: Firebase (für Authentifizierung und Datenhaltung)
-- **Datenquellen**: API für Echtzeit-Aktien-(Yahoo finance = https://rapidapi.com/davethebeast/api/yahoo-finance166/playground/apiendpoint_a0f7b3cc-d473-49f2-a5be-bbf6c09f6ced)
-                    und Crypto-Daten
+```bash
+git clone <repository-url>
+cd stronks
+```
 
-### Seitenstruktur
-1. **Wallet-Seite**:
-   - Übersicht über aktuelle Aktien- und Crypto-Werte
-   - Favoritenleiste (anpassbar)
-   - Anzeige von Top-Gewinnern und -Verlierern
-2. **Marktübersicht**:
-   - Kompletter Markt (Aktien & Crypto)
-   - Filter- und Sortiermöglichkeiten (z.B. nach Kursen, Veränderungen, Volumen)
-3. **Casino-Seite**:
-   - Glücksspielmöglichkeiten (z.B. Slotmaschinen, Würfeln)
-   - Einsatz von Wallet-Guthaben
-4. **Einstellungen**:
-   - Kontomanagement (Passwort, Profilbild)
-   - Währungsumstellung (z.B. USD, EUR, BTC)
-   - Theme-Auswahl (z.B. Dark-/Light-Mode)
+2. **Abhängigkeiten installieren**
 
----
+```bash
+npm install
+```
 
-## Detailplanung
+3. **Konfiguration einrichten**
+   Bearbeite die `config.json` Datei mit deinen echten API-Schlüsseln:
 
-### Meilensteine
-1. **MVP (Minimal Viable Product)**:
-   - Wallet-Seite mit Favoritenleiste und Marktübersicht
-   - Funktionierende API-Anbindung
-   - Basis-Casino-Seite mit einer einfachen Spieloption
-   - Einstellungsseite mit Währungsumstellung
-2. **Erweiterung**:
-   - Erweiterte Filter-/Sortieroptionen in der Marktübersicht
-   - Interaktive Spiele im Casino
-   - Push-Benachrichtigungen
-3. **Finalisierung**:
-   - UI/UX-Verbesserungen
-   - Performance-Optimierung
+```json
+{
+  "rapidApiKey": "dein-rapid-api-key",
+  "rapidApiHost": "alpha-vantage.p.rapidapi.com",
+  "firebaseApiKey": "dein-firebase-api-key",
+  "firebaseAuthDomain": "dein-projekt.firebaseapp.com",
+  "firebaseProjectId": "dein-projekt-id",
+  "firebaseStorageBucket": "dein-projekt.appspot.com",
+  "firebaseMessagingSenderId": "deine-sender-id",
+  "firebaseAppId": "deine-app-id",
+  "firebaseMeasurementId": "deine-measurement-id"
+}
+```
 
-### Zeitschätzung
-- **Phase 1**: 2 Wochen für Grundstruktur & API-Integration
-- **Phase 2**: 3 Wochen für Casino-Funktionalitäten
-- **Phase 3**: 1 Woche für Feinschliff und Tests
+4. **Entwicklungsserver starten**
 
----
+```bash
+ionic serve
+```
 
-## Implementierung
+## 🔧 Konfiguration
 
-### Tools und Technologien
-- **Frontend**: Ionic, Angular
-- **Backend**: Firebase Realtime Database
-- **API**: CoinGecko API, Alpha Vantage API
-- **Design**: Figma für Prototyping
-- **Testing**: Jasmine, Karma
+### Firebase Setup
 
-### Verzeichnisstruktur
+1. Erstelle ein neues Projekt auf [firebase.google.com](https://firebase.google.com)
+2. Aktiviere Authentication und Firestore
+3. Kopiere die Konfigurationsdaten
+4. Füge sie in `config.json` ein
+
+### RapidAPI Setup
+
+1. Registriere dich auf [rapidapi.com](https://rapidapi.com)
+2. Abonniere die Alpha Vantage API
+3. Kopiere deinen API-Schlüssel
+4. Füge ihn in `config.json` ein
+
+## 🐛 Fehlerbehebung
+
+### Firebase Fehler
+
+**Problem**: Firebase-Konfigurationsfehler
+
+**Lösungen**:
+
+1. Überprüfe die Firebase-Konfiguration in `config.json`
+2. Stelle sicher, dass Authentication und Firestore aktiviert sind
+3. Überprüfe die Firestore-Regeln
+
+### Netzwerkfehler
+
+**Problem**: `Failed to fetch` oder Verbindungsfehler
+
+**Lösungen**:
+
+1. Überprüfe deine Internetverbindung
+2. Stelle sicher, dass alle API-Schlüssel korrekt sind
+3. Überprüfe die Firebase-Projekt-Einstellungen
+
+## 📱 Build & Deploy
+
+### Android Build
+
+```bash
+ionic capacitor add android
+ionic capacitor build android
+ionic capacitor open android
+```
+
+### iOS Build
+
+```bash
+ionic capacitor add ios
+ionic capacitor build ios
+ionic capacitor open ios
+```
+
+### Web Deploy
+
+```bash
+ionic build --prod
+firebase deploy
+```
+
+## 🏗️ Projektstruktur
+
+```
+src/
+├── app/
+│   ├── components/          # Wiederverwendbare Komponenten
+│   ├── services/           # Services für API-Calls
+│   ├── guards/             # Route Guards
+│   └── pages/              # App-Seiten
+├── assets/                 # Statische Assets
+├── environments/           # Umgebungsvariablen
+└── lib/                    # Externe Bibliotheken
+```
+
+## 🤝 Beitragen
+
+1. Fork das Repository
+2. Erstelle einen Feature-Branch
+3. Committe deine Änderungen
+4. Push zum Branch
+5. Erstelle einen Pull Request
+
+## 📄 Lizenz
+
+Dieses Projekt ist unter der MIT-Lizenz lizenziert.
+
+## 🆘 Support
+
+Bei Problemen:
+
+1. Überprüfe die Fehlerbehebung oben
+2. Schaue in die Issues
+3. Erstelle ein neues Issue mit detaillierter Beschreibung

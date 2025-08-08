@@ -3,7 +3,7 @@ import { Chart, registerables } from 'chart.js';
 import axios from 'axios';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { interval, Subscription } from 'rxjs';
-import { AuthenticationService } from '../services/authentication.service';
+import { FirebaseAdminService } from '../services/firebase-admin.service';
 import { TradingService } from '../services/trading.service';
 import { ModalController, ToastController } from '@ionic/angular';
 import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
@@ -16,7 +16,7 @@ interface PurchaseResponse {
 }
 
 interface PurchaseData {
-  user_id: number;
+  user_id: string | number;
   investments: string;
   shares: number;
   amount: number;
@@ -92,7 +92,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   accountBalance: number = 0;
   portfolioValue: number = 0;
-  userId: number = this.authService.currentUserValue?.id || 0;
+  userId: string = '';
   readonly ASSET_TYPE: string = 'Bitcoin';
   private refreshSubscription: Subscription;
   initialInvestment: number = 0;
@@ -171,12 +171,12 @@ export class HomePage implements OnInit, OnDestroy {
 
   showInvestments: boolean = false;
   userInvestments: any[] = [];
-  
+
   // Trading-Popup
   showTradePopup = false;
   tradeAction: 'buy' | 'sell' = 'buy';
   currentUser: any;
-  
+
   // Crypto properties
   showCryptoList: boolean = false;
   cryptoAssets: CryptoAsset[] = [];
@@ -184,7 +184,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   constructor(
     private http: HttpClient,
-    private authService: AuthenticationService,
+    private firebaseService: FirebaseAdminService,
     private tradingService: TradingService,
     private modalController: ModalController,
     private toastController: ToastController
@@ -194,7 +194,7 @@ export class HomePage implements OnInit, OnDestroy {
       this.fetchAccountBalance();
     });
 
-    const currentUser = this.authService.currentUserValue;
+    const currentUser = this.firebaseService.getCurrentUser();
     if (currentUser) {
       this.userId = currentUser.id;
     }
@@ -208,16 +208,14 @@ export class HomePage implements OnInit, OnDestroy {
   async initializeData() {
     try {
       // Benutzer einloggen falls nicht angemeldet
-      const user = this.authService.getCurrentUser();
+      const user = this.firebaseService.getCurrentUser();
       if (!user) {
-        this.authService.login('testuser', 'test').subscribe((success) => {
-          if (success) {
-            this.currentUser = this.authService.getCurrentUser();
-            this.loadAllData();
-          }
-        });
+        console.log('Kein Benutzer angemeldet, leite zur Login-Seite weiter');
+        // Hier könnte man zur Login-Seite weiterleiten
+        return;
       } else {
         this.currentUser = user;
+        this.userId = user.id;
         this.loadAllData();
         this.loadPortfolio(); // Load portfolio on init
       }
@@ -344,25 +342,28 @@ export class HomePage implements OnInit, OnDestroy {
 
   async fetchAccountBalance() {
     try {
-      const user = this.authService.getCurrentUser();
+      const user = this.firebaseService.getCurrentUser();
       if (user) {
-        // Balance direkt von der API abrufen
-        this.http.get(`/backend/get_balance.php?user_id=${user.id}`).subscribe({
+        // Balance über Firebase Functions abrufen
+        this.tradingService.getBalance(user.id).subscribe({
           next: (response: any) => {
             if (response.success) {
               this.accountBalance = response.balance;
               console.log(
-                'Account balance loaded from API:',
+                'Account balance loaded from Firebase:',
                 this.accountBalance
               );
 
               // Aktualisiere auch den localStorage
-              const currentUser = this.authService.getCurrentUser();
+              const currentUser = this.firebaseService.getCurrentUser();
               if (currentUser) {
-                currentUser.accountbalance = this.accountBalance;
+                const userData = {
+                  ...currentUser,
+                  accountbalance: this.accountBalance
+                };
                 localStorage.setItem(
                   'currentUser',
-                  JSON.stringify(currentUser)
+                  JSON.stringify(userData)
                 );
               }
             } else {
@@ -370,9 +371,15 @@ export class HomePage implements OnInit, OnDestroy {
             }
           },
           error: (error) => {
-            console.error('Error fetching balance from API:', error);
+            console.error('Error fetching balance from Firebase:', error);
             // Fallback auf localStorage
-            this.accountBalance = user.accountbalance || 0;
+            const userData = localStorage.getItem('currentUser');
+            if (userData) {
+              const parsedUser = JSON.parse(userData);
+              this.accountBalance = parsedUser.accountbalance || 0;
+            } else {
+              this.accountBalance = 0;
+            }
           },
         });
       } else {
@@ -396,83 +403,58 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
-      const options = {
-        method: 'GET',
-        url: '/backend/cache.php',
-        params: {
-          symbol: this.selectedCryptoSymbol,
-          range: this.selectedRange,
-          interval: this.selectedInterval,
+      // Chart-Daten über Firebase Functions abrufen
+      this.tradingService.getChartData('BTC-USD', this.selectedRange, this.selectedInterval).subscribe({
+        next: (response: any) => {
+          console.log('Chart Data Response:', response);
+
+          if (response.error) {
+            console.error('API Error:', response.error);
+            return;
+          }
+
+          const data = response;
+          if (!data?.chart?.result?.[0]) {
+            console.error('Unexpected data format:', data);
+            return;
+          }
+
+          const result = data.chart.result[0];
+          const prices = result.indicators?.quote[0]?.close || [];
+          const timestamps = result.timestamp || [];
+          const volumes = result.indicators?.quote[0]?.volume || [];
+
+          if (prices.length === 0) {
+            console.error('No price data available');
+            return;
+          }
+
+          this.currentPrice = prices[prices.length - 1];
+          this.currentPrices['Bitcoin'] = this.currentPrice;
+
+          const labels = timestamps.map((timestamp: number) => {
+            const date = new Date(timestamp * 1000);
+            return this.formatDateLabel(date);
+          });
+
+          this.createChart(prices, labels);
+
+          this.tableData = prices.map((price: number, index: number) => ({
+            date: labels[index],
+            price: price?.toFixed(2) || 'N/A',
+            volume: volumes[index]?.toLocaleString() || 'N/A',
+          }));
+
+          console.log('Chart data updated:', {
+            range: this.selectedRange,
+            interval: this.selectedInterval,
+            dataPoints: prices.length,
+            currentPrice: this.currentPrice,
+          });
         },
-      };
-
-      const response = await axios.request(options);
-      console.log('API Response:', response.data);
-
-      if (response.data.error) {
-        console.error('API Error:', response.data.error);
-        return;
-      }
-
-      const data = response.data;
-      if (!data.chart?.result?.[0]) {
-        console.error('Unexpected data format:', data);
-        return;
-      }
-
-      const result = data.chart.result[0];
-      const prices = result.indicators?.quote[0]?.close || [];
-      const timestamps = result.timestamp || [];
-      const volumes = result.indicators?.quote[0]?.volume || [];
-
-      const labels = timestamps.map((timestamp: number) => {
-        const date = new Date(timestamp * 1000);
-        switch (this.selectedRange) {
-          case TimeRange.DAY:
-            return date.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            });
-          case TimeRange.WEEK:
-            return date.toLocaleDateString([], { weekday: 'short' });
-          case TimeRange.MONTH:
-            return date.toLocaleDateString([], {
-              day: 'numeric',
-              month: 'short',
-            });
-          case TimeRange.THREE_MONTHS:
-          case TimeRange.SIX_MONTHS:
-            return date.toLocaleDateString([], {
-              month: 'short',
-              day: 'numeric',
-            });
-          case TimeRange.YEAR:
-          case TimeRange.FIVE_YEARS:
-            return date.toLocaleDateString([], {
-              month: 'short',
-              year: '2-digit',
-            });
-          default:
-            return date.toLocaleDateString();
+        error: (error: any) => {
+          console.error('Error fetching chart data:', error);
         }
-      });
-
-      this.createChart(prices, labels);
-
-      this.currentPrice = prices[prices.length - 1] || 0;
-      await this.calculatePortfolioValue();
-
-      this.tableData = timestamps.map((timestamp: number, index: number) => ({
-        date: labels[index],
-        price: prices[index]?.toFixed(2) || 'N/A',
-        volume: volumes[index]?.toLocaleString() || 'N/A',
-      }));
-
-      console.log('Chart data updated:', {
-        range: this.selectedRange,
-        interval: this.selectedInterval,
-        dataPoints: prices.length,
-        currentPrice: this.currentPrice,
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -598,25 +580,19 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async fetchAllCurrentPrices() {
-
     try {
-      this.http
-        .get<any>(`/backend/cache.php?symbol=${this.selectedCryptoSymbol}&range=1d&interval=5m`)
-        .subscribe({
-          next: (response) => {
-            if (response && response.chart?.result?.[0]) {
-              const result = response.chart.result[0];
-              const prices = result.indicators?.quote[0]?.close || [];
-              if (prices.length > 0) {
-                this.currentPrice = prices[prices.length - 1];
-                this.currentPrices[this.selectedCryptoName] = this.currentPrice;
-              }
-            }
-          },
-          error: (error) => {
-            console.error('Error fetching current prices:', error);
-          },
-        });
+
+      this.tradingService.getAssetPrice('BTC-USD').subscribe({
+        next: (response) => {
+          if (response && response.success) {
+            this.currentPrice = response.price;
+            this.currentPrices['Bitcoin'] = this.currentPrice;
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching current prices:', error);
+        },
+      });
     } catch (error) {
       console.error('Error fetching current prices:', error);
     }
@@ -624,7 +600,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   async calculatePortfolioValue() {
     try {
-      const user = this.authService.getCurrentUser();
+      const user = this.firebaseService.getCurrentUser();
       if (!user) {
         this.portfolioValue = 0;
         this.profitLoss = 0;
@@ -632,37 +608,54 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
-      // Verwende das neue Portfolio-System
+      // Verwende Firebase Functions für Portfolio
       this.tradingService.getPortfolio(user.id).subscribe({
         next: (response) => {
           if (response.success) {
-            this.portfolioValue = response.summary.total_portfolio_value;
-            this.profitLoss = response.summary.total_profit_loss;
-            this.profitLossPercentage =
-              response.summary.total_profit_loss_percent;
+            // Berechne Portfolio-Werte: Cash + aktueller Wert der Assets
+            let assetsCurrentValue = 0;
+            let totalInvested = 0;
+            let totalProfitLoss = 0;
 
-            // Aktualisiere auch die Balance aus dem Portfolio
-            this.accountBalance = response.summary.cash_balance;
+            if (response.assets && response.assets.length > 0) {
+              response.assets.forEach((asset: any) => {
+                const currentValue = asset.quantity * (asset.currentPrice || 0);
+                const profitLoss = currentValue - asset.totalInvested;
+                
+                assetsCurrentValue += currentValue;
+                totalInvested += asset.totalInvested;
+                totalProfitLoss += profitLoss;
+              });
+            }
+
+            // Cash aus dem User-Dokument laden (bereits separat geladen), fallback 0
+            const cashBalance = this.accountBalance || 0;
+            this.portfolioValue = cashBalance + assetsCurrentValue;
+            this.initialInvestment = totalInvested;
+            this.profitLoss = totalProfitLoss;
+            this.profitLossPercentage = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
 
             // Aktualisiere auch die userInvestments
-            this.userInvestments = response.portfolio.map((item) => ({
-              id: item.id,
-              asset_symbol: item.asset_symbol,
-              investments: item.asset_name || this.getAssetNameFromSymbol(item.asset_symbol),
-              calculatedShares: item.quantity,
-              currentValue: item.current_value,
-              purchase_price: item.avg_purchase_price,
-              amount: item.total_invested,
-              quantity: item.quantity,
-              profit_loss: item.profit_loss,
-              profit_loss_percent: item.profit_loss_percent,
-            }));
+            this.userInvestments = response.assets?.map((asset: any) => ({
+              id: asset.symbol,
+              asset_symbol: asset.symbol,
+              investments: asset.symbol,
+              calculatedShares: asset.quantity,
+              currentValue: asset.quantity * (asset.currentPrice || 0),
+              purchase_price: asset.totalInvested / asset.quantity,
+              amount: asset.totalInvested,
+              quantity: asset.quantity,
+              profit_loss: (asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested,
+              profit_loss_percent: asset.totalInvested > 0 ? 
+                (((asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested) / asset.totalInvested) * 100 : 0,
+            })) || [];
 
             console.log('Portfolio updated:', {
               totalValue: this.portfolioValue,
               profitLoss: this.profitLoss,
               profitLossPercentage: this.profitLossPercentage,
-              cashBalance: this.accountBalance,
+              totalInvested: this.initialInvestment,
+              cashBalance,
             });
           } else {
             console.error('Portfolio response not successful:', response);
@@ -736,7 +729,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.authService.logout();
+    this.firebaseService.logout();
   }
 
   async toggleInvestments() {
@@ -748,29 +741,30 @@ export class HomePage implements OnInit, OnDestroy {
 
   async fetchUserInvestments() {
     try {
-      const user = this.authService.getCurrentUser();
+      const user = this.firebaseService.getCurrentUser();
       if (!user) {
         this.userInvestments = [];
         return;
       }
 
-      // Verwende das neue Portfolio-System
+      // Verwende Firebase Functions für Portfolio
       this.tradingService.getPortfolio(user.id).subscribe({
         next: (response) => {
           if (response.success) {
             // Konvertiere Portfolio-Daten in das alte Format für Kompatibilität
-            this.userInvestments = response.portfolio.map((item) => ({
-              id: item.id,
-              asset_symbol: item.asset_symbol,
-              investments: item.asset_name || this.getAssetNameFromSymbol(item.asset_symbol),
-              calculatedShares: item.quantity,
-              currentValue: item.current_value,
-              purchase_price: item.avg_purchase_price,
-              amount: item.total_invested,
-              quantity: item.quantity,
-              profit_loss: item.profit_loss,
-              profit_loss_percent: item.profit_loss_percent,
-            }));
+            this.userInvestments = response.assets?.map((asset: any) => ({
+              id: asset.symbol,
+              asset_symbol: asset.symbol,
+              investments: asset.symbol,
+              calculatedShares: asset.quantity,
+              currentValue: asset.quantity * (asset.currentPrice || 0),
+              purchase_price: asset.totalInvested / asset.quantity,
+              amount: asset.totalInvested,
+              quantity: asset.quantity,
+              profit_loss: (asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested,
+              profit_loss_percent: asset.totalInvested > 0 ? 
+                (((asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested) / asset.totalInvested) * 100 : 0,
+            })) || [];
 
             console.log(
               'User investments updated:',
@@ -800,7 +794,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   async loadPortfolio() {
     try {
-      const user = this.authService.getCurrentUser();
+      const user = this.firebaseService.getCurrentUser();
       if (!user) {
         console.error('Kein Benutzer angemeldet');
         return;
@@ -809,25 +803,42 @@ export class HomePage implements OnInit, OnDestroy {
       this.tradingService.getPortfolio(user.id).subscribe({
         next: (response) => {
           if (response.success) {
-            // Verwende die Portfolio-Daten direkt
-            this.userInvestments = response.portfolio.map((item) => ({
-              id: item.id,
-              asset_symbol: item.asset_symbol,
-              investments: item.asset_name || this.getAssetNameFromSymbol(item.asset_symbol),
-              calculatedShares: item.quantity,
-              currentValue: item.current_value,
-              purchase_price: item.avg_purchase_price,
-              amount: item.total_invested,
-              quantity: item.quantity,
-              profit_loss: item.profit_loss,
-              profit_loss_percent: item.profit_loss_percent,
-            }));
+            // Berechne Portfolio-Werte: Cash + aktueller Wert der Assets
+            let assetsCurrentValue = 0;
+            let totalInvested = 0;
+            let totalProfitLoss = 0;
 
-            this.portfolioValue = response.summary.total_portfolio_value;
-            this.accountBalance = response.summary.cash_balance;
-            this.profitLoss = response.summary.total_profit_loss;
-            this.profitLossPercentage =
-              response.summary.total_profit_loss_percent;
+            if (response.assets && response.assets.length > 0) {
+              response.assets.forEach((asset: any) => {
+                const currentValue = asset.quantity * (asset.currentPrice || 0);
+                const profitLoss = currentValue - asset.totalInvested;
+                
+                assetsCurrentValue += currentValue;
+                totalInvested += asset.totalInvested;
+                totalProfitLoss += profitLoss;
+              });
+            }
+
+            const cashBalance2 = this.accountBalance || 0;
+            this.portfolioValue = cashBalance2 + assetsCurrentValue;
+            this.initialInvestment = totalInvested;
+            this.profitLoss = totalProfitLoss;
+            this.profitLossPercentage = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
+
+            // Aktualisiere auch die userInvestments
+            this.userInvestments = response.assets?.map((asset: any) => ({
+              id: asset.symbol,
+              asset_symbol: asset.symbol,
+              investments: asset.symbol,
+              calculatedShares: asset.quantity,
+              currentValue: asset.quantity * (asset.currentPrice || 0),
+              purchase_price: asset.totalInvested / asset.quantity,
+              amount: asset.totalInvested,
+              quantity: asset.quantity,
+              profit_loss: (asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested,
+              profit_loss_percent: asset.totalInvested > 0 ? 
+                (((asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested) / asset.totalInvested) * 100 : 0,
+            })) || [];
 
             console.log('Portfolio loaded successfully');
           } else {
@@ -852,42 +863,43 @@ export class HomePage implements OnInit, OnDestroy {
       return;
     }
 
-    const purchaseData: PurchaseData = {
-      user_id: this.userId,
-      investments: this.selectedCrypto.name,
-      shares: this.calculatedShares,
+    const user = this.firebaseService.getCurrentUser();
+    if (!user) {
+      console.error('Kein Benutzer angemeldet');
+      return;
+    }
+
+    const tradeRequest = {
+      userId: user.id,
+      assetSymbol: this.selectedCrypto.symbol,
+      quantity: this.calculatedShares,
       amount: this.investmentAmount,
-      purchase_price: this.selectedCrypto.price,
+      currentPrice: this.selectedCrypto.price,
+      action: 'buy' as const
     };
 
     try {
-      const response = await this.http
-        .post<PurchaseResponse>(`${environment.apiUrl}/buy.php`, purchaseData)
-        .toPromise();
+      this.tradingService.trade(tradeRequest).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.fetchAccountBalance();
+            this.fetchUserInvestments();
+            this.investmentAmount = 0;
+            this.calculatedShares = 0;
 
-      if (response && response.success) {
-        await this.fetchAccountBalance();
-        await this.fetchUserInvestments();
-        this.investmentAmount = 0;
-        this.calculatedShares = 0;
-
-        const toast = await this.toastController.create({
-          message: `${this.selectedCrypto.name} erfolgreich gekauft!`,
-          duration: 2000,
-          color: 'success',
-        });
-        toast.present();
-      } else {
-        throw new Error(response?.message || 'Purchase failed');
-      }
+            this.showToast(`${this.selectedCrypto?.name} erfolgreich gekauft!`, 'success');
+          } else {
+            throw new Error(response.message || 'Purchase failed');
+          }
+        },
+        error: (error) => {
+          console.error('Error buying crypto:', error);
+          this.showToast('Fehler beim Kauf. Bitte versuchen Sie es erneut.', 'danger');
+        }
+      });
     } catch (error) {
       console.error('Error buying crypto:', error);
-      const toast = await this.toastController.create({
-        message: 'Fehler beim Kauf. Bitte versuchen Sie es erneut.',
-        duration: 2000,
-        color: 'danger',
-      });
-      toast.present();
+      this.showToast('Fehler beim Kauf. Bitte versuchen Sie es erneut.', 'danger');
     }
   }
 
@@ -905,80 +917,79 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
-      const options = {
-        method: 'GET',
-        url: environment.apiUrl + '/cache.php',
-        params: {
-          symbol: `${this.selectedCrypto.symbol}-USD`,
-          range: this.selectedRange,
-          interval: this.selectedInterval,
+      // Verwende Firebase Functions für Chart-Daten
+      this.tradingService.getChartData(`${this.selectedCrypto.symbol}-USD`, this.selectedRange, this.selectedInterval).subscribe({
+        next: (response: any) => {
+          console.log('Crypto Chart Data Response:', response);
+
+          if (response.error) {
+            console.error('API Error:', response.error);
+            return;
+          }
+
+          const data = response;
+          if (!data?.chart?.result?.[0]) {
+            console.error('Unexpected data format:', data);
+            return;
+          }
+
+          const result = data.chart.result[0];
+          const prices = result.indicators?.quote[0]?.close || [];
+          const timestamps = result.timestamp || [];
+          const volumes = result.indicators?.quote[0]?.volume || [];
+
+          // Format dates based on selected range and interval
+          const labels = timestamps.map((timestamp: number) => {
+            const date = new Date(timestamp * 1000);
+            switch (this.selectedRange) {
+              case TimeRange.DAY:
+                return date.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+              case TimeRange.WEEK:
+                return date.toLocaleDateString([], { weekday: 'short' });
+              case TimeRange.MONTH:
+                return date.toLocaleDateString([], {
+                  day: 'numeric',
+                  month: 'short',
+                });
+              case TimeRange.THREE_MONTHS:
+              case TimeRange.SIX_MONTHS:
+                return date.toLocaleDateString([], {
+                  month: 'short',
+                  day: 'numeric',
+                });
+              case TimeRange.YEAR:
+              case TimeRange.FIVE_YEARS:
+                return date.toLocaleDateString([], {
+                  month: 'short',
+                  year: '2-digit',
+                });
+              default:
+                return date.toLocaleDateString();
+            }
+          });
+
+          // Update chart with new data
+          this.createChart(prices, labels);
+
+          // Update selected crypto price and shares
+          if (this.selectedCrypto) {
+            this.selectedCrypto.price = prices[prices.length - 1] || 0;
+            this.calculateShares();
+          }
+
+          console.log('Chart data updated for', this.selectedCrypto?.name ?? this.selectedCrypto, {
+            range: this.selectedRange,
+            interval: this.selectedInterval,
+            dataPoints: prices.length,
+            currentPrice: this.selectedCrypto?.price ?? this.currentPrice,
+          });
         },
-      };
-
-      const response = await axios.request(options);
-      console.log('API Response:', response.data);
-
-      if (response.data.error) {
-        console.error('API Error:', response.data.error);
-        return;
-      }
-
-      const data = response.data;
-      if (!data.chart?.result?.[0]) {
-        console.error('Unexpected data format:', data);
-        return;
-      }
-
-      const result = data.chart.result[0];
-      const prices = result.indicators?.quote[0]?.close || [];
-      const timestamps = result.timestamp || [];
-      const volumes = result.indicators?.quote[0]?.volume || [];
-
-      // Format dates based on selected range and interval
-      const labels = timestamps.map((timestamp: number) => {
-        const date = new Date(timestamp * 1000);
-        switch (this.selectedRange) {
-          case TimeRange.DAY:
-            return date.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            });
-          case TimeRange.WEEK:
-            return date.toLocaleDateString([], { weekday: 'short' });
-          case TimeRange.MONTH:
-            return date.toLocaleDateString([], {
-              day: 'numeric',
-              month: 'short',
-            });
-          case TimeRange.THREE_MONTHS:
-          case TimeRange.SIX_MONTHS:
-            return date.toLocaleDateString([], {
-              month: 'short',
-              day: 'numeric',
-            });
-          case TimeRange.YEAR:
-          case TimeRange.FIVE_YEARS:
-            return date.toLocaleDateString([], {
-              month: 'short',
-              year: '2-digit',
-            });
-          default:
-            return date.toLocaleDateString();
+        error: (error: any) => {
+          console.error('Error fetching crypto data:', error);
         }
-      });
-
-      // Update chart with new data
-      this.createChart(prices, labels);
-
-      // Update selected crypto price and shares
-      this.selectedCrypto.price = prices[prices.length - 1] || 0;
-      this.calculateShares();
-
-      console.log('Chart data updated for', this.selectedCrypto.name, {
-        range: this.selectedRange,
-        interval: this.selectedInterval,
-        dataPoints: prices.length,
-        currentPrice: this.selectedCrypto.price,
       });
     } catch (error) {
       console.error('Error fetching crypto data:', error);
@@ -1001,34 +1012,46 @@ export class HomePage implements OnInit, OnDestroy {
 
   async fetchCryptoAssets() {
     try {
-      // Hole alle Crypto-Assets aus dem Backend
-      const response = await this.http
-        .get<any>(`${environment.apiUrl}/get_crypto_assets.php`)
-        .toPromise();
-      if (response && response.success) {
-        this.cryptoAssets = response.assets;
-        this.showCryptoList = true;
-        this.showInvestments = false;
+      // Für jetzt verwenden wir eine statische Liste von Crypto-Assets
+      // Später kann dies über Firebase Functions erweitert werden
+      this.cryptoAssets = [
+        { name: 'Bitcoin', symbol: 'BTC', price: 0 },
+        { name: 'Ethereum', symbol: 'ETH', price: 0 },
+        { name: 'Cardano', symbol: 'ADA', price: 0 },
+        { name: 'Solana', symbol: 'SOL', price: 0 },
+        { name: 'Polkadot', symbol: 'DOT', price: 0 },
+      ];
 
-        // If we have a selectedCrypto, update its price
-        if (this.selectedCrypto) {
-          const updatedAsset = this.cryptoAssets.find(
-            (asset) => asset.symbol === this.selectedCrypto?.symbol
-          );
-          if (updatedAsset) {
-            this.selectedCrypto = updatedAsset;
-            this.calculateShares();
+      this.showCryptoList = true;
+      this.showInvestments = false;
+
+      // Lade aktuelle Preise für alle Assets
+      this.cryptoAssets.forEach(async (asset) => {
+        this.tradingService.getAssetPrice(`${asset.symbol}-USD`).subscribe({
+          next: (response) => {
+            if (response.success) {
+              asset.price = response.price;
+            }
+          },
+          error: (error) => {
+            console.error(`Error fetching price for ${asset.symbol}:`, error);
           }
+        });
+      });
+
+      // If we have a selectedCrypto, update its price
+      if (this.selectedCrypto) {
+        const updatedAsset = this.cryptoAssets.find(
+          (asset) => asset.symbol === this.selectedCrypto?.symbol
+        );
+        if (updatedAsset) {
+          this.selectedCrypto = updatedAsset;
+          this.calculateShares();
         }
       }
     } catch (error) {
       console.error('Error fetching crypto assets:', error);
-      const toast = await this.toastController.create({
-        message: 'Fehler beim Laden der Kryptowährungen',
-        duration: 2000,
-        color: 'danger',
-      });
-      toast.present();
+      this.showToast('Fehler beim Laden der Kryptowährungen', 'danger');
     }
   }
 

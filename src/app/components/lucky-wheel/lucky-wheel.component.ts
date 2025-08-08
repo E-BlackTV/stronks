@@ -9,6 +9,9 @@ import {
 } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { HttpClient } from '@angular/common/http';
+import { FirebaseAdminService } from '../../services/firebase-admin.service';
+import { LuckyWheelService } from '../../services/lucky-wheel.service';
+import { TradingService } from '../../services/trading.service';
 import { environment } from '../../../environments/environment';
 
 const COLORS = ['#27AE60', '#1ABC9C'];
@@ -92,7 +95,10 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private modalController: ModalController,
     private toastController: ToastController,
-    private http: HttpClient
+    private http: HttpClient,
+    private firebaseService: FirebaseAdminService,
+    private luckyWheelService: LuckyWheelService,
+    private tradingService: TradingService
   ) {}
 
   ngOnInit() {
@@ -374,44 +380,42 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   saveSpinResult(prize: Prize) {
-    // Lade Benutzer aus localStorage für die Datenbank
+    // Lade Benutzer aus Firebase Service
     try {
-      const userData = localStorage.getItem('currentUser');
-      if (userData) {
-        const currentUser = JSON.parse(userData);
+      const currentUser = this.firebaseService.getCurrentUser();
+      if (currentUser) {
 
-        // Berechne den tatsächlichen Gewinn basierend auf dem aktuellen Vermögen
-        const currentBalance = currentUser.balance || 10000; // Fallback auf 10000
-        const actualPrizeValue = Math.round(
-          (currentBalance * prize.percentage) / 100
-        );
-
-        this.http
-          .post(`${environment.apiUrl}/lucky-wheel.php?action=spin_wheel`, {
-            user_id: currentUser.id,
-            prize_value: actualPrizeValue,
-          })
-          .subscribe({
-            next: (response: any) => {
-              if (response.success) {
-                console.log('Gewinn erfolgreich gespeichert:', response);
-                this.showToast('Gewinn erfolgreich hinzugefügt!', 'success');
-              } else {
-                console.error(
-                  'Fehler beim Speichern des Gewinns:',
-                  response.message
-                );
-                this.showToast(
-                  'Fehler beim Speichern des Gewinns: ' + response.message,
-                  'danger'
-                );
+        // Verwende Firestore-basierte Logik (Spark-kompatibel)
+        this.luckyWheelService.spinWheel(currentUser.id).subscribe({
+          next: (response: any) => {
+            if (response.success) {
+              console.log('Gewinn erfolgreich gespeichert:', response);
+              this.showToast(`Gewinn erfolgreich hinzugefügt! ${response.prizeAmount}€`, 'success');
+              
+              // Aktualisiere das Benutzer-Vermögen im localStorage
+              if (currentUser) {
+                const userData = {
+                  ...currentUser,
+                  balance: response.newBalance
+                };
+                localStorage.setItem('currentUser', JSON.stringify(userData));
               }
-            },
-            error: (error) => {
-              console.error('Fehler beim Speichern des Spins:', error);
-              this.showToast('Fehler beim Speichern des Gewinns', 'danger');
-            },
-          });
+            } else {
+              console.error(
+                'Fehler beim Speichern des Gewinns:',
+                response.message
+              );
+              this.showToast(
+                'Fehler beim Speichern des Gewinns: ' + response.message,
+                'danger'
+              );
+            }
+          },
+          error: (error) => {
+            console.error('Fehler beim Speichern des Spins:', error);
+            this.showToast('Fehler beim Speichern des Gewinns', 'danger');
+          },
+        });
       } else {
         console.warn('Kein Benutzer gefunden, Gewinn wird nicht gespeichert');
         this.showToast(
@@ -427,8 +431,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   showResult(prize: Prize) {
     // Lade aktuelles Vermögen für die Berechnung
-    const userData = localStorage.getItem('currentUser');
-    const currentUser = userData ? JSON.parse(userData) : null;
+    const currentUser = this.firebaseService.getCurrentUser();
     const currentBalance = currentUser?.balance || 10000;
     const actualPrizeValue = Math.round(
       (currentBalance * prize.percentage) / 100
@@ -461,8 +464,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getActualPrizeValue(prize: Prize): number {
-    const userData = localStorage.getItem('currentUser');
-    const currentUser = userData ? JSON.parse(userData) : null;
+    const currentUser = this.firebaseService.getCurrentUser();
     const currentBalance = currentUser?.balance || 10000;
     return Math.round((currentBalance * prize.percentage) / 100);
   }
@@ -481,43 +483,41 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   loadCurrentBalanceAndUpdateWheel() {
     try {
-      const userData = localStorage.getItem('currentUser');
-      if (userData) {
-        const currentUser = JSON.parse(userData);
+      const currentUser = this.firebaseService.getCurrentUser();
+      if (currentUser) {
 
-        // Lade aktuelles Vermögen von der API
-        this.http
-          .get(
-            `${environment.apiUrl}/get_balance.php?user_id=${currentUser.id}`
-          )
-          .subscribe({
-            next: (response: any) => {
-              if (response.success) {
-                // Aktualisiere das Vermögen im localStorage
-                currentUser.balance = response.balance;
-                localStorage.setItem(
-                  'currentUser',
-                  JSON.stringify(currentUser)
-                );
+        // Lade aktuelles Vermögen clientseitig
+        this.tradingService.getBalance(currentUser.id).subscribe({
+          next: (response: any) => {
+            if (response.success) {
+              // Aktualisiere das Vermögen im localStorage für Kompatibilität
+              const userData = {
+                ...currentUser,
+                balance: response.balance
+              };
+              localStorage.setItem(
+                'currentUser',
+                JSON.stringify(userData)
+              );
 
-                // Aktualisiere die Sektoren mit dem aktuellen Vermögen
-                this.updateWheelLabels();
-                console.log('Vermögen geladen:', response.balance);
-              } else {
-                console.error(
-                  'Fehler beim Laden des Vermögens:',
-                  response.message
-                );
-                // Fallback auf localStorage oder Standardwert
-                this.updateWheelLabels();
-              }
-            },
-            error: (error) => {
-              console.error('Fehler beim Laden des Vermögens:', error);
+              // Aktualisiere die Sektoren mit dem aktuellen Vermögen
+              this.updateWheelLabels();
+              console.log('Vermögen geladen:', response.balance);
+            } else {
+              console.error(
+                'Fehler beim Laden des Vermögens:',
+                response.message
+              );
               // Fallback auf localStorage oder Standardwert
               this.updateWheelLabels();
-            },
-          });
+            }
+          },
+          error: (error) => {
+            console.error('Fehler beim Laden des Vermögens:', error);
+            // Fallback auf localStorage oder Standardwert
+            this.updateWheelLabels();
+          },
+        });
       } else {
         // Kein Benutzer gefunden, verwende Standardwert
         this.updateWheelLabels();
@@ -547,53 +547,16 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   // Daily Spin Logic
   private checkDailySpinAvailability() {
     try {
-      const userData = localStorage.getItem('currentUser');
-      if (userData) {
-        const currentUser = JSON.parse(userData);
-
-        // Prüfe letzten Spin in der Datenbank
-        this.http
-          .get(
-            `${environment.apiUrl}/lucky-wheel.php?action=check_spin&user_id=${currentUser.id}`
-          )
-          .subscribe({
-            next: (response: any) => {
-              if (response.success) {
-                if (response.can_spin) {
-                  this.isSpinBlocked = false;
-                  this.canSpin = true;
-                  this.lastSpinTime = null;
-                  this.nextSpinTime = null;
-                  this.timeUntilNextSpin = '';
-                } else {
-                  this.isSpinBlocked = true;
-                  this.canSpin = false;
-                  this.lastSpinTime = new Date(response.last_spin);
-                  this.nextSpinTime = new Date(response.next_spin);
-                  this.updateTimeUntilNextSpin();
-                }
-              } else {
-                console.error(
-                  'Fehler beim Prüfen der Spin-Verfügbarkeit:',
-                  response.message
-                );
-                this.showToast(
-                  'Fehler beim Prüfen der Spin-Verfügbarkeit',
-                  'danger'
-                );
-              }
-            },
-            error: (error) => {
-              console.error(
-                'Fehler beim Prüfen der Spin-Verfügbarkeit:',
-                error
-              );
-              this.showToast(
-                'Fehler beim Prüfen der Spin-Verfügbarkeit',
-                'danger'
-              );
-            },
-          });
+      const currentUser = this.firebaseService.getCurrentUser();
+      if (currentUser) {
+        // Prüfe mit Firestore, ob heute schon gedreht wurde
+        this.luckyWheelService.checkLastSpin(currentUser.id).subscribe(({ canSpin }) => {
+          this.isSpinBlocked = !canSpin;
+          this.canSpin = canSpin;
+          this.lastSpinTime = null;
+          this.nextSpinTime = canSpin ? null : new Date(Date.now() + 24 * 60 * 60 * 1000);
+          this.timeUntilNextSpin = '';
+        });
       } else {
         console.warn('Kein Benutzer gefunden');
         this.showToast('Bitte melden Sie sich an', 'warning');

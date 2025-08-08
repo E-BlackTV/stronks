@@ -1,31 +1,60 @@
 <ion-content [fullscreen]="true">
   <ion-card>
     <ion-card-header>
-      <ion-card-title class="ion-text-center">Login</ion-card-title>
+      <ion-card-title class="ion-text-center">Anmeldung</ion-card-title>
     </ion-card-header>
 
     <ion-card-content>
       <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-        <ion-item>
-          <ion-label position="stacked">Username</ion-label>
-          <ion-input formControlName="username"></ion-input>
+        <ion-item [class.ion-invalid]="hasError('emailOrUsername')">
+          <ion-label position="stacked">E-Mail oder Benutzername *</ion-label>
+          <ion-input
+            formControlName="emailOrUsername"
+            placeholder="deine@email.com oder benutzername"
+            [class.ion-invalid]="hasError('emailOrUsername')"
+          >
+          </ion-input>
+          <ion-note slot="error" *ngIf="emailOrUsernameError"
+            >{{ emailOrUsernameError }}</ion-note
+          >
         </ion-item>
 
-        <ion-item>
-          <ion-label position="stacked">Password</ion-label>
-          <ion-input type="password" formControlName="password"></ion-input>
+        <ion-item [class.ion-invalid]="hasError('password')">
+          <ion-label position="stacked">Passwort *</ion-label>
+          <ion-input
+            type="password"
+            formControlName="password"
+            placeholder="Dein Passwort"
+            [class.ion-invalid]="hasError('password')"
+          >
+          </ion-input>
+          <ion-note slot="error" *ngIf="passwordError"
+            >{{ passwordError }}</ion-note
+          >
         </ion-item>
 
         <div class="error-message" *ngIf="error">
+          <ion-icon name="alert-circle"></ion-icon>
           {{ error }}
         </div>
 
-        <ion-button expand="block" type="submit" [disabled]="!loginForm.valid" class="success-btn">
-          Login
+        <ion-button
+          expand="block"
+          type="submit"
+          [disabled]="!loginForm.valid || loading"
+          class="success-btn"
+        >
+          <ion-spinner *ngIf="loading" name="crescent"></ion-spinner>
+          {{ loading ? 'Anmelden...' : 'Anmelden' }}
         </ion-button>
 
-        <ion-button expand="block" fill="clear" (click)="goToRegister()" class="fail-text">
-          Don't have an account? Register here
+        <ion-button
+          expand="block"
+          fill="clear"
+          (click)="goToRegister()"
+          class="fail-text"
+        >
+          Noch kein Konto? Hier registrieren
         </ion-button>
       </form>
     </ion-card-content>

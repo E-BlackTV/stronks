@@ -1,18 +1,18 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
-import { AuthenticationService } from '../services/authentication.service';
+import { FirebaseAdminService } from '../services/firebase-admin.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthGuard implements CanActivate {
   constructor(
-    private authService: AuthenticationService,
+    private firebaseService: FirebaseAdminService,
     private router: Router
   ) {}
 
   canActivate(): boolean {
-    if (!this.authService.isLoggedIn()) {
+    if (!this.firebaseService.isLoggedIn()) {
       this.router.navigate(['/login'], {
         queryParams: { returnUrl: window.location.pathname },
       });

@@ -1,65 +1,96 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
+import { Observable, throwError, of } from 'rxjs';
+import { tap, catchError, switchMap, map } from 'rxjs/operators';
+import { FirestoreService } from './firestore.service';
+import { FirebaseAdminService } from './firebase-admin.service';
 
-interface WheelResponse {
+export interface WheelResponse {
   success: boolean;
-  prize?: number;
-  degrees?: number;
   message?: string;
+  prizeAmount?: number;
+  prizePercentage?: number;
+  newBalance?: number;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class LuckyWheelService {
-  private apiUrl = '/backend/lucky-wheel.php'; // Proxy über Angular Dev Server
+  constructor(
+    private http: HttpClient,
+    private firestoreService: FirestoreService,
+    private firebaseAdminService: FirebaseAdminService
+  ) {}
 
-  constructor(private http: HttpClient) {}
-
-  spinWheel(userId: number): Observable<WheelResponse> {
+  spinWheel(userId: string): Observable<WheelResponse> {
     if (!userId) {
       return throwError(() => new Error('User ID is required'));
     }
 
-    return this.http
-      .post<WheelResponse>(this.apiUrl, {
-        user_id: userId,
-        timestamp: Date.now(), // Füge Zeitstempel für zusätzliche Sicherheit hinzu
-        action: 'spin',
-      })
-      .pipe(
-        tap((response) => {
-          if (!response.success) {
-            throw new Error(response.message || 'Spin failed');
+    // 1) Prüfe letzten Spin
+    return this.firestoreService.getLastSpin(userId).pipe(
+      switchMap((last) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (last?.lastSpinDate) {
+          const lastDate = (last.lastSpinDate as any).toDate?.() ?? new Date(last.lastSpinDate as any);
+          lastDate.setHours(0, 0, 0, 0);
+          if (today.getTime() === lastDate.getTime()) {
+            return of({ success: false, message: 'Heute schon gedreht' });
           }
-        }),
-        catchError(this.handleError)
-      );
+        }
+
+        // 2) Lade aktuelles Guthaben
+        return this.firestoreService.getUserBalance(userId).pipe(
+          switchMap((balance) => {
+            // 3) Gewinn 1-10%
+            const prizePercentage = Math.random() * 9 + 1; // 1-10%
+            const prizeAmount = Math.round((balance * prizePercentage) / 100);
+            const newBalance = balance + prizeAmount;
+
+            // 4) Update Balance und Spin speichern
+            return this.firestoreService.updateUserBalance(userId, newBalance).pipe(
+              switchMap(() => this.firestoreService.setLastSpin(userId, prizeAmount, prizePercentage)),
+              map(() => ({
+                success: true,
+                prizeAmount,
+                prizePercentage,
+                newBalance,
+                message: 'Spin erfolgreich'
+              } as WheelResponse))
+            );
+          })
+        );
+      }),
+      catchError(this.handleError)
+    );
   }
 
-  checkLastSpin(userId: number): Observable<{ canSpin: boolean }> {
+  checkLastSpin(userId: string): Observable<{ canSpin: boolean }> {
     if (!userId) {
       return throwError(() => new Error('User ID is required'));
     }
 
-    return this.http
-      .get<{ canSpin: boolean }>(
-        `${this.apiUrl}?user_id=${userId}&action=check`
-      )
-      .pipe(catchError(this.handleError));
+    return this.firestoreService.getLastSpin(userId).pipe(
+      map((last) => {
+        if (!last?.lastSpinDate) return { canSpin: true };
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const lastDate = (last.lastSpinDate as any).toDate?.() ?? new Date(last.lastSpinDate as any);
+        lastDate.setHours(0, 0, 0, 0);
+        return { canSpin: today.getTime() !== lastDate.getTime() };
+      })
+    );
   }
 
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'An error occurred';
 
     if (error.error instanceof ErrorEvent) {
-      // Client-side error
       errorMessage = `Error: ${error.error.message}`;
     } else {
-      // Server-side error
       errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
     }
 

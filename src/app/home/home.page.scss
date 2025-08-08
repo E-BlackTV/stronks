@@ -1,7 +1,149 @@
+// Custom Design Variablen (wie in der Registrierungsseite)
+:root {
+  --primary: #30eb7e;
+  --secondary-navy: #1a1a2e;
+  --secondary-white: #ffffff;
+  --secondary-midgray: #888888;
+  --secondary-lightgray: #f8f9fa;
+  --status-negative: #ff4757;
+  --status-positive: #2ed573;
+}
+
 canvas {
   display: block;
   width: 100%;
   height: 300px;
+}
+
+// Custom Toolbar
+.custom-toolbar {
+  --background: var(--primary);
+  --color: var(--secondary-white);
+}
+
+.custom-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--secondary-white);
+}
+
+// Custom Cards
+.custom-card {
+  margin: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: var(--secondary-navy);
+}
+
+.custom-card-header {
+  background: var(--primary);
+  color: var(--secondary-white);
+  border-radius: 15px 15px 0 0;
+}
+
+.custom-card-content {
+  padding: 16px;
+  background: var(--secondary-navy);
+}
+
+.custom-subtitle {
+  color: var(--secondary-white);
+  font-weight: 500;
+}
+
+.custom-note {
+  color: var(--secondary-white);
+  font-size: 1em;
+  display: block;
+  margin-top: 8px;
+
+  &.positive-color {
+    color: var(--status-positive);
+  }
+
+  &.negative-color {
+    color: var(--status-negative);
+  }
+}
+
+// Custom Content
+.custom-content {
+  --background: var(--secondary-navy);
+  --padding: 20px;
+}
+
+// Custom Items
+.custom-item {
+  margin: 10px 0;
+  border-radius: 10px;
+  --border-radius: 10px;
+  --background: var(--secondary-navy);
+  --border-color: var(--secondary-midgray);
+  --highlight-color: var(--primary);
+  --inner-background: var(--secondary-navy);
+  --inner-border-color: var(--secondary-midgray);
+}
+
+// Custom Labels
+.custom-label {
+  font-weight: 500;
+  color: var(--secondary-white);
+  margin-bottom: 5px;
+}
+
+// Custom Text Elements
+.custom-h3 {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: var(--secondary-white);
+}
+
+.custom-p {
+  margin: 0;
+  color: var(--secondary-midgray);
+}
+
+.custom-small {
+  color: var(--status-positive);
+  margin: 0;
+}
+
+.custom-text {
+  color: var(--secondary-midgray);
+  text-align: center;
+  padding: 20px;
+}
+
+// Custom Buttons
+.custom-button {
+  --background: var(--primary);
+  --color: var(--secondary-white);
+  --border-radius: 10px;
+  --box-shadow: 0 4px 15px rgba(48, 235, 126, 0.4);
+  font-weight: 600;
+}
+
+.custom-button:disabled {
+  --background: #6c757d;
+  --box-shadow: none;
+}
+
+// Custom Badge
+.custom-badge {
+  --background: var(--status-positive);
+  --color: var(--secondary-white);
+}
+
+// Custom Select
+.custom-select {
+  --background: var(--secondary-navy);
+  --color: var(--secondary-white);
+  --placeholder-color: var(--secondary-midgray);
+}
+
+// Custom List
+.custom-list {
+  background: var(--secondary-navy);
 }
 
 .title-align {
@@ -37,26 +179,6 @@ ion-content {
   --padding-end: 16px;
   --padding-top: 16px;
   --padding-bottom: 16px;
-}
-
-ion-content {
-  --padding: 20px;
-
-  ion-card {
-    margin: 0 auto; // Zentriert die Card
-    border-radius: 15px; // Abgerundete Ecken
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); // Subtiler Schatten
-
-    // Desktop-Version: 30% Breite
-    @media (min-width: 768px) {
-      width: 100%;
-    }
-
-    // Mobile-Version: Volle Breite
-    @media (max-width: 767px) {
-      width: 100%;
-    }
-  }
 }
 
 // Balance cards at top
@@ -123,12 +245,12 @@ ion-card-title {
 }
 
 .profit {
-  color: #4caf50;
+  color: var(--status-positive);
   margin-left: 8px;
 }
 
 .loss {
-  color: #f44336;
+  color: var(--status-negative);
   margin-left: 8px;
 }
 
@@ -138,11 +260,11 @@ ion-note {
   margin-top: 8px;
 
   &.profit {
-    color: #4caf50;
+    color: var(--status-positive);
   }
 
   &.loss {
-    color: #f44336;
+    color: var(--status-negative);
   }
 }
 
@@ -208,7 +330,7 @@ ion-note {
   margin-top: 16px;
 
   .buy-button {
-    --background: #28a745;
+    --background: var(--status-positive);
     --background-hover: #218838;
     --border-radius: 12px;
     font-weight: 600;
@@ -217,7 +339,7 @@ ion-note {
   }
 
   .sell-button {
-    --background: #dc3545;
+    --background: var(--status-negative);
     --background-hover: #c82333;
     --border-radius: 12px;
     font-weight: 600;
@@ -281,11 +403,11 @@ ion-note {
 
 // Status indicators
 .profit {
-  color: var(--ion-color-success);
+  color: var(--status-positive);
 }
 
 .loss {
-  color: var(--ion-color-danger);
+  color: var(--status-negative);
 }
 
 // Bitcoin price display
@@ -322,5 +444,29 @@ canvas {
       font-size: 1rem;
       height: 48px;
     }
+  }
+}
+
+// Spezifische Regeln für Dark Mode Komponenten
+ion-item .item-inner {
+  background: var(--secondary-navy) !important;
+}
+
+ion-item .input-wrapper {
+  background: var(--secondary-navy) !important;
+}
+
+ion-item slot {
+  background: var(--secondary-navy) !important;
+}
+
+// Responsive Design
+@media (max-width: 576px) {
+  .custom-card {
+    margin: 10px;
+  }
+
+  .custom-title {
+    font-size: 1.3rem;
   }
 }

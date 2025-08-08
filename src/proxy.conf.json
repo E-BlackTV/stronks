@@ -1,11 +1,8 @@
 {
-  "/backend/*": {
-    "target": "https://web053.wifiooe.at",
-    "secure": true,
+  "/api": {
+    "target": "http://localhost:3000",
+    "secure": false,
     "changeOrigin": true,
-    "logLevel": "debug",
-    "pathRewrite": {
-      "^/backend": "/backend"
-    }
+    "logLevel": "debug"
   }
 }

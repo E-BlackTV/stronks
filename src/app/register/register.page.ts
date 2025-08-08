@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { NavController } from '@ionic/angular';
-import { environment } from '../../environments/environment';
+import { FirebaseAdminService } from '../services/firebase-admin.service';
 
 @Component({
   selector: 'app-register',
@@ -11,51 +10,119 @@ import { environment } from '../../environments/environment';
 })
 export class RegisterPage implements OnInit {
   registerForm!: FormGroup;
+  error: string = '';
+  loading: boolean = false;
 
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient,
-    private navCtrl: NavController
+    private firebaseService: FirebaseAdminService,
+    public navCtrl: NavController
   ) {}
 
   ngOnInit() {
     this.registerForm = this.fb.group(
       {
-        username: ['', Validators.required],
+        username: ['', [Validators.required, Validators.minLength(3)]],
+        email: ['', [Validators.required, Validators.email]],
         password: ['', [Validators.required, Validators.minLength(6)]],
-        confirmPassword: ['', Validators.required],
+        confirmPassword: ['', [Validators.required]],
       },
-      { validator: this.passwordMatchValidator }
+      { validators: this.passwordMatchValidator }
     );
   }
 
-  passwordMatchValidator(form: FormGroup) {
-    return form.get('password')?.value === form.get('confirmPassword')?.value
-      ? null
-      : { mismatch: true };
+  // Korrigierter Password Match Validator
+  passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
+    const password = control.get('password');
+    const confirmPassword = control.get('confirmPassword');
+
+    if (password && confirmPassword && password.value !== confirmPassword.value) {
+      return { passwordMismatch: true };
+    }
+
+    return null;
   }
 
-  onRegister() {
+  // Getter für einfacheren Zugriff auf Form-Fehler
+  get usernameError(): string {
+    const control = this.registerForm.get('username');
+    if (control?.errors && control.touched) {
+      if (control.errors['required']) return 'Benutzername ist erforderlich';
+      if (control.errors['minlength']) return 'Benutzername muss mindestens 3 Zeichen haben';
+    }
+    return '';
+  }
+
+  get emailError(): string {
+    const control = this.registerForm.get('email');
+    if (control?.errors && control.touched) {
+      if (control.errors['required']) return 'E-Mail ist erforderlich';
+      if (control.errors['email']) return 'Bitte gib eine gültige E-Mail-Adresse ein';
+    }
+    return '';
+  }
+
+  get passwordError(): string {
+    const control = this.registerForm.get('password');
+    if (control?.errors && control.touched) {
+      if (control.errors['required']) return 'Passwort ist erforderlich';
+      if (control.errors['minlength']) return 'Passwort muss mindestens 6 Zeichen haben';
+    }
+    return '';
+  }
+
+  get confirmPasswordError(): string {
+    const control = this.registerForm.get('confirmPassword');
+    if (control?.errors && control.touched) {
+      if (control.errors['required']) return 'Passwort-Bestätigung ist erforderlich';
+    }
+    return '';
+  }
+
+  get passwordMismatchError(): string {
+    if (this.registerForm.errors?.['passwordMismatch'] && this.registerForm.get('confirmPassword')?.touched) {
+      return 'Passwörter stimmen nicht überein';
+    }
+    return '';
+  }
+
+  async onRegister() {
+    // Markiere alle Felder als touched für bessere Validierung
+    Object.keys(this.registerForm.controls).forEach(key => {
+      const control = this.registerForm.get(key);
+      control?.markAsTouched();
+    });
+
     if (this.registerForm.invalid) {
-      alert('Bitte fülle alle Felder korrekt aus.');
+      this.error = 'Bitte korrigiere die Fehler im Formular.';
       return;
     }
 
-    this.http
-      .post(`${environment.apiUrl}/register.php`, this.registerForm.value)
-      .subscribe(
-        (response: any) => {
-          if (response.success) {
-            alert(response.message);
-            this.navCtrl.navigateRoot('/login');
-          } else {
-            alert(response.message);
-          }
-        },
-        (error) => {
-          console.error('Fehler bei der Anfrage:', error);
-          alert('Serverfehler. Prüfen Sie die Konsole für Details.');
-        }
-      );
+    this.loading = true;
+    this.error = '';
+
+    const { username, email, password } = this.registerForm.value;
+
+    try {
+      const result = await this.firebaseService.register(email, password, username);
+      
+      if (result.success) {
+        alert(result.message);
+        this.navCtrl.navigateRoot('/login');
+      } else {
+        this.error = result.message;
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      this.error = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  // Hilfsmethode um zu prüfen ob ein Feld einen Fehler hat
+  hasError(fieldName: string): boolean {
+    const control = this.registerForm.get(fieldName);
+    return !!(control?.errors && control.touched);
   }
 }

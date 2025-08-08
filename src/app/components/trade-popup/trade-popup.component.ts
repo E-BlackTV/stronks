@@ -9,7 +9,7 @@ import {
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { TradingService, TradeRequest } from '../../services/trading.service';
-import { AuthenticationService } from '../../services/authentication.service';
+import { FirebaseAdminService } from '../../services/firebase-admin.service';
 import { Subscription, timer } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -81,7 +81,7 @@ export class TradePopupComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private tradingService: TradingService,
-    private authService: AuthenticationService,
+    private authService: FirebaseAdminService,
     private http: HttpClient
   ) {
     this.tradeForm = this.fb.group({
@@ -562,18 +562,19 @@ export class TradePopupComponent implements OnInit, OnDestroy {
       }
 
       if (this.action === 'buy') {
-        // Kauf-Request an buy.php senden
-        const buyRequest = {
-          user_id: userId,
-          asset_symbol: this.assetSymbol,
+        // Kauf-Request über Firebase Functions
+        const tradeRequest = {
+          userId: userId,
+          assetSymbol: this.assetSymbol,
           quantity: formValue.assetQuantity,
           amount: formValue.euroAmount,
-          current_price: this.currentPrice,
+          currentPrice: this.currentPrice,
+          action: 'buy' as const
         };
 
-        console.log('Sending buy request:', buyRequest);
+        console.log('Sending buy request:', tradeRequest);
 
-        this.http.post('/backend/buy.php', buyRequest).subscribe({
+        this.tradingService.trade(tradeRequest).subscribe({
           next: (response: any) => {
             console.log('Buy response:', response);
             if (response.success) {
@@ -594,59 +595,35 @@ export class TradePopupComponent implements OnInit, OnDestroy {
           },
         });
       } else {
-        // Verkauf-Request an sellInvestment.php senden
-        // Für den Verkauf brauchen wir die Portfolio-ID
-        this.tradingService.getPortfolio(userId).subscribe({
-          next: (portfolioResponse) => {
-            if (portfolioResponse.success) {
-              const portfolioItem = portfolioResponse.portfolio.find(
-                (item) => item.asset_symbol === this.assetSymbol
-              );
+        // Verkauf-Request über Firebase Functions
+        const tradeRequest = {
+          userId: userId,
+          assetSymbol: this.assetSymbol,
+          quantity: formValue.assetQuantity,
+          amount: formValue.euroAmount,
+          currentPrice: this.currentPrice,
+          action: 'sell' as const
+        };
 
-              if (portfolioItem) {
-                const sellRequest = {
-                  user_id: userId,
-                  portfolio_id: portfolioItem.id,
-                  sell_percentage: formValue.percentage,
-                };
+        console.log('Sending sell request:', tradeRequest);
 
-                console.log('Sending sell request:', sellRequest);
-
-                this.http
-                  .post('/backend/sellInvestment.php', sellRequest)
-                  .subscribe({
-                    next: (response: any) => {
-                      console.log('Sell response:', response);
-                      if (response.success) {
-                        this.successMessage = 'Verkauf erfolgreich!';
-                        this.tradeCompleted.emit(response);
-                        setTimeout(() => {
-                          this.closePopup();
-                        }, 1500);
-                      } else {
-                        this.errorMessage =
-                          response.message || 'Verkauf fehlgeschlagen';
-                        this.isLoading = false;
-                      }
-                    },
-                    error: (error) => {
-                      console.error('Sell error:', error);
-                      this.errorMessage = 'Fehler beim Ausführen des Verkaufs';
-                      this.isLoading = false;
-                    },
-                  });
-              } else {
-                this.errorMessage = 'Portfolio-Position nicht gefunden';
-                this.isLoading = false;
-              }
+        this.tradingService.trade(tradeRequest).subscribe({
+          next: (response: any) => {
+            console.log('Sell response:', response);
+            if (response.success) {
+              this.successMessage = 'Verkauf erfolgreich!';
+              this.tradeCompleted.emit(response);
+              setTimeout(() => {
+                this.closePopup();
+              }, 1500);
             } else {
-              this.errorMessage = 'Fehler beim Laden des Portfolios';
+              this.errorMessage = response.message || 'Verkauf fehlgeschlagen';
               this.isLoading = false;
             }
           },
           error: (error) => {
-            console.error('Portfolio error:', error);
-            this.errorMessage = 'Fehler beim Laden des Portfolios';
+            console.error('Sell error:', error);
+            this.errorMessage = 'Fehler beim Ausführen des Verkaufs';
             this.isLoading = false;
           },
         });
