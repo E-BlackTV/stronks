@@ -12,6 +12,7 @@ import { TradingService, TradeRequest } from '../../services/trading.service';
 import { FirebaseAdminService } from '../../services/firebase-admin.service';
 import { Subscription, timer } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { ModalController } from '@ionic/angular';
 
 @Component({
   selector: 'app-trade-popup',
@@ -82,7 +83,8 @@ export class TradePopupComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private tradingService: TradingService,
     private authService: FirebaseAdminService,
-    private http: HttpClient
+    private http: HttpClient,
+    private modalController: ModalController
   ) {
     this.tradeForm = this.fb.group({
       euroAmount: [0, [Validators.min(0)]], // Feldname bleibt für Kompatibilität
@@ -581,8 +583,8 @@ export class TradePopupComponent implements OnInit, OnDestroy {
               this.successMessage = 'Kauf erfolgreich!';
               this.tradeCompleted.emit(response);
               setTimeout(() => {
-                this.closePopup();
-              }, 1500);
+                this.modalController.dismiss({ refresh: true });
+              }, 800);
             } else {
               this.errorMessage = response.message || 'Kauf fehlgeschlagen';
               this.isLoading = false;
@@ -614,8 +616,8 @@ export class TradePopupComponent implements OnInit, OnDestroy {
               this.successMessage = 'Verkauf erfolgreich!';
               this.tradeCompleted.emit(response);
               setTimeout(() => {
-                this.closePopup();
-              }, 1500);
+                this.modalController.dismiss({ refresh: true });
+              }, 800);
             } else {
               this.errorMessage = response.message || 'Verkauf fehlgeschlagen';
               this.isLoading = false;
@@ -640,7 +642,7 @@ export class TradePopupComponent implements OnInit, OnDestroy {
     this.tradeForm.reset();
     this.errorMessage = '';
     this.successMessage = '';
-    this.close.emit();
+    this.modalController.dismiss();
   }
 
   getPercentageColor(): string {

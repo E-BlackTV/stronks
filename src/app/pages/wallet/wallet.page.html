@@ -1,0 +1,40 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Wallet</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Vermögensentwicklung</ion-card-title>
+      <ion-card-subtitle
+        >Kontostand: {{ balance | currency:'USD' }}</ion-card-subtitle
+      >
+    </ion-card-header>
+    <ion-card-content>
+      <div style="height: 240px; width: 100%">
+        <canvas #walletChart></canvas>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-list>
+    <ion-list-header>Deine Assets</ion-list-header>
+    <ion-item *ngFor="let a of assets">
+      <ion-label>
+        <h3>{{ a.symbol }}</h3>
+        <p>
+          Menge: {{ a.quantity }} • Wert: {{ (a.quantity * (a.currentPrice ||
+          0)) | currency:'USD' }}
+        </p>
+      </ion-label>
+      <ion-button slot="end" color="warning" (click)="openSell(a)"
+        >Verkaufen</ion-button
+      >
+    </ion-item>
+  </ion-list>
+</ion-content>
