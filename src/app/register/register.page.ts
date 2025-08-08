@@ -6,7 +6,7 @@ import { FirebaseAdminService } from '../services/firebase-admin.service';
 @Component({
   selector: 'app-register',
   templateUrl: './register.page.html',
-  styleUrls: ['./register.page.scss'],
+  styleUrls: ['../../global.scss'],
 })
 export class RegisterPage implements OnInit {
   registerForm!: FormGroup;

@@ -1,12 +1,10 @@
 <ion-content [fullscreen]="true">
-  <ion-card>
+  <ion-card class="container-card">
     <ion-card-header>
       <ion-card-title class="ion-text-center">Anmeldung</ion-card-title>
     </ion-card-header>
-
-    <ion-card-content>
-      <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-        <ion-item [class.ion-invalid]="hasError('emailOrUsername')">
+      <form [formGroup]="loginForm" (ngSubmit)="onLogin()" style="margin-bottom: 25px">
+        <ion-item [class.ion-invalid]="hasError('emailOrUsername')" class="form-group">
           <ion-label position="stacked">E-Mail oder Benutzername *</ion-label>
           <ion-input
             formControlName="emailOrUsername"
@@ -57,6 +55,5 @@
           Noch kein Konto? Hier registrieren
         </ion-button>
       </form>
-    </ion-card-content>
-  </ion-card>
+    </ion-card>
 </ion-content>
