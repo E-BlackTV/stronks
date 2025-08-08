@@ -386,19 +386,21 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
       if (currentUser) {
 
         // Verwende Firestore-basierte Logik (Spark-kompatibel)
-        this.luckyWheelService.spinWheel(currentUser.id).subscribe({
+        this.luckyWheelService.spinWheel(currentUser.id, prize.percentage).subscribe({
           next: (response: any) => {
             if (response.success) {
               console.log('Gewinn erfolgreich gespeichert:', response);
               this.showToast(`Gewinn erfolgreich hinzugefügt! ${response.prizeAmount}€`, 'success');
               
-              // Aktualisiere das Benutzer-Vermögen im localStorage
+              // Aktualisiere das Benutzer-Vermögen im localStorage und im Service
               if (currentUser) {
                 const userData = {
                   ...currentUser,
                   balance: response.newBalance
                 };
                 localStorage.setItem('currentUser', JSON.stringify(userData));
+                // Optional: FirebaseAdminService aktualisieren, falls vorhanden
+                (this.firebaseService as any).currentUser = userData;
               }
             } else {
               console.error(
@@ -433,9 +435,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     // Lade aktuelles Vermögen für die Berechnung
     const currentUser = this.firebaseService.getCurrentUser();
     const currentBalance = currentUser?.balance || 10000;
-    const actualPrizeValue = Math.round(
-      (currentBalance * prize.percentage) / 100
-    );
+    const actualPrizeValue = Math.round((currentBalance * prize.percentage) / 100);
 
     let message = `Glückwunsch! Sie haben ${prize.name} gewonnen!`;
 

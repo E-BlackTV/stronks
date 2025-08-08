@@ -1,1 +1,16 @@
+/* Mobile: Tabbar sichtbar, Desktop: ausgeblendet */
+@media (min-width: 992px) {
+  ion-tab-bar {
+    display: none;
+  }
+}
 
+ion-tab-bar {
+  --background: rgba(17, 24, 39, 0.6); /* dunkel transparent */
+  backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+ion-tab-button {
+  --color: rgba(255, 255, 255, 0.7);
+  --color-selected: var(--ion-color-primary);
+}

@@ -95,7 +95,7 @@ export class FirestoreService {
    */
   getAssets(): Observable<Asset[]> {
     const assetsRef = collection(this.firestore, 'assets');
-    const q = query(assetsRef, where('isActive', '==', true), orderBy('symbol'));
+    const q = query(assetsRef, where('isActive', '==', true));
     
     return from(getDocs(q)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => 
@@ -115,8 +115,7 @@ export class FirestoreService {
     const q = query(
       assetsRef, 
       where('type', '==', type),
-      where('isActive', '==', true),
-      orderBy('symbol')
+      where('isActive', '==', true)
     );
     
     return from(getDocs(q)).pipe(
@@ -322,37 +321,56 @@ export class FirestoreService {
     const portfolioRef = doc(this.firestore, 'portfolios', userId);
 
     return from(getDoc(portfolioRef)).pipe(
-      map(async (snapshot: DocumentSnapshot<DocumentData>) => {
+      switchMap((snapshot: DocumentSnapshot<DocumentData>) => {
         let assets: any[] = [];
         if (snapshot.exists()) {
           const data = snapshot.data() as any;
           assets = Array.isArray(data.assets) ? [...data.assets] : [];
         }
-        const idx = assets.findIndex(a => a.symbol === symbol);
-        if (idx >= 0) {
-          const asset = { ...assets[idx] };
-          asset.quantity = (asset.quantity || 0) + quantityDelta;
-          asset.totalInvested = (asset.totalInvested || 0) + amountDelta;
-          asset.currentPrice = currentPrice;
-          // Entferne Asset, falls Menge auf oder unter 0 fällt
-          if (asset.quantity <= 0) {
-            assets.splice(idx, 1);
+
+        const indexOfAsset = assets.findIndex((a) => a.symbol === symbol);
+        if (indexOfAsset >= 0) {
+          const existing = { ...assets[indexOfAsset] };
+          existing.quantity = (existing.quantity || 0) + quantityDelta;
+          existing.totalInvested = (existing.totalInvested || 0) + amountDelta;
+          existing.currentPrice = currentPrice;
+
+          if (existing.quantity <= 0) {
+            assets.splice(indexOfAsset, 1);
           } else {
-            assets[idx] = asset;
+            assets[indexOfAsset] = existing;
           }
-        } else {
-          if (quantityDelta > 0) {
-            assets.push({
-              symbol,
-              quantity: quantityDelta,
-              totalInvested: amountDelta,
-              currentPrice
-            });
-          }
+        } else if (quantityDelta > 0) {
+          assets.push({
+            symbol,
+            quantity: quantityDelta,
+            totalInvested: amountDelta,
+            currentPrice,
+          });
         }
-        await setDoc(portfolioRef, { userId, assets }, { merge: true });
+
+        return from(setDoc(portfolioRef, { userId, assets }, { merge: true })) as unknown as Observable<void>;
       })
-    ) as unknown as Observable<void>;
+    );
+  }
+
+  /** Portfolio-CashBalance setzen (portfolios/{userId}.cashBalance) */
+  setPortfolioCashBalance(userId: string, cashBalance: number): Observable<void> {
+    const portfolioRef = doc(this.firestore, 'portfolios', userId);
+    return from(getDoc(portfolioRef)).pipe(
+      switchMap((snapshot: DocumentSnapshot<DocumentData>) => {
+        if (snapshot.exists()) {
+          return from(updateDoc(portfolioRef, { cashBalance, updatedAt: serverTimestamp() })) as unknown as Observable<void>;
+        }
+        return from(setDoc(portfolioRef, {
+          userId,
+          assets: [],
+          cashBalance,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })).pipe(map(() => void 0));
+      })
+    );
   }
 
   /** Transaktion protokollieren */
@@ -414,7 +432,7 @@ export class FirestoreService {
    */
   getAssetsRealtime(): Observable<Asset[]> {
     const assetsRef = collection(this.firestore, 'assets');
-    const q = query(assetsRef, where('isActive', '==', true), orderBy('symbol'));
+    const q = query(assetsRef, where('isActive', '==', true));
     
     return new Observable(observer => {
       const unsubscribe = onSnapshot(q, (snapshot) => {

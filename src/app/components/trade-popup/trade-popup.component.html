@@ -1,203 +1,191 @@
-<div class="trade-popup-overlay" *ngIf="isOpen" (click)="closePopup()">
-  <div class="trade-popup" (click)="$event.stopPropagation()">
-    <!-- Header -->
-    <div class="popup-header" [style.background-color]="getActionColor()">
-      <h2>{{ getActionText() }} {{ assetName }}</h2>
-      <button class="close-btn" (click)="closePopup()">×</button>
+<div class="trade-popup">
+  <!-- Header -->
+  <div class="popup-header" [style.background-color]="getActionColor()">
+    <h2>{{ getActionText() }} {{ assetName }}</h2>
+    <button class="close-btn" (click)="closePopup()">×</button>
+  </div>
+
+  <!-- Content -->
+  <div class="popup-content">
+    <!-- Aktueller Preis -->
+    <div class="price-info">
+      <div class="current-price">
+        <span class="label">Aktueller Preis:</span>
+        <span class="price">{{
+          currentPrice | currency : "USD" : "symbol" : "1.2-8"
+        }}</span>
+      </div>
+      <div class="balance-info">
+        <span class="label">{{
+          action === "buy" ? "Verfügbares Guthaben:" : "Verfügbare Menge:"
+        }}</span>
+        <span class="value">
+          {{
+            action === "buy"
+              ? (userBalance | currency : "USD" : "symbol" : "1.2-2")
+              : (availableQuantity | number : "1.2-8") +
+                " " +
+                assetSymbol.split("-")[0]
+          }}
+        </span>
+      </div>
+      <!-- Maximaler Betrag Anzeige -->
+      <div class="max-amount-info" *ngIf="action === 'buy'">
+        <span class="label">Maximaler Kaufbetrag:</span>
+        <span class="value">{{
+          userBalance | currency : "USD" : "symbol" : "1.2-2"
+        }}</span>
+      </div>
     </div>
 
-    <!-- Content -->
-    <div class="popup-content">
-      <!-- Aktueller Preis -->
-      <div class="price-info">
-        <div class="current-price">
-          <span class="label">Aktueller Preis:</span>
-          <span class="price">{{
-            currentPrice | currency : "USD" : "symbol" : "1.2-8"
-          }}</span>
+    <!-- Trade Form -->
+    <form [formGroup]="tradeForm" class="trade-form">
+      <!-- Dollar Betrag -->
+      <div class="form-group">
+        <label for="euroAmount">Dollar Betrag</label>
+        <div class="input-group">
+          <input
+            type="number"
+            id="euroAmount"
+            formControlName="euroAmount"
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+            [max]="action === 'buy' ? userBalance : maxAmount"
+          />
+          <span class="currency">$</span>
         </div>
-        <div class="balance-info">
-          <span class="label">{{
-            action === "buy" ? "Verfügbares Guthaben:" : "Verfügbare Menge:"
-          }}</span>
-          <span class="value">
-            {{
-              action === "buy"
-                ? (userBalance | currency : "USD" : "symbol" : "1.2-2")
-                : (availableQuantity | number : "1.2-8") +
-                  " " +
-                  assetSymbol.split("-")[0]
-            }}
-          </span>
+        <!-- Hinweis für maximalen Betrag -->
+        <div class="input-hint" *ngIf="action === 'buy'">
+          Maximal: {{ userBalance | currency : "USD" : "symbol" : "1.2-2" }}
         </div>
-        <!-- Maximaler Betrag Anzeige -->
-        <div class="max-amount-info" *ngIf="action === 'buy'">
-          <span class="label">Maximaler Kaufbetrag:</span>
+      </div>
+
+      <!-- Asset Menge -->
+      <div class="form-group">
+        <label for="assetQuantity">{{ assetSymbol.split("-")[0] }} Menge</label>
+        <div class="input-group">
+          <input
+            type="number"
+            id="assetQuantity"
+            formControlName="assetQuantity"
+            placeholder="0.00000000"
+            step="0.00000001"
+            min="0"
+            [max]="
+              action === 'sell' ? availableQuantity : userBalance / currentPrice
+            "
+          />
+          <span class="currency">{{ assetSymbol.split("-")[0] }}</span>
+        </div>
+        <!-- Hinweis für maximale Menge -->
+        <div class="input-hint" *ngIf="action === 'buy'">
+          Maximal: {{ userBalance / currentPrice | number : "1.2-8" }}
+          {{ assetSymbol.split("-")[0] }}
+        </div>
+      </div>
+
+      <!-- Schnell-Buttons -->
+      <div class="quick-buttons">
+        <button
+          type="button"
+          class="quick-btn quarter"
+          (click)="setQuarterAmount()"
+        >
+          25%
+        </button>
+        <button type="button" class="quick-btn half" (click)="setHalfAmount()">
+          50%
+        </button>
+        <button type="button" class="quick-btn max" (click)="setMaxAmount()">
+          Max
+        </button>
+      </div>
+
+      <!-- Prozentanzeige -->
+      <div class="percentage-section">
+        <div class="percentage-label">
+          <span>{{
+            action === "buy" ? "Anteil vom Guthaben:" : "Anteil vom Bestand:"
+          }}</span>
+          <span class="percentage-value"
+            >{{ percentage | number : "1.1-1" }}%</span
+          >
+        </div>
+        <div class="progress-bar">
+          <div
+            class="progress-fill"
+            [style.width.%]="percentage"
+            [style.background-color]="getPercentageColor()"
+          ></div>
+        </div>
+        <input
+          type="range"
+          formControlName="percentage"
+          min="0"
+          max="100"
+          step="1"
+          class="percentage-slider"
+        />
+      </div>
+
+      <!-- Zusammenfassung -->
+      <div class="summary" *ngIf="dollarAmount > 0 || assetQuantity > 0">
+        <div class="summary-item">
+          <span class="label">Betrag:</span>
           <span class="value">{{
-            userBalance | currency : "USD" : "symbol" : "1.2-2"
+            dollarAmount | currency : "USD" : "symbol" : "1.2-2"
+          }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Menge:</span>
+          <span class="value"
+            >{{ assetQuantity | number : "1.2-8" }}
+            {{ assetSymbol.split("-")[0] }}</span
+          >
+        </div>
+        <div class="summary-item">
+          <span class="label">Preis pro {{ assetSymbol.split("-")[0] }}:</span>
+          <span class="value">{{
+            currentPrice | currency : "USD" : "symbol" : "1.2-8"
           }}</span>
         </div>
       </div>
 
-      <!-- Trade Form -->
-      <form [formGroup]="tradeForm" class="trade-form">
-        <!-- Dollar Betrag -->
-        <div class="form-group">
-          <label for="euroAmount">Dollar Betrag</label>
-          <div class="input-group">
-            <input
-              type="number"
-              id="euroAmount"
-              formControlName="euroAmount"
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              [max]="action === 'buy' ? userBalance : maxAmount"
-            />
-            <span class="currency">$</span>
-          </div>
-          <!-- Hinweis für maximalen Betrag -->
-          <div class="input-hint" *ngIf="action === 'buy'">
-            Maximal: {{ userBalance | currency : "USD" : "symbol" : "1.2-2" }}
-          </div>
-        </div>
+      <!-- Fehler- und Erfolgsmeldungen -->
+      <div class="message error" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+      <div class="message success" *ngIf="successMessage">
+        {{ successMessage }}
+      </div>
 
-        <!-- Asset Menge -->
-        <div class="form-group">
-          <label for="assetQuantity"
-            >{{ assetSymbol.split("-")[0] }} Menge</label
-          >
-          <div class="input-group">
-            <input
-              type="number"
-              id="assetQuantity"
-              formControlName="assetQuantity"
-              placeholder="0.00000000"
-              step="0.00000001"
-              min="0"
-              [max]="
-                action === 'sell'
-                  ? availableQuantity
-                  : userBalance / currentPrice
-              "
-            />
-            <span class="currency">{{ assetSymbol.split("-")[0] }}</span>
-          </div>
-          <!-- Hinweis für maximale Menge -->
-          <div class="input-hint" *ngIf="action === 'buy'">
-            Maximal: {{ userBalance / currentPrice | number : "1.2-8" }}
-            {{ assetSymbol.split("-")[0] }}
-          </div>
-        </div>
-
-        <!-- Schnell-Buttons -->
-        <div class="quick-buttons">
-          <button
-            type="button"
-            class="quick-btn quarter"
-            (click)="setQuarterAmount()"
-          >
-            25%
-          </button>
-          <button
-            type="button"
-            class="quick-btn half"
-            (click)="setHalfAmount()"
-          >
-            50%
-          </button>
-          <button type="button" class="quick-btn max" (click)="setMaxAmount()">
-            Max
-          </button>
-        </div>
-
-        <!-- Prozentanzeige -->
-        <div class="percentage-section">
-          <div class="percentage-label">
-            <span>{{
-              action === "buy" ? "Anteil vom Guthaben:" : "Anteil vom Bestand:"
-            }}</span>
-            <span class="percentage-value"
-              >{{ percentage | number : "1.1-1" }}%</span
-            >
-          </div>
-          <div class="progress-bar">
-            <div
-              class="progress-fill"
-              [style.width.%]="percentage"
-              [style.background-color]="getPercentageColor()"
-            ></div>
-          </div>
-          <input
-            type="range"
-            formControlName="percentage"
-            min="0"
-            max="100"
-            step="1"
-            class="percentage-slider"
-          />
-        </div>
-
-        <!-- Zusammenfassung -->
-        <div class="summary" *ngIf="dollarAmount > 0 || assetQuantity > 0">
-          <div class="summary-item">
-            <span class="label">Betrag:</span>
-            <span class="value">{{
-              dollarAmount | currency : "USD" : "symbol" : "1.2-2"
-            }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">Menge:</span>
-            <span class="value"
-              >{{ assetQuantity | number : "1.2-8" }}
-              {{ assetSymbol.split("-")[0] }}</span
-            >
-          </div>
-          <div class="summary-item">
-            <span class="label"
-              >Preis pro {{ assetSymbol.split("-")[0] }}:</span
-            >
-            <span class="value">{{
-              currentPrice | currency : "USD" : "symbol" : "1.2-8"
-            }}</span>
-          </div>
-        </div>
-
-        <!-- Fehler- und Erfolgsmeldungen -->
-        <div class="message error" *ngIf="errorMessage">
-          {{ errorMessage }}
-        </div>
-        <div class="message success" *ngIf="successMessage">
-          {{ successMessage }}
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            (click)="closePopup()"
-            [disabled]="isLoading"
-          >
-            Abbrechen
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            [class]="action === 'buy' ? 'btn-buy' : 'btn-sell'"
-            (click)="executeTrade()"
-            [disabled]="
-              tradeForm.invalid ||
-              isLoading ||
-              (assetQuantity <= 0) ||
-              (action === 'buy' && dollarAmount > userBalance)
-            "
-          >
-            <span *ngIf="!isLoading">{{ getActionText() }}</span>
-            <span *ngIf="isLoading" class="loading-spinner"></span>
-          </button>
-        </div>
-      </form>
-    </div>
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closePopup()"
+          [disabled]="isLoading"
+        >
+          Abbrechen
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [class]="action === 'buy' ? 'btn-buy' : 'btn-sell'"
+          (click)="executeTrade()"
+          [disabled]="
+            tradeForm.invalid ||
+            isLoading ||
+            assetQuantity <= 0 ||
+            (action === 'buy' && dollarAmount > userBalance)
+          "
+        >
+          <span *ngIf="!isLoading">{{ getActionText() }}</span>
+          <span *ngIf="isLoading" class="loading-spinner"></span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>

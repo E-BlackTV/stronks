@@ -20,42 +20,32 @@ export class FirebaseTestService {
 
   // Testet die Firebase-Konfiguration
   async testFirebaseConfiguration(): Promise<FirebaseTestResult> {
-    const result: FirebaseTestResult = {
-      success: false,
-      message: '',
-      recommendations: []
-    };
+    const result: FirebaseTestResult = { success: false, message: '', recommendations: [] };
 
     try {
       console.log('🔍 Teste Firebase-Konfiguration...');
-      
-      // 1. Konfiguration überprüfen
       if (!this.validateConfig(firebaseConfig)) {
         result.message = 'Firebase-Konfiguration ist unvollständig';
         result.recommendations?.push('Überprüfen Sie alle erforderlichen Konfigurationsfelder');
         return result;
       }
 
-      // 2. Firebase App initialisieren (nur wenn nicht vorhanden)
       const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
       console.log('✅ Firebase App erfolgreich initialisiert/verwendet');
 
-      // 3. Auth testen
       const auth = getAuth(app);
       console.log('✅ Firebase Auth erfolgreich initialisiert');
 
-      // 4. Firestore testen
       const db = getFirestore(app);
       console.log('✅ Firestore erfolgreich initialisiert');
 
-      // 5. Emulator-Verbindung testen (falls verfügbar)
       try {
         if (window.location.hostname === 'localhost') {
           connectAuthEmulator(auth, 'http://localhost:9099');
           connectFirestoreEmulator(db, 'localhost', 8080);
           console.log('✅ Emulator-Verbindung hergestellt');
         }
-      } catch (emulatorError) {
+      } catch (_emulatorError) {
         console.log('ℹ️ Emulator nicht verfügbar, verwende Produktions-Firebase');
       }
 
@@ -66,24 +56,18 @@ export class FirebaseTestService {
         authDomain: firebaseConfig.authDomain,
         hasEmulator: window.location.hostname === 'localhost'
       };
-
     } catch (error: any) {
       console.error('❌ Firebase-Konfigurationstest fehlgeschlagen:', error);
-      
       result.message = 'Firebase-Konfiguration fehlgeschlagen: ' + error.message;
-      
-      // Spezifische Empfehlungen basierend auf dem Fehler
       if (error.code === 'auth/configuration-not-found') {
         result.recommendations?.push('Firebase Authentication ist nicht aktiviert');
         result.recommendations?.push('Aktivieren Sie E-Mail/Passwort-Authentifizierung in der Firebase Console');
       }
-      
       if (error.code === 'firestore/unavailable') {
         result.recommendations?.push('Firestore Database ist nicht aktiviert');
         result.recommendations?.push('Erstellen Sie eine Firestore-Datenbank in der Firebase Console');
       }
-      
-      if (error.message.includes('apiKey')) {
+      if (error.message?.includes('apiKey')) {
         result.recommendations?.push('API-Key ist ungültig oder fehlt');
         result.recommendations?.push('Überprüfen Sie die API-Key in der Firebase Console');
       }
@@ -92,74 +76,52 @@ export class FirebaseTestService {
     return result;
   }
 
-  // Validiert die Firebase-Konfiguration
   private validateConfig(config: any): boolean {
-    const requiredFields = [
-      'apiKey',
-      'authDomain', 
-      'projectId',
-      'storageBucket',
-      'messagingSenderId',
-      'appId'
-    ];
-
+    const requiredFields = ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'];
     for (const field of requiredFields) {
-      if (!config[field] || config[field].trim() === '') {
+      if (!config[field] || (typeof config[field] === 'string' && config[field].trim() === '')) {
         console.error(`❌ Fehlendes Konfigurationsfeld: ${field}`);
         return false;
       }
     }
-
     return true;
   }
 
   // Testet die Netzwerk-Verbindung zu Firebase
   async testNetworkConnection(): Promise<FirebaseTestResult> {
-    const result: FirebaseTestResult = {
-      success: false,
-      message: '',
-      recommendations: []
-    };
+    const result: FirebaseTestResult = { success: false, message: '', recommendations: [] };
 
     try {
       console.log('🌐 Teste Netzwerk-Verbindung zu Firebase...');
-      
-      // Teste Verbindung zur Firebase Auth API
+
       const authResponse = await fetch(
         `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: 'test@example.com',
-            password: 'testpassword123',
-            returnSecureToken: true
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'diagnostic@test.invalid', password: 'diagnostic-123456', returnSecureToken: false })
         }
       );
 
-      if (authResponse.ok) {
-        result.success = true;
-        result.message = 'Netzwerk-Verbindung zu Firebase ist verfügbar';
-      } else {
-        const errorData = await authResponse.json();
-        result.message = `Netzwerk-Verbindung fehlgeschlagen: ${errorData.error?.message || 'Unbekannter Fehler'}`;
-        
-        if (errorData.error?.message?.includes('API key')) {
-          result.recommendations?.push('API-Key ist ungültig');
-        }
-        if (errorData.error?.message?.includes('not enabled')) {
-          result.recommendations?.push('Firebase Authentication ist nicht aktiviert');
-        }
-      }
+      // Wenn wir irgendeine Antwort von der Firebase API erhalten, ist die Netzwerkverbindung OK.
+      // Auch Fehler wie EMAIL_EXISTS bedeuten Konnektivität (HTTP erreicht, JSON geparst).
+      let info: any = undefined;
+      try { info = await authResponse.clone().json(); } catch { /* non-json body */ }
 
+      result.success = true;
+      result.message = authResponse.ok
+        ? 'Netzwerk-Verbindung zu Firebase ist verfügbar'
+        : `Netzwerk erreichbar (Antwort: ${info?.error?.message || authResponse.status})`;
+      result.details = { status: authResponse.status, firebaseError: info?.error?.message };
+
+      // Zusatz-Ping als Fallback-Check (keine Blockade):
+      fetch('https://www.googleapis.com/generate_204').catch(() => {/* ignorieren */});
     } catch (error: any) {
       console.error('❌ Netzwerk-Test fehlgeschlagen:', error);
-      result.message = 'Netzwerk-Verbindung fehlgeschlagen: ' + error.message;
+      result.success = false;
+      result.message = 'Netzwerk-Verbindung fehlgeschlagen: ' + (error?.message || 'Unbekannter Fehler');
       result.recommendations?.push('Überprüfen Sie Ihre Internetverbindung');
-      result.recommendations?.push('Überprüfen Sie Firewall-Einstellungen');
+      result.recommendations?.push('Überprüfen Sie Firewall-/CORS-Einstellungen');
     }
 
     return result;
@@ -168,16 +130,9 @@ export class FirebaseTestService {
   // Vollständiger Diagnose-Test
   async runFullDiagnostic(): Promise<FirebaseTestResult[]> {
     console.log('🔧 Starte vollständige Firebase-Diagnose...');
-    
     const results: FirebaseTestResult[] = [];
-    
-    // 1. Konfigurationstest
     results.push(await this.testFirebaseConfiguration());
-    
-    // 2. Netzwerk-Test
     results.push(await this.testNetworkConnection());
-    
-    // 3. Zusammenfassung
     const summary: FirebaseTestResult = {
       success: results.every(r => r.success),
       message: `Diagnose abgeschlossen: ${results.filter(r => r.success).length}/${results.length} Tests erfolgreich`,
@@ -187,13 +142,10 @@ export class FirebaseTestService {
         failedTests: results.filter(r => !r.success).length
       }
     };
-    
     results.push(summary);
-    
     return results;
   }
 
-  // Gibt Diagnose-Informationen aus
   logDiagnosticInfo(): void {
     console.log('📋 Firebase Diagnose-Informationen:');
     console.log('Konfiguration:', firebaseConfig);

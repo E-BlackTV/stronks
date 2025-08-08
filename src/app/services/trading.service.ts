@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, map, switchMap, of } from 'rxjs';
+import { Observable, map, switchMap, of, combineLatest, catchError } from 'rxjs';
 import { FirestoreService } from './firestore.service';
 import { MarketDataService } from './market-data.service';
 
@@ -21,6 +21,7 @@ export interface PortfolioResponse {
   success: boolean;
   assets: any[];
   totalValue: number;
+  cashBalance: number;
 }
 
 export interface TransactionsResponse {
@@ -62,6 +63,8 @@ export class TradingService {
               currentPrice: request.currentPrice,
             })
           ),
+          // Portfolio.cashBalance synchron mitführen
+          switchMap(() => this.firestoreService.setPortfolioCashBalance(request.userId, newBalance).pipe(catchError(() => of(void 0)))),
           switchMap(() =>
             this.firestoreService.addTransaction({
               userId: request.userId,
@@ -78,14 +81,16 @@ export class TradingService {
     );
   }
 
-  // Portfolio abrufen
+  // Portfolio abrufen (+ CashBalance direkt verknüpft)
   getPortfolio(userId: string): Observable<PortfolioResponse> {
-    return this.firestoreService.getPortfolioByUserId(userId).pipe(
-      map((data) => {
+    return combineLatest([
+      this.firestoreService.getPortfolioByUserId(userId),
+      this.firestoreService.getUserBalance(userId),
+    ]).pipe(
+      map(([data, balance]) => {
         const assets = data?.assets ?? [];
-        // totalValue kann clientseitig berechnet werden, wenn currentPrice vorhanden ist
         const totalValue = assets.reduce((sum: number, a: any) => sum + (a.quantity * (a.currentPrice || 0)), 0);
-        return { success: true, assets, totalValue };
+        return { success: true, assets, totalValue, cashBalance: balance };
       })
     );
   }
@@ -127,16 +132,23 @@ export class TradingService {
         return this.marketData.fetchCryptoChart(symbol, range, interval).pipe(
           switchMap((cryptoRes) => {
             if (cryptoRes?.data?.chart?.result?.[0]) {
-              // Für limitierte Quellen müssten wir nicht cachen; CoinGecko ist großzügig → optional kein Cache
-              return of(cryptoRes.data);
+              // Best-effort Cache (Schreibfehler ignorieren)
+              return this.firestoreService
+                .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: cryptoRes.data, type: 'chart' })
+                .pipe(
+                  map(() => cryptoRes.data),
+                  catchError(() => of(cryptoRes.data))
+                );
             }
             return this.marketData.fetchStockChart(symbol, range, interval).pipe(
               switchMap((stockRes) => {
                 if (stockRes?.data?.chart?.result?.[0]) {
-                  // Alpha Vantage ist limitiert → Cache speichern
                   return this.firestoreService
                     .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: stockRes.data, type: 'chart' })
-                    .pipe(map(() => stockRes.data));
+                    .pipe(
+                      map(() => stockRes.data),
+                      catchError(() => of(stockRes.data))
+                    );
                 }
                 // Fallback: Nimm die neueste Cached-Data ohne Range/Interval-Filter
                 return this.firestoreService.getCachedData(symbol).pipe(
