@@ -1,30 +1,91 @@
 <ion-content [fullscreen]="true">
   <ion-card>
     <ion-card-header>
-      <ion-card-title class="ion-text-center">
-        Registrierung
-      </ion-card-title>
+      <ion-card-title class="ion-text-center"> Registrierung </ion-card-title>
     </ion-card-header>
 
     <ion-card-content>
       <form [formGroup]="registerForm" (ngSubmit)="onRegister()">
-        <ion-item>
-          <ion-label position="stacked">Username</ion-label>
-          <ion-input formControlName="username"></ion-input>
+        <ion-item [class.ion-invalid]="hasError('username')">
+          <ion-label position="stacked">Benutzername *</ion-label>
+          <ion-input
+            formControlName="username"
+            placeholder="Dein Benutzername"
+            [class.ion-invalid]="hasError('username')"
+          >
+          </ion-input>
+          <ion-note slot="error" *ngIf="usernameError"
+            >{{ usernameError }}</ion-note
+          >
         </ion-item>
 
-        <ion-item>
-          <ion-label position="stacked">Password</ion-label>
-          <ion-input type="password" formControlName="password"></ion-input>
+        <ion-item [class.ion-invalid]="hasError('email')">
+          <ion-label position="stacked">E-Mail *</ion-label>
+          <ion-input
+            type="email"
+            formControlName="email"
+            placeholder="deine@email.com"
+            [class.ion-invalid]="hasError('email')"
+          >
+          </ion-input>
+          <ion-note slot="error" *ngIf="emailError">{{ emailError }}</ion-note>
         </ion-item>
 
-        <ion-item>
-          <ion-label position="stacked">Confirm Password</ion-label>
-          <ion-input type="password" formControlName="confirmPassword"></ion-input>
+        <ion-item [class.ion-invalid]="hasError('password')">
+          <ion-label position="stacked">Passwort *</ion-label>
+          <ion-input
+            type="password"
+            formControlName="password"
+            placeholder="Mindestens 6 Zeichen"
+            [class.ion-invalid]="hasError('password')"
+          >
+          </ion-input>
+          <ion-note slot="error" *ngIf="passwordError"
+            >{{ passwordError }}</ion-note
+          >
         </ion-item>
 
-        <ion-button expand="block" type="submit" class="success-btn">
-          Registrieren
+        <ion-item
+          [class.ion-invalid]="hasError('confirmPassword') || passwordMismatchError"
+        >
+          <ion-label position="stacked">Passwort bestätigen *</ion-label>
+          <ion-input
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="Passwort wiederholen"
+            [class.ion-invalid]="hasError('confirmPassword') || passwordMismatchError"
+          >
+          </ion-input>
+          <ion-note slot="error" *ngIf="confirmPasswordError"
+            >{{ confirmPasswordError }}</ion-note
+          >
+          <ion-note slot="error" *ngIf="passwordMismatchError"
+            >{{ passwordMismatchError }}</ion-note
+          >
+        </ion-item>
+
+        <div class="error-message" *ngIf="error">
+          <ion-icon name="alert-circle"></ion-icon>
+          {{ error }}
+        </div>
+
+        <ion-button
+          expand="block"
+          type="submit"
+          [disabled]="!registerForm.valid || loading"
+          class="success-btn"
+        >
+          <ion-spinner *ngIf="loading" name="crescent"></ion-spinner>
+          {{ loading ? 'Registriere...' : 'Registrieren' }}
+        </ion-button>
+
+        <ion-button
+          expand="block"
+          fill="clear"
+          (click)="navCtrl.navigateRoot('/login')"
+          class="fail-text"
+        >
+          Bereits ein Konto? Hier anmelden
         </ion-button>
       </form>
     </ion-card-content>

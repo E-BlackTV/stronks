@@ -17,7 +17,6 @@ export class AuthenticationService {
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser: Observable<User | null>;
   private readonly USER_KEY = 'currentUser';
-  private apiUrl = 'https://web053.wifiooe.at/backend'; // Direkte Server-Verbindung
 
   constructor(private http: HttpClient, private router: Router) {
     const storedUser = localStorage.getItem(this.USER_KEY);
@@ -32,21 +31,24 @@ export class AuthenticationService {
   }
 
   login(username: string, password: string): Observable<boolean> {
-    return this.http
-      .post<any>(`${this.apiUrl}/login.php`, {
-        username,
-        password,
+    // Verwende Firebase Authentication anstelle der PHP-API
+    // Für jetzt verwenden wir eine einfache lokale Authentifizierung
+    // In einer echten Implementierung würden Sie Firebase Auth verwenden
+    
+    // Simuliere eine erfolgreiche Anmeldung für Demo-Zwecke
+    const mockUser: User = {
+      id: 1,
+      username: username,
+      accountbalance: 10000
+    };
+    
+    return of(true).pipe(
+      map(() => {
+        localStorage.setItem(this.USER_KEY, JSON.stringify(mockUser));
+        this.currentUserSubject.next(mockUser);
+        return true;
       })
-      .pipe(
-        map((response) => {
-          if (response.success && response.user) {
-            localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
-            this.currentUserSubject.next(response.user);
-            return true;
-          }
-          return false;
-        })
-      );
+    );
   }
 
   logout() {

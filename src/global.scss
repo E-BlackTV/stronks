@@ -25,6 +25,74 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
+// Custom Design Variablen für die gesamte App
+:root {
+  --primary: #30eb7e;
+  --secondary-navy: #1a1a2e;
+  --secondary-white: #ffffff;
+  --secondary-midgray: #888888;
+  --secondary-lightgray: #f8f9fa;
+  --status-negative: #ff4757;
+  --status-positive: #2ed573;
+}
+
+// Globale Styles für konsistentes Design
+ion-content {
+  --background: var(--secondary-navy);
+}
+
+ion-card {
+  --background: var(--secondary-navy);
+  --color: var(--secondary-white);
+}
+
+ion-card-header {
+  --background: var(--primary);
+  --color: var(--secondary-white);
+}
+
+ion-item {
+  --background: var(--secondary-navy);
+  --color: var(--secondary-white);
+  --border-color: var(--secondary-midgray);
+  --highlight-color: var(--primary);
+}
+
+ion-input {
+  --background: var(--secondary-navy);
+  --color: var(--secondary-white);
+  --placeholder-color: var(--secondary-midgray);
+}
+
+ion-label {
+  --color: var(--secondary-white);
+}
+
+ion-button {
+  --background: var(--primary);
+  --color: var(--secondary-white);
+  --border-radius: 10px;
+  --box-shadow: 0 4px 15px rgba(48, 235, 126, 0.4);
+}
+
+ion-toolbar {
+  --background: var(--primary);
+  --color: var(--secondary-white);
+}
+
+// Dark Mode Unterstützung
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #30eb7e;
+    --secondary-navy: #1a1a2e;
+    --secondary-white: #ffffff;
+    --secondary-midgray: #888888;
+    --secondary-lightgray: #2a2a3e;
+    --status-negative: #ff4757;
+    --status-positive: #2ed573;
+  }
+}
+
 /**
  * Ionic Dark Mode
  * -----------------------------------------------------
@@ -74,4 +142,3 @@ ion-buttons[slot="end"] ion-button {
   min-width: 44px !important;
   min-height: 44px !important;
 }
-

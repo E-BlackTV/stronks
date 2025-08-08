@@ -1,0 +1,128 @@
+ion-card {
+  margin: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: var(--secondary-navy);
+}
+
+ion-card-header {
+  background: var(--primary);
+  color: var(--secondary-white);
+  border-radius: 15px 15px 0 0;
+}
+
+ion-card-title {
+  font-size: 1.5rem;
+  background: var(--primary);
+  font-weight: 600;
+}
+
+ion-item {
+  margin: 10px 0;
+  border-radius: 10px;
+  --border-radius: 10px;
+  --background: var(--secondary-navy);
+  --border-color: var(--secondary-midgray);
+  --highlight-color: var(--primary);
+  --inner-background: var(--secondary-navy);
+  --inner-border-color: var(--secondary-midgray);
+}
+
+ion-item.ion-invalid {
+  --background: var(--secondary-navy);
+  --border-color: var(--status-negative);
+  --inner-background: var(--secondary-navy);
+}
+
+ion-input {
+  --padding-start: 15px;
+  --padding-end: 15px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --background: var(--secondary-navy);
+  --color: var(--secondary-white);
+  --placeholder-color: var(--secondary-midgray);
+  font-size: 16px;
+}
+
+ion-label {
+  font-weight: 500;
+  color: var(--secondary-white);
+  margin-bottom: 5px;
+}
+
+ion-note {
+  color: var(--status-negative);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.error-message {
+  background: var(--secondary-lightgray);
+  border: 1px solid var(--status-negative);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 15px 0;
+  color: var(--status-negative);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.error-message ion-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.success-btn {
+  margin: 20px 0 10px 0;
+  --background: var(--primary);
+  --border-radius: 10px;
+  --box-shadow: 0 4px 15px rgba(48, 235, 126, 0.4);
+  font-weight: 600;
+  height: 50px;
+}
+
+.success-btn:disabled {
+  --background: #6c757d;
+  --box-shadow: none;
+}
+
+.fail-text {
+  color: var(--secondary-midgray);
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+ion-spinner {
+  margin-right: 8px;
+}
+
+// Spezifische Regeln für Dark Mode Komponenten
+ion-item .item-inner {
+  background: var(--secondary-navy) !important;
+}
+
+ion-item .input-wrapper {
+  background: var(--secondary-navy) !important;
+}
+
+ion-item slot {
+  background: var(--secondary-navy) !important;
+}
+
+// Responsive Design
+@media (max-width: 576px) {
+  ion-card {
+    margin: 10px;
+  }
+
+  ion-card-title {
+    font-size: 1.3rem;
+  }
+
+  ion-input {
+    font-size: 14px;
+  }
+}

@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { AuthenticationService } from './services/authentication.service';
 
 @Component({
   selector: 'app-login',
@@ -13,7 +13,7 @@ export class LoginComponent {
 
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient,
+    private authService: AuthenticationService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
@@ -25,28 +25,32 @@ export class LoginComponent {
 
   onLogin() {
     if (this.loginForm.valid) {
-      this.http
-        .post<any>(
-          'https://web053.wifiooe.at/backend/login.php', // Direkte Server-Verbindung
-          {
-            username: this.username,
-            password: this.password,
+      const username = this.loginForm.get('username')?.value;
+      const password = this.loginForm.get('password')?.value;
+      
+      this.authService.login(username, password).subscribe(
+        (success: boolean) => {
+          if (success) {
+            // Weiterleitung zur Startseite
+            this.router.navigate(['/home']);
+          } else {
+            // Fehlermeldung anzeigen
+            alert('Anmeldung fehlgeschlagen');
           }
-        )
-        .subscribe(
-          (response) => {
-            if (response.success) {
-              // Weiterleitung zur Startseite
-              this.router.navigate(['/home']);
-            } else {
-              // Fehlermeldung anzeigen
-              alert(response.message);
-            }
-          },
-          (error) => {
-            console.error('Fehler bei der Anfrage', error);
-          }
-        );
+        },
+        (error: any) => {
+          console.error('Fehler bei der Anfrage', error);
+          alert('Fehler bei der Anmeldung');
+        }
+      );
     }
+  }
+
+  get username() {
+    return this.loginForm.get('username')?.value;
+  }
+
+  get password() {
+    return this.loginForm.get('password')?.value;
   }
 }

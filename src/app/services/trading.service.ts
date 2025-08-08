@@ -1,117 +1,174 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, map, switchMap, of } from 'rxjs';
+import { FirestoreService } from './firestore.service';
+import { MarketDataService } from './market-data.service';
 
 export interface TradeRequest {
-  user_id: number;
+  userId: string;
+  assetSymbol: string;
+  quantity: number;
+  amount: number;
+  currentPrice: number;
   action: 'buy' | 'sell';
-  asset_symbol: string;
-  euro_amount?: number;
-  asset_quantity?: number;
-  sell_percentage?: number;
 }
 
 export interface TradeResponse {
   success: boolean;
   message: string;
-  data?: {
-    action: string;
-    asset_symbol: string;
-    quantity: number;
-    price_per_unit: number;
-    total_amount: number;
-    new_balance: number;
-    portfolio_position?: any;
-  };
-}
-
-export interface PortfolioItem {
-  id: number;
-  asset_symbol: string;
-  asset_name: string;
-  asset_type: string;
-  quantity: number;
-  avg_purchase_price: number;
-  current_price: number;
-  total_invested: number;
-  current_value: number;
-  profit_loss: number;
-  profit_loss_percent: number;
-  last_updated: string;
 }
 
 export interface PortfolioResponse {
   success: boolean;
-  portfolio: PortfolioItem[];
-  summary: {
-    total_invested: number;
-    total_value: number;
-    total_profit_loss: number;
-    total_profit_loss_percent: number;
-    cash_balance: number;
-    total_portfolio_value: number;
-  };
-}
-
-export interface Transaction {
-  id: number;
-  asset_symbol: string;
-  asset_name: string;
-  asset_type: string;
-  type: 'buy' | 'sell';
-  quantity: number;
-  price_per_unit: number;
-  total_amount: number;
-  transaction_date: string;
-  formatted_date: string;
+  assets: any[];
+  totalValue: number;
 }
 
 export interface TransactionsResponse {
   success: boolean;
-  transactions: Transaction[];
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-    has_more: boolean;
-  };
+  transactions: any[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+export interface BalanceResponse {
+  success: boolean;
+  balance: number;
+}
+
+@Injectable({ providedIn: 'root' })
 export class TradingService {
-  private apiUrl = 'https://web053.wifiooe.at/backend'; // Direkte Server-Verbindung
+  constructor(
+    private firestoreService: FirestoreService,
+    private marketData: MarketDataService,
+  ) {}
 
-  constructor(private http: HttpClient) {}
-
-  // Trade (Kauf oder Verkauf)
+  // Buy/Sell via Firestore
   trade(request: TradeRequest): Observable<TradeResponse> {
-    return this.http.post<TradeResponse>(`${this.apiUrl}/trade.php`, request);
+    const sign = request.action === 'buy' ? 1 : -1;
+    const amountDelta = sign * request.amount;
+    const quantityDelta = sign * request.quantity;
+
+    return this.firestoreService.getUserBalance(request.userId).pipe(
+      switchMap((balance) => {
+        if (request.action === 'buy' && balance < request.amount) {
+          return of({ success: false, message: 'Insufficient balance' });
+        }
+        const newBalance = request.action === 'buy' ? balance - request.amount : balance + request.amount;
+        return this.firestoreService.updateUserBalance(request.userId, newBalance).pipe(
+          switchMap(() =>
+            this.firestoreService.upsertPortfolioAsset({
+              userId: request.userId,
+              symbol: request.assetSymbol,
+              quantityDelta,
+              amountDelta,
+              currentPrice: request.currentPrice,
+            })
+          ),
+          switchMap(() =>
+            this.firestoreService.addTransaction({
+              userId: request.userId,
+              assetSymbol: request.assetSymbol,
+              quantity: request.quantity,
+              amount: request.amount,
+              action: request.action,
+              currentPrice: request.currentPrice,
+            })
+          ),
+          map(() => ({ success: true, message: `${request.action} executed successfully` }))
+        );
+      })
+    );
   }
 
   // Portfolio abrufen
-  getPortfolio(userId: number): Observable<PortfolioResponse> {
-    return this.http.get<PortfolioResponse>(
-      `${this.apiUrl}/get_portfolio_new.php?user_id=${userId}`
+  getPortfolio(userId: string): Observable<PortfolioResponse> {
+    return this.firestoreService.getPortfolioByUserId(userId).pipe(
+      map((data) => {
+        const assets = data?.assets ?? [];
+        // totalValue kann clientseitig berechnet werden, wenn currentPrice vorhanden ist
+        const totalValue = assets.reduce((sum: number, a: any) => sum + (a.quantity * (a.currentPrice || 0)), 0);
+        return { success: true, assets, totalValue };
+      })
     );
   }
 
-  // Transaktionshistorie abrufen
-  getTransactions(
-    userId: number,
-    limit: number = 50,
-    offset: number = 0
-  ): Observable<TransactionsResponse> {
-    return this.http.get<TransactionsResponse>(
-      `${this.apiUrl}/get_transactions.php?user_id=${userId}&limit=${limit}&offset=${offset}`
+  // Balance abrufen
+  getBalance(userId: string): Observable<BalanceResponse> {
+    return this.firestoreService.getUserBalance(userId).pipe(
+      map((balance) => ({ success: true, balance }))
     );
   }
 
-  // Aktuellen Asset-Preis abrufen
+  // Transaktionen abrufen
+  getTransactions(userId: string, limit: number = 50, _offset: number = 0): Observable<TransactionsResponse> {
+    return this.firestoreService.getTransactions(userId, limit).pipe(
+      map((transactions) => ({ success: true, transactions }))
+    );
+  }
+
+  // Asset-Preis (aus cached_data; falls nicht vorhanden, leer zurück)
   getAssetPrice(symbol: string): Observable<any> {
-    return this.http.get(
-      `${this.apiUrl}/cache.php?symbol=${symbol}&range=1d&interval=5m`
+    return this.firestoreService.getLatestCachedData(symbol, '1d', '5m').pipe(
+      map((cached) => {
+        if (!cached) return { success: false };
+        const prices = cached.data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+        const price = prices.length ? prices[prices.length - 1] : null;
+        return price ? { success: true, price, symbol } : { success: false };
+      })
     );
+  }
+
+  // Chart-Daten (aus cached_data)
+  getChartData(symbol: string, range: string = '1d', interval: string = '5m'): Observable<any> {
+    return this.firestoreService.getLatestCachedData(symbol, range, interval).pipe(
+      switchMap((cached) => {
+        if (cached?.data) {
+          return of(this.normalizeChartPayload(cached.data));
+        }
+        // Live-Fetch: zuerst CoinGecko (für Krypto), dann Alpha Vantage (für Aktien), sonst generischer Fallback
+        return this.marketData.fetchCryptoChart(symbol, range, interval).pipe(
+          switchMap((cryptoRes) => {
+            if (cryptoRes?.data?.chart?.result?.[0]) {
+              // Für limitierte Quellen müssten wir nicht cachen; CoinGecko ist großzügig → optional kein Cache
+              return of(cryptoRes.data);
+            }
+            return this.marketData.fetchStockChart(symbol, range, interval).pipe(
+              switchMap((stockRes) => {
+                if (stockRes?.data?.chart?.result?.[0]) {
+                  // Alpha Vantage ist limitiert → Cache speichern
+                  return this.firestoreService
+                    .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: stockRes.data, type: 'chart' })
+                    .pipe(map(() => stockRes.data));
+                }
+                // Fallback: Nimm die neueste Cached-Data ohne Range/Interval-Filter
+                return this.firestoreService.getCachedData(symbol).pipe(
+                  map((list) => this.normalizeChartPayload(list?.[0]?.data ?? { chart: { result: [] } }))
+                );
+              })
+            );
+          })
+        );
+      })
+    );
+  }
+
+  private normalizeChartPayload(payload: any): any {
+    try {
+      // Falls String gespeichert wurde
+      if (typeof payload === 'string') {
+        const parsed = JSON.parse(payload);
+        return this.normalizeChartPayload(parsed);
+      }
+      // Direkte Yahoo-Struktur
+      if (payload?.chart?.result?.[0]) {
+        return payload;
+      }
+      // Verschachtelt unter data
+      if (payload?.data?.chart?.result?.[0]) {
+        return payload.data;
+      }
+      // Standard-Fallback
+      return { chart: { result: [] } };
+    } catch (_e) {
+      return { chart: { result: [] } };
+    }
   }
 }

@@ -1,0 +1,185 @@
+// Custom Design Variablen
+:root {
+  --primary: #30eb7e;
+  --secondary-navy: #1a1a2e;
+  --secondary-white: #ffffff;
+  --secondary-midgray: #888888;
+  --secondary-lightgray: #f8f9fa;
+  --status-negative: #ff4757;
+  --status-positive: #2ed573;
+}
+
+// Content Background
+ion-content {
+  --background: var(--secondary-navy);
+  --padding: 20px;
+}
+
+// Card Styling
+ion-card {
+  margin: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background: var(--secondary-navy);
+  border: 1px solid var(--secondary-midgray);
+}
+
+// Card Header - KEIN GRADIENT!
+ion-card-header {
+  background: var(--primary);
+  color: var(--secondary-white);
+  border-radius: 15px 15px 0 0;
+  padding: 20px;
+}
+
+ion-card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--secondary-white);
+  text-align: center;
+  margin: 0;
+}
+
+// Card Content
+ion-card-content {
+  padding: 20px;
+  background: var(--secondary-navy);
+}
+
+// Input Items - SICHTBAR!
+ion-item {
+  margin: 15px 0;
+  border-radius: 10px;
+  --border-radius: 10px;
+  --background: var(--secondary-navy);
+  --border-color: var(--secondary-midgray);
+  --border-width: 2px;
+  --border-style: solid;
+  --highlight-color: var(--primary);
+  --inner-background: var(--secondary-navy);
+  --inner-border-color: var(--secondary-midgray);
+  --padding-start: 15px;
+  --padding-end: 15px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+}
+
+ion-item.ion-invalid {
+  --background: var(--secondary-navy);
+  --border-color: var(--status-negative);
+  --inner-background: var(--secondary-navy);
+}
+
+ion-item.ion-focused {
+  --border-color: var(--primary);
+  --border-width: 2px;
+}
+
+// Input Fields - DEUTLICH SICHTBAR!
+ion-input {
+  --padding-start: 15px;
+  --padding-end: 15px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --background: var(--secondary-navy);
+  --color: var(--secondary-white);
+  --placeholder-color: var(--secondary-midgray);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+// Labels - SICHTBAR!
+ion-label {
+  font-weight: 600;
+  color: var(--secondary-white);
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+// Error Notes
+ion-note {
+  color: var(--status-negative);
+  font-size: 12px;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+// Error Message
+.error-message {
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid var(--status-negative);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 15px 0;
+  color: var(--status-negative);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.error-message ion-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+// Success Button - KEIN GRADIENT!
+.success-btn {
+  margin: 20px 0 10px 0;
+  --background: var(--primary);
+  --color: var(--secondary-white);
+  --border-radius: 10px;
+  --box-shadow: 0 4px 15px rgba(48, 235, 126, 0.4);
+  font-weight: 600;
+  height: 50px;
+  font-size: 16px;
+}
+
+.success-btn:disabled {
+  --background: #6c757d;
+  --box-shadow: none;
+  --color: var(--secondary-white);
+}
+
+// Secondary Button
+.fail-text {
+  color: var(--secondary-midgray);
+  font-weight: 500;
+  margin-top: 10px;
+  --background: transparent;
+  --color: var(--secondary-midgray);
+}
+
+// Spinner
+ion-spinner {
+  margin-right: 8px;
+}
+
+// Spezifische Regeln für Dark Mode Komponenten
+ion-item .item-inner {
+  background: var(--secondary-navy) !important;
+}
+
+ion-item .input-wrapper {
+  background: var(--secondary-navy) !important;
+}
+
+ion-item slot {
+  background: var(--secondary-navy) !important;
+}
+
+// Responsive Design
+@media (max-width: 576px) {
+  ion-card {
+    margin: 10px;
+  }
+
+  ion-card-title {
+    font-size: 1.3rem;
+  }
+
+  ion-input {
+    font-size: 14px;
+  }
+}

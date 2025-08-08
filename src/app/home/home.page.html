@@ -1,11 +1,11 @@
 <ion-header>
-  <ion-toolbar>
-    <ion-title>Stronks</ion-title>
+  <ion-toolbar class="custom-toolbar">
+    <ion-title class="custom-title">Stronks</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="logout()">
+      <ion-button (click)="logout()" class="custom-button">
         <ion-icon name="log-out-outline"></ion-icon>
       </ion-button>
-      <ion-button (click)="openLuckyWheel()">
+      <ion-button (click)="openLuckyWheel()" class="custom-button">
         <ion-icon name="gift-outline"></ion-icon>
         Daily Reward
       </ion-button>
@@ -14,19 +14,21 @@
 </ion-header>
 
 <div class="balance-container">
-  <ion-card class="balance-card">
-    <ion-card-header>
-      <ion-card-subtitle>Verfügbar</ion-card-subtitle>
-      <ion-card-title
-        >{{ accountBalance | currency:'USD':'symbol':'1.2-2' }}</ion-card-title
-      >
+  <ion-card class="balance-card custom-card">
+    <ion-card-header class="custom-card-header">
+      <ion-card-subtitle class="custom-subtitle">Verfügbar</ion-card-subtitle>
+      <ion-card-title class="custom-title">
+        {{ accountBalance | currency:'USD':'symbol':'1.2-2' }}
+      </ion-card-title>
     </ion-card-header>
   </ion-card>
 
-  <ion-card class="balance-card">
-    <ion-card-header>
-      <ion-card-subtitle>Portfoliowert</ion-card-subtitle>
-      <ion-card-title>
+  <ion-card class="balance-card custom-card">
+    <ion-card-header class="custom-card-header">
+      <ion-card-subtitle class="custom-subtitle"
+        >Portfoliowert</ion-card-subtitle
+      >
+      <ion-card-title class="custom-title">
         {{ portfolioValue | currency:'USD':'symbol':'1.2-2' }}
         <span
           [ngClass]="{'positive-color': profitLossPercentage > 0, 'negative-color': profitLossPercentage < 0}"
@@ -36,6 +38,7 @@
       </ion-card-title>
       <ion-note
         [ngClass]="{'positive-color': profitLoss > 0, 'negative-color': profitLoss < 0}"
+        class="custom-note"
       >
         {{ profitLoss >= 0 ? '+' : ''}}{{ profitLoss |
         currency:'USD':'symbol':'1.2-2' }}
@@ -44,12 +47,14 @@
   </ion-card>
 </div>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding custom-content">
   <div class="cards-container">
     <!-- Investment Card -->
-    <ion-card class="investment-card">
-      <ion-card-header>
-        <ion-card-subtitle>Investitionen</ion-card-subtitle>
+    <ion-card class="investment-card custom-card">
+      <ion-card-header class="custom-card-header">
+        <ion-card-subtitle class="custom-subtitle"
+          >Investitionen</ion-card-subtitle
+        >
         <!-- Toggle-Button für Investments -->
         <ion-grid class="toggle-btn-grid">
           <ion-row>
@@ -57,7 +62,7 @@
               <ion-button
                 fill="clear"
                 (click)="toggleInvestments()"
-                class="toggle-btn"
+                class="toggle-btn custom-button"
               >
                 <ion-icon
                   [name]="showInvestments ? 'card' : 'card-outline'"
@@ -65,95 +70,127 @@
               </ion-button>
             </ion-col>
             <ion-col size="4" class="toggle-btn-col">
-              <ion-button fill="clear" class="toggle-btn"  (click)="fetchCryptoAssets()">
-                <ion-icon
-                  [name]="false ? 'logo-bitcoin' : 'logo-bitcoin'"
-                ></ion-icon>
+              <ion-button
+                fill="clear"
+                class="toggle-btn custom-button"
+                (click)="fetchCryptoAssets()"
+              >
+                <ion-icon name="logo-bitcoin"></ion-icon>
               </ion-button>
             </ion-col>
             <ion-col size="4" class="toggle-btn-col">
-              <ion-button fill="clear" class="toggle-btn">
-                <ion-icon
-                  [name]="false ? 'bar-chart' : 'bar-chart-outline'"
-                ></ion-icon>
+              <ion-button
+                fill="clear"
+                class="toggle-btn custom-button"
+                (click)="loadPortfolio()"
+              >
+                <ion-icon name="bar-chart-outline"></ion-icon>
               </ion-button>
             </ion-col>
           </ion-row>
         </ion-grid>
       </ion-card-header>
 
-      <ion-card-content>
+      <ion-card-content class="custom-card-content">
         <div class="investments-scroll-container">
-          
-          <ion-list *ngIf="showInvestments">
-            <ion-card-header>
-            <ion-card-title>Portfolio</ion-card-title>
-          </ion-card-header>
+          <ion-list *ngIf="showInvestments" class="custom-list">
+            <ion-card-header class="custom-card-header">
+              <ion-card-title class="custom-title">Portfolio</ion-card-title>
+            </ion-card-header>
             <ion-item
               *ngFor="let investment of userInvestments"
-              class="investment-item"
+              class="investment-item custom-item"
             >
               <div class="investment-details">
-                <h3>{{ investment.investments }}</h3>
+                <h3 class="custom-h3">{{ investment.investments }}</h3>
                 <div class="investment-stats">
-                  <p>
+                  <p class="custom-p">
                     Shares: {{ investment.calculatedShares | number:'1.8-8' }}
                   </p>
-                  <small>
+                  <small class="custom-small">
                     Betrag: {{ investment.currentValue |
                     currency:'USD':'symbol':'1.2-2' }}
                   </small>
+                  <small
+                    class="custom-small"
+                    [ngClass]="{'positive-color': investment.profit_loss_percent > 0, 'negative-color': investment.profit_loss_percent < 0}"
+                  >
+                    {{ investment.profit_loss_percent >= 0 ? '+' : '' }}{{
+                    investment.profit_loss_percent | number:'1.2-2' }}%
+                  </small>
                 </div>
               </div>
+              <ion-button
+                size="small"
+                color="danger"
+                slot="end"
+                class="custom-button"
+                (click)="openTradePopup('sell', investment.asset_symbol, currentPrice)"
+              >
+                Verkaufen
+              </ion-button>
             </ion-item>
           </ion-list>
-          <div class="no-investments" *ngIf="!userInvestments.length">
+          <div
+            class="no-investments custom-text"
+            *ngIf="!userInvestments.length"
+          >
             Keine Investitionen vorhanden.
           </div>
 
-          
-          <ion-list *ngIf="showCryptoList" class="crypto-list-card">
-            <ion-card-header>
-            <ion-card-title>Alle Kryptowährungen</ion-card-title>
-          </ion-card-header>
-          <ion-item *ngFor="let asset of cryptoAssets">
-            <ion-label>
-              <h3>{{ asset.name }}</h3>
-              <p>{{ asset.symbol }}</p>
-            </ion-label>
-            <ion-badge color="success" slot="end">
-              {{ asset.price | currency:'USD':'symbol':'1.2-2' }}
-            </ion-badge>
-            <ion-button size="small" color="primary" slot="end">
-              Auswählen
-            </ion-button>
-          </ion-item>
-        </ion-list>
+          <ion-list *ngIf="showCryptoList" class="crypto-list-card custom-list">
+            <ion-card-header class="custom-card-header">
+              <ion-card-title class="custom-title"
+                >Alle Kryptowährungen</ion-card-title
+              >
+            </ion-card-header>
+            <ion-item *ngFor="let asset of cryptoAssets" class="custom-item">
+              <ion-label class="custom-label">
+                <h3 class="custom-h3">{{ asset.name }}</h3>
+                <p class="custom-p">{{ asset.symbol }}</p>
+              </ion-label>
+              <ion-badge color="success" slot="end" class="custom-badge">
+                {{ asset.price | currency:'USD':'symbol':'1.2-2' }}
+              </ion-badge>
+              <ion-button
+                size="small"
+                color="primary"
+                slot="end"
+                class="custom-button"
+                (click)="openTradePopup('buy', asset.symbol + '-USD', asset.price)"
+              >
+                Kaufen
+              </ion-button>
+            </ion-item>
+          </ion-list>
         </div>
       </ion-card-content>
     </ion-card>
 
     <!-- Bitcoin Card -->
-    <ion-card class="bitcoin-card">
-      <ion-card-header>
-        <ion-card-subtitle>Bitcoin</ion-card-subtitle>
-        <ion-card-title class="bitcoin-price">
+    <ion-card class="bitcoin-card custom-card">
+      <ion-card-header class="custom-card-header">
+        <ion-card-subtitle class="custom-subtitle">Bitcoin</ion-card-subtitle>
+        <ion-card-title class="bitcoin-price custom-title">
           {{ currentPrice | currency:'USD':'symbol':'1.2-2' }}
         </ion-card-title>
-        <ion-card-subtitle>Test Version</ion-card-subtitle>
+        <ion-card-subtitle class="custom-subtitle"
+          >Test Version</ion-card-subtitle
+        >
       </ion-card-header>
 
-      <ion-card-content>
-        <ion-button fill="clear" (click)="loadAllData()">
+      <ion-card-content class="custom-card-content">
+        <ion-button fill="clear" (click)="loadAllData()" class="custom-button">
           <ion-icon name="refresh" slot="start"></ion-icon>
           Aktualisieren
         </ion-button>
         <div class="chart-controls">
-          <ion-item>
-            <ion-label>Time Range</ion-label>
+          <ion-item class="custom-item">
+            <ion-label class="custom-label">Time Range</ion-label>
             <ion-select
               [(ngModel)]="selectedRange"
               (ionChange)="onRangeChange($event)"
+              class="custom-select"
             >
               <ion-select-option
                 *ngFor="let option of rangeOptions"
@@ -164,11 +201,12 @@
             </ion-select>
           </ion-item>
 
-          <ion-item>
-            <ion-label>Interval</ion-label>
+          <ion-item class="custom-item">
+            <ion-label class="custom-label">Interval</ion-label>
             <ion-select
               [(ngModel)]="selectedInterval"
               (ionChange)="onIntervalChange($event)"
+              class="custom-select"
             >
               <ion-select-option
                 *ngFor="let option of getAvailableIntervals()"
@@ -179,16 +217,20 @@
             </ion-select>
           </ion-item>
         </div>
-        <div style="width: 100%; height: 200px" [class.colorful]="true">
+        <div
+          style="width: 100%; height: 200px"
+          [class.colorful]="true"
+          class="chart-container"
+        >
           <canvas #lineChart></canvas>
         </div>
-        <!-- Neue Trading-Buttons -->
+        <!-- Trading-Buttons -->
         <div class="trading-buttons">
           <ion-button
-            class="success-btn"
+            class="success-btn custom-button"
             expand="block"
             size="small"
-            (click)="openBuyPopup()"
+            (click)="openTradePopup('buy', 'BTC-USD', currentPrice)"
             class="buy-button"
           >
             <ion-icon name="add-circle" slot="start"></ion-icon>
@@ -196,10 +238,10 @@
           </ion-button>
 
           <ion-button
-            class="danger-btn"
+            class="danger-btn custom-button"
             expand="block"
             size="small"
-            (click)="openSellPopup()"
+            (click)="openTradePopup('sell', 'BTC-USD', currentPrice)"
             class="sell-button"
           >
             <ion-icon name="remove-circle" slot="start"></ion-icon>
@@ -211,15 +253,19 @@
   </div>
 </ion-content>
 
-<!-- Trade Popup -->
-<app-trade-popup
-  [isOpen]="showTradePopup"
-  [action]="tradeAction"
-  [assetSymbol]="'BTC-USD'"
-  [assetName]="'Bitcoin'"
-  [currentPrice]="currentPrice"
-  [userBalance]="accountBalance"
-  [availableQuantity]="getBitcoinQuantity()"
-  (close)="closeTradePopup()"
-  (tradeCompleted)="onTradeCompleted($event)"
-></app-trade-popup>
+<!-- Trade Popup Modal -->
+<ion-modal [isOpen]="showTradePopup" (didDismiss)="closeTradePopup()">
+  <ng-template>
+    <app-trade-popup
+      [isOpen]="showTradePopup"
+      [action]="tradeAction"
+      [assetSymbol]="'BTC-USD'"
+      [assetName]="'Bitcoin'"
+      [currentPrice]="currentPrice"
+      [userBalance]="accountBalance"
+      [availableQuantity]="getBitcoinQuantity()"
+      (close)="closeTradePopup()"
+      (tradeCompleted)="onTradeCompleted($event)"
+    ></app-trade-popup>
+  </ng-template>
+</ion-modal>
