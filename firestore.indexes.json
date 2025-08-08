@@ -1,46 +1,85 @@
 {
   "indexes": [
     {
-      "collectionGroup": "cached_data",
+      "collectionGroup": "assets",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "symbol", "order": "ASCENDING" },
-        { "fieldPath": "lastUpdated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "cached_data",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "symbol", "order": "ASCENDING" },
-        { "fieldPath": "rangePeriod", "order": "ASCENDING" },
-        { "fieldPath": "intervalPeriod", "order": "ASCENDING" },
-        { "fieldPath": "lastUpdated", "order": "DESCENDING" }
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "symbol",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "assets",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "isActive", "order": "ASCENDING" },
-        { "fieldPath": "symbol", "order": "ASCENDING" }
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "symbol",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
-      "collectionGroup": "assets",
+      "collectionGroup": "cached_data",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "type", "order": "ASCENDING" },
-        { "fieldPath": "isActive", "order": "ASCENDING" },
-        { "fieldPath": "symbol", "order": "ASCENDING" }
+        {
+          "fieldPath": "symbol",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastUpdated",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "cached_data",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "symbol",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rangePeriod",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "intervalPeriod",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastUpdated",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "transactions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],

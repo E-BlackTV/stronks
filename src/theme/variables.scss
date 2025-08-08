@@ -130,23 +130,17 @@
   margin-top: 2px;
 }
 
-/* "Bitcoin kaufen"-Button mint einfärben 
+ 
 .success-btn {
-    background-color: none;
-  --background-hover: var(--accent-mint);
-  color: #22313F; 
-  font-weight: bold;
-  transition: --color 0.2s;
+  padding-inline: 16px;
+  color: var(--accent-darkgreen); 
+
 }
-*/
+
 
 .success-btn:hover,
 .success-btn:focus {
   --background: var(--accent-mint-dark);
-}
-
-.fail-text {
-  color: var(--secondary-midgray);
 }
 
 .danger-btn {

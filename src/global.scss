@@ -36,30 +36,58 @@
   --status-positive: #2ed573;
 }
 
-// Globale Styles für konsistentes Design
-ion-content {
-  --background: var(--secondary-navy);
+.form-group {
+  display: flex;
+  flex-direction: column; /* stapelt Label und Input */
+  margin-bottom: 1rem; /* Abstand zum nächsten Feld */
 }
 
-ion-card {
-  --background: var(--secondary-navy);
-  --color: var(--secondary-white);
+.form-group label {
+  width: 100%; /* Label nimmt die volle Breite ein */
+  margin-bottom: 0.3rem; /* Abstand zwischen Label und Input */
+  font-weight: bold;
 }
 
-ion-card-header {
-  --background: var(--primary);
-  --color: var(--secondary-white);
+.container-card {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* verteilt top & bottom */
+  align-items: center; /* horizontal zentriert */
+  width: 400px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 25px;
+  background: linear-gradient(145deg, #2c2e30, #1d1d1d);
+  border-radius: 20px;
+  padding: 1rem 2rem 1rem 2rem;
+  color: #ececec;
+  font-weight: 600;
+  font-size: 1.4rem;
+  user-select: none;
+  cursor: default;
+
+
+  /* Mehrschichtiger Schatten für Tiefe */
+  box-shadow:
+    /* äußere starke Schatten */
+    8px 8px 15px rgba(0, 0, 0, 0.9),
+    -8px -8px 15px rgba(60, 60, 60, 0.4),
+    /* subtiler innerer Schatten */
+    inset 2px 2px 6px rgba(255, 255, 255, 0.07),
+    inset -2px -2px 6px rgba(0, 0, 0, 0.7);
+
+  /* Leichter Glanz oben */
+  position: relative;
 }
 
 ion-item {
-  --background: var(--secondary-navy);
   --color: var(--secondary-white);
   --border-color: var(--secondary-midgray);
   --highlight-color: var(--primary);
 }
 
 ion-input {
-  --background: var(--secondary-navy);
   --color: var(--secondary-white);
   --placeholder-color: var(--secondary-midgray);
 }
@@ -142,3 +170,128 @@ ion-buttons[slot="end"] ion-button {
   min-width: 44px !important;
   min-height: 44px !important;
 }
+
+.label-stacked.sc-ion-label-md-h,
+.label-floating.sc-ion-label-md-h {
+  margin-bottom: 10px;
+}
+
+ion-item::part(native) {
+  padding-right: 20px !important;
+}
+
+.ion-text-center {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+//Register Page Styles
+ion-item {
+  --background: #ffffff00;
+}
+
+ion-item {
+  margin: 10px 0;
+  border-radius: 10px;
+  --border-radius: 10px;
+  --border-color: var(--secondary-midgray);
+  --highlight-color: var(--primary);
+  --inner-background: var(--secondary-navy);
+  --inner-border-color: var(--secondary-midgray);
+}
+
+ion-item.ion-invalid {
+  --border-color: var(--status-negative);
+
+}
+
+ion-input {
+  --color: var(--secondary-white);
+  --placeholder-color: var(--secondary-midgray);
+  font-size: 16px;
+}
+
+ion-label {
+  font-weight: 500;
+  color: var(--secondary-white);
+  margin-bottom: 5px;
+}
+
+ion-note {
+  color: var(--status-negative);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.error-message {
+  background: var(--secondary-lightgray);
+  border: 1px solid var(--status-negative);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 15px 0;
+  color: var(--status-negative);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.error-message ion-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.success-btn {
+  margin: 20px 0 10px 0;
+  --background: var(--primary);
+  --border-radius: 10px;
+  --box-shadow: 0 4px 15px rgba(48, 235, 126, 0.4);
+  font-weight: 600;
+  height: 50px;
+}
+
+.success-btn:disabled {
+  --background: #6c757d;
+  --box-shadow: none;
+}
+
+.fail-text {
+  padding-inline: 16px;
+  color: var(--accent-darkgreen);
+  font-size: small !important;
+  font-weight: 600;
+  margin-top: 20px;
+}
+
+ion-spinner {
+  margin-right: 8px;
+}
+
+ion-item .input-wrapper {
+  background: var() !important;
+}
+
+// Responsive Design
+@media (max-width: 450px) {
+  .container-card {
+    width: 90%;
+    margin-top: 30px;
+    margin-bottom: 30px;
+  }
+
+  ion-item {
+    --padding-start: 10px;
+    --padding-end: 10px;
+  }
+
+  ion-input, ion-label {
+    font-size: 14px;
+  }
+
+  .success-btn {
+    color: var(--accent-darkgreen);
+    font-size: 16px;
+    height: 45px;
+  }
+}
+
