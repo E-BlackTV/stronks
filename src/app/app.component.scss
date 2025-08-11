@@ -1,16 +1,17 @@
 :host {
-  --menu-width: 100%;
-  --menu-width-collapsed: 20%;
+  --menu-width: 280px;
+  --menu-width-collapsed: 80px;
 }
 
 .app-menu {
-  --background: rgba(26, 26, 46, 0);
+  --background: rgba(26, 26, 46, 0.95);
   --ion-text-color: var(--secondary-white);
-  /* Kritisch: echte Breite des Menüs über CSS-Variablen von Ion Menu steuern */
   --width: var(--menu-width);
   --min-width: var(--menu-width);
   --max-width: var(--menu-width);
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .app-menu.collapsed {
@@ -22,35 +23,70 @@
 .menu-toolbar {
   --color: var(--secondary-white);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  --background: transparent;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
+
+.brand:hover {
+  opacity: 0.8;
+}
+
 .brand-text {
   font-weight: 700;
   font-size: 18px;
   color: var(--secondary-white);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.app-menu.collapsed .brand-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
 }
 
 .menu-list {
   background: transparent;
 }
+
 .menu-list ion-item {
   --background: transparent;
   --color: var(--secondary-white);
   --border-color: transparent;
   margin: 2px 8px;
   border-radius: 10px;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
+
 .menu-list ion-item:hover {
   background: rgba(255, 255, 255, 0.06);
+  transform: translateX(4px);
 }
+
 .menu-list ion-icon {
   color: var(--secondary-white);
   opacity: 0.9;
+  min-width: 24px;
+  text-align: center;
+}
+
+.menu-list ion-label {
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.app-menu.collapsed .menu-list ion-label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
 }
 
 .menu-footer {
@@ -58,9 +94,28 @@
   bottom: 16px;
   left: 16px;
   right: 16px;
+  transition: all 0.3s ease;
 }
+
+.app-menu.collapsed .menu-footer {
+  left: 8px;
+  right: 8px;
+}
+
 .menu-footer ion-button {
   --border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.app-menu.collapsed .menu-footer ion-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+}
+
+.app-menu.collapsed .menu-footer span {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
 }
 
 .menu-balance {
@@ -105,26 +160,70 @@
   display: none;
 }
 
+/* Split-Pane Konfiguration */
 ion-split-pane {
   --side-width: var(--menu-width);
   --side-width-lg: var(--menu-width);
+  transition: all 0.3s ease;
 }
+
 ion-split-pane.menu-collapsed {
   --side-width: var(--menu-width-collapsed);
   --side-width-lg: var(--menu-width-collapsed);
 }
 
-.display-toolbar{
-
-}
-
-.hidden-menu {
-  transform: translateX(-100%);
-  visibility: hidden;
-}
-
+/* Mobile Anpassungen */
 @media (max-width: 992px) {
-  .app-container{
+  :host {
+    --menu-width: 100%;
+    --menu-width-collapsed: 100%;
+  }
+  
+  .app-menu {
+    --width: 100%;
+    --min-width: 100%;
+    --max-width: 100%;
+  }
+  
+  .app-menu.collapsed {
+    --width: 100%;
+    --min-width: 100%;
+    --max-width: 100%;
+  }
+  
+  /* Auf mobilen Geräten das Menü ausblenden wenn es eingeklappt ist */
+  .app-menu.collapsed {
     display: none;
+  }
+}
+
+/* Sticky Sidebar für Desktop */
+@media (min-width: 993px) {
+  .app-menu {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  
+  /* Split-Pane Verhalten anpassen */
+  ion-split-pane {
+    --side-width: var(--menu-width);
+    --side-width-lg: var(--menu-width);
+  }
+  
+  ion-split-pane.menu-collapsed {
+    --side-width: var(--menu-width-collapsed);
+    --side-width-lg: var(--menu-width-collapsed);
+  }
+  
+  /* Hauptinhalt anpassen */
+  #main-content {
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
+  }
+  
+  ion-split-pane.menu-collapsed #main-content {
+    margin-left: 0;
   }
 }

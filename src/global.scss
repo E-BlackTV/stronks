@@ -28,24 +28,12 @@
 // Custom Design Variablen für die gesamte App
 :root {
   --primary: #30eb7e;
-  --secondary-navy: #0a0a1a;
+  --secondary-navy: #1a1a2e;
   --secondary-white: #ffffff;
   --secondary-midgray: #888888;
-  --secondary-lightgray: #1a1a2e;
+  --secondary-lightgray: #f8f9fa;
   --status-negative: #ff4757;
   --status-positive: #2ed573;
-  --background-dark: #0a0a1a;
-  --card-background: rgba(10, 10, 26, 0.8);
-  --border-color: rgba(255, 255, 255, 0.08);
-}
-
-// Dunkler Hintergrund für die gesamte App
-ion-app {
-  --background: var(--background-dark);
-}
-
-ion-content {
-  --background: var(--background-dark);
 }
 
 .form-group {

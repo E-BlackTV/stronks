@@ -17,7 +17,7 @@
 
     <ion-tab-button tab="rewards" routerLink="/wallet/rewards">
       <ion-icon name="gift-outline"></ion-icon>
-      <ion-label>Daily Rewards</ion-label>
+      <ion-label>Rewards</ion-label>
     </ion-tab-button>
 
     <ion-tab-button tab="settings" routerLink="/wallet/settings">
@@ -26,3 +26,10 @@
     </ion-tab-button>
   </ion-tab-bar>
 </ion-tabs>
+
+<!-- Lucky Wheel Button als Floating Action Button -->
+<ion-fab vertical="bottom" horizontal="center" slot="fixed" class="lucky-wheel-fab">
+  <ion-fab-button (click)="openLuckyWheel()" color="warning">
+    <ion-icon name="gift"></ion-icon>
+  </ion-fab-button>
+</ion-fab>
