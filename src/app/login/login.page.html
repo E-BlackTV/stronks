@@ -3,57 +3,69 @@
     <ion-card-header>
       <ion-card-title class="ion-text-center">Anmeldung</ion-card-title>
     </ion-card-header>
-      <form [formGroup]="loginForm" (ngSubmit)="onLogin()" style="margin-bottom: 25px">
-        <ion-item [class.ion-invalid]="hasError('emailOrUsername')" class="form-group">
-          <ion-label position="stacked">E-Mail oder Benutzername *</ion-label>
-          <ion-input
-            formControlName="emailOrUsername"
-            placeholder="deine@email.com oder benutzername"
-            [class.ion-invalid]="hasError('emailOrUsername')"
-          >
-          </ion-input>
-          <ion-note slot="error" *ngIf="emailOrUsernameError"
-            >{{ emailOrUsernameError }}</ion-note
-          >
-        </ion-item>
-
-        <ion-item [class.ion-invalid]="hasError('password')">
-          <ion-label position="stacked">Passwort *</ion-label>
-          <ion-input
-            type="password"
-            formControlName="password"
-            placeholder="Dein Passwort"
-            [class.ion-invalid]="hasError('password')"
-          >
-          </ion-input>
-          <ion-note slot="error" *ngIf="passwordError"
-            >{{ passwordError }}</ion-note
-          >
-        </ion-item>
-
-        <div class="error-message" *ngIf="error">
-          <ion-icon name="alert-circle"></ion-icon>
-          {{ error }}
-        </div>
-
-        <ion-button
-          expand="block"
-          type="submit"
-          [disabled]="!loginForm.valid || loading"
-          class="success-btn"
+    <form
+      [formGroup]="loginForm"
+      (ngSubmit)="onLogin()"
+      style="margin-bottom: 25px"
+    >
+      <ion-item
+        [class.ion-invalid]="hasError('emailOrUsername')"
+        class="form-group"
+      >
+        <ion-label position="stacked">E-Mail oder Benutzername *</ion-label>
+        <ion-input
+          formControlName="emailOrUsername"
+          placeholder="deine@email.com oder benutzername"
+          [class.ion-invalid]="hasError('emailOrUsername')"
         >
-          <ion-spinner *ngIf="loading" name="crescent"></ion-spinner>
-          {{ loading ? 'Anmelden...' : 'Anmelden' }}
-        </ion-button>
-
-        <ion-button
-          expand="block"
-          fill="clear"
-          (click)="goToRegister()"
-          class="fail-text"
+        </ion-input>
+        <ion-note slot="error" *ngIf="emailOrUsernameError"
+          >{{ emailOrUsernameError }}</ion-note
         >
-          Noch kein Konto? Hier registrieren
-        </ion-button>
-      </form>
-    </ion-card>
+      </ion-item>
+
+      <ion-item [class.ion-invalid]="hasError('password')">
+        <ion-label position="stacked">Passwort *</ion-label>
+        <ion-input
+          type="password"
+          formControlName="password"
+          placeholder="Dein Passwort"
+          [class.ion-invalid]="hasError('password')"
+        >
+        </ion-input>
+        <ion-note slot="error" *ngIf="passwordError"
+          >{{ passwordError }}</ion-note
+        >
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-checkbox slot="start" formControlName="remember"></ion-checkbox>
+        <ion-label>Angemeldet bleiben</ion-label>
+      </ion-item>
+
+      <div class="error-message" *ngIf="error">
+        <ion-icon name="alert-circle"></ion-icon>
+        {{ error }}
+      </div>
+
+      <ion-button
+        expand="block"
+        type="submit"
+        [disabled]="!loginForm.valid || loading"
+        class="success-btn"
+      >
+        <ion-spinner *ngIf="loading" name="crescent"></ion-spinner>
+        {{ loading ? 'Anmelden...' : 'Anmelden' }}
+      </ion-button>
+
+      <ion-button
+        expand="block"
+        fill="clear"
+        (click)="goToRegister()"
+        class="fail-text"
+      >
+        Noch kein Konto? Hier registrieren
+      </ion-button>
+    </form>
+  </ion-card>
 </ion-content>

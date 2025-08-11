@@ -3,6 +3,7 @@ import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import firebase from 'firebase/compat/app';
 
 @Injectable({
   providedIn: 'root',
@@ -14,9 +15,14 @@ export class AuthenticationService {
     this.user$ = afAuth.authState;
   }
 
-  login(email: string, password: string): Promise<void> {
+  login(email: string, password: string, remember: boolean = false): Promise<void> {
+    const persistence = remember
+      ? firebase.auth.Auth.Persistence.LOCAL
+      : firebase.auth.Auth.Persistence.SESSION;
+
     return this.afAuth
-      .signInWithEmailAndPassword(email, password)
+      .setPersistence(persistence)
+      .then(() => this.afAuth.signInWithEmailAndPassword(email, password))
       .then(() => {
         this.router.navigate(['/home']);
       })
