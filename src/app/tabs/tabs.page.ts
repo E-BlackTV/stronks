@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { ModalController } from '@ionic/angular';
+import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
 
 @Component({
   selector: 'app-tabs',
@@ -7,6 +9,14 @@ import { Component } from '@angular/core';
 })
 export class TabsPage {
 
-  constructor() {}
+  constructor(private modalController: ModalController) {}
 
+  async openLuckyWheel() {
+    const modal = await this.modalController.create({
+      component: LuckyWheelComponent,
+      componentProps: {},
+      cssClass: 'lucky-wheel-modal'
+    });
+    return await modal.present();
+  }
 }

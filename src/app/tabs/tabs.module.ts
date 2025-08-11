@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { TabsPageRoutingModule } from './tabs-routing.module';
+import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
 
 import { TabsPage } from './tabs.page';
 
@@ -14,6 +15,6 @@ import { TabsPage } from './tabs.page';
     FormsModule,
     TabsPageRoutingModule
   ],
-  declarations: [TabsPage]
+  declarations: [TabsPage, LuckyWheelComponent]
 })
 export class TabsPageModule {}
