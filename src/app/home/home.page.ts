@@ -9,7 +9,7 @@ import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.compo
 import { TradePopupComponent } from '../components/trade-popup/trade-popup.component';
 import { environment } from '../../environments/environment';
 import { MarketDataService } from '../services/market-data.service';
-
+import { MenuService } from '../services/menuService.service';
 interface PurchaseResponse {
   success: boolean;
   message: string;
@@ -183,6 +183,7 @@ export class HomePage implements OnInit, OnDestroy {
   investmentAmount: number = 0;
 
   constructor(
+    public menuService: MenuService,
     private http: HttpClient,
     private firebaseService: FirebaseAdminService,
     private tradingService: TradingService,

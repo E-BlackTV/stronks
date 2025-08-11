@@ -319,6 +319,18 @@ ion-item .input-wrapper {
   background: var() !important;
 }
 
+.border-main{
+  border-radius: 14px !important;
+}
+
+.ion-danger-btn{
+  --box-shadow: 0 6px 18px rgba(235, 48, 48, 0.35);
+}
+
+.box-shadow-off{
+  --box-shadow: 0 6px 18px rgba(48, 235, 126, 0);
+}
+
 // Responsive Design
 @media (max-width: 450px) {
   .container-card {

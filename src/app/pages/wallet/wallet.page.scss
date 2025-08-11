@@ -3,3 +3,21 @@ ion-card {
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
+
+.ion-mg-important{
+  margin: 10px;
+  margin-top: 25px;
+  border-radius: 14px !important;
+}
+
+.verkaufen-btn {
+  --box-shadow: 0 6px 18px rgba(235, 232, 48, 0.35);
+}
+
+.ion-border-main{
+  border-radius: 14px !important;
+}
+
+ion-card.md.hydrated {
+    border-radius: 14px;
+}
