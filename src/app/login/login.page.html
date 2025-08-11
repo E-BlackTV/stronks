@@ -12,10 +12,10 @@
         [class.ion-invalid]="hasError('emailOrUsername')"
         class="form-group"
       >
-        <ion-label position="stacked">E-Mail oder Benutzername *</ion-label>
-        <ion-input
+      <ion-icon name="person-outline" class="ion-mg-right"></ion-icon>  
+      <ion-input
           formControlName="emailOrUsername"
-          placeholder="deine@email.com oder benutzername"
+          placeholder="Email oder Benutzername"
           [class.ion-invalid]="hasError('emailOrUsername')"
         >
         </ion-input>
@@ -25,7 +25,7 @@
       </ion-item>
 
       <ion-item [class.ion-invalid]="hasError('password')">
-        <ion-label position="stacked">Passwort *</ion-label>
+        <ion-icon name="lock-closed-outline" class="ion-mg-right"></ion-icon>
         <ion-input
           type="password"
           formControlName="password"

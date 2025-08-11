@@ -321,6 +321,14 @@ ion-item .input-wrapper {
   --box-shadow: 0 6px 18px rgba(48, 235, 126, 0);
 }
 
+.ion-mg-right {
+  margin-right: 10px;
+}
+
+.ion-text-size{
+  font-weight: 300;
+}
+
 // Responsive Design
 @media (max-width: 450px) {
   .container-card {
