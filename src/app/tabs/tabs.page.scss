@@ -10,10 +10,13 @@
 }
 
 ion-tab-bar {
-  --background: rgba(17, 24, 39, 0.95);
   backdrop-filter: saturate(180%) blur(14px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.display-text{
+  
 }
 
 ion-tab-button {
@@ -68,6 +71,10 @@ ion-tab-button.tab-selected {
   ion-icon {
     font-size: 20px;
   }
+
+  .display-text{
+  display: none;
+}
   
   .lucky-wheel-fab {
     bottom: 70px;
