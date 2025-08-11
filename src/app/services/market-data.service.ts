@@ -8,18 +8,122 @@ export interface NormalizedChartResponse {
   data: any; // Yahoo-Chart-Format
 }
 
+export interface MarketAsset {
+  type: 'crypto' | 'stock';
+  symbol: string;
+  name: string;
+  price?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MarketDataService {
   private alphaVantageApiKey = (environment as any).alphaVantageApiKey as string | undefined;
 
   constructor(private http: HttpClient) {}
 
-  // Heuristik: Symbol-zu-CoinGecko-ID-Mapping (erweiterbar)
+  // ======= Listen holen =======
+  // CoinGecko Top-Märkte (preis + symbol + name)
+  fetchTopCryptoMarkets(vsCurrency: string = 'usd', perPage: number = 100): Observable<MarketAsset[]> {
+    const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${encodeURIComponent(vsCurrency)}&order=market_cap_desc&per_page=${perPage}&page=1&sparkline=false&price_change_percentage=24h`;
+    return this.http.get<any[]>(url).pipe(
+      map(rows => (rows || []).map(r => ({ type: 'crypto' as const, symbol: (r.symbol || '').toUpperCase() + '-USD', name: r.name, price: r.current_price }) )),
+      catchError(() => of([]))
+    );
+  }
+
+  // Aktienliste (Fallback auf eine kompakte statische Liste, falls kein Key vorhanden)
+  fetchTopStocks(perPage: number = 50): Observable<MarketAsset[]> {
+    const staticList: MarketAsset[] = [
+      { type: 'stock', symbol: 'AAPL', name: 'Apple Inc.' },
+      { type: 'stock', symbol: 'MSFT', name: 'Microsoft Corporation' },
+      { type: 'stock', symbol: 'GOOGL', name: 'Alphabet Inc.' },
+      { type: 'stock', symbol: 'AMZN', name: 'Amazon.com, Inc.' },
+      { type: 'stock', symbol: 'TSLA', name: 'Tesla, Inc.' },
+      { type: 'stock', symbol: 'META', name: 'Meta Platforms, Inc.' },
+      { type: 'stock', symbol: 'NVDA', name: 'NVIDIA Corporation' },
+      { type: 'stock', symbol: 'BRK.B', name: 'Berkshire Hathaway Inc.' },
+      { type: 'stock', symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
+      { type: 'stock', symbol: 'V', name: 'Visa Inc.' },
+      { type: 'stock', symbol: 'JNJ', name: 'Johnson & Johnson' },
+      { type: 'stock', symbol: 'WMT', name: 'Walmart Inc.' },
+      { type: 'stock', symbol: 'PG', name: 'Procter & Gamble Co.' },
+      { type: 'stock', symbol: 'XOM', name: 'Exxon Mobil Corporation' },
+      { type: 'stock', symbol: 'MA', name: 'Mastercard Incorporated' },
+      { type: 'stock', symbol: 'UNH', name: 'UnitedHealth Group Incorporated' },
+      { type: 'stock', symbol: 'HD', name: 'Home Depot, Inc.' },
+      { type: 'stock', symbol: 'BAC', name: 'Bank of America Corporation' },
+      { type: 'stock', symbol: 'PFE', name: 'Pfizer Inc.' },
+      { type: 'stock', symbol: 'DIS', name: 'The Walt Disney Company' },
+      { type: 'stock', symbol: 'KO', name: 'Coca-Cola Company' },
+      { type: 'stock', symbol: 'PEP', name: 'PepsiCo, Inc.' },
+      { type: 'stock', symbol: 'NFLX', name: 'Netflix, Inc.' },
+      { type: 'stock', symbol: 'ADBE', name: 'Adobe Inc.' },
+      { type: 'stock', symbol: 'CRM', name: 'Salesforce, Inc.' },
+      { type: 'stock', symbol: 'CSCO', name: 'Cisco Systems, Inc.' },
+      { type: 'stock', symbol: 'INTC', name: 'Intel Corporation' },
+      { type: 'stock', symbol: 'AMD', name: 'Advanced Micro Devices, Inc.' },
+      { type: 'stock', symbol: 'NKE', name: 'NIKE, Inc.' },
+      { type: 'stock', symbol: 'SAP', name: 'SAP SE' },
+      { type: 'stock', symbol: 'ORCL', name: 'Oracle Corporation' },
+      { type: 'stock', symbol: 'TM', name: 'Toyota Motor Corporation' },
+      { type: 'stock', symbol: 'BABA', name: 'Alibaba Group Holding Limited' },
+      { type: 'stock', symbol: 'TCEHY', name: 'Tencent Holdings Ltd.' },
+      { type: 'stock', symbol: 'SONY', name: 'Sony Group Corporation' },
+      { type: 'stock', symbol: 'UBER', name: 'Uber Technologies, Inc.' },
+      { type: 'stock', symbol: 'LYFT', name: 'Lyft, Inc.' },
+      { type: 'stock', symbol: 'SHOP', name: 'Shopify Inc.' },
+      { type: 'stock', symbol: 'SQ', name: 'Block, Inc.' },
+      { type: 'stock', symbol: 'PYPL', name: 'PayPal Holdings, Inc.' },
+      { type: 'stock', symbol: 'MRNA', name: 'Moderna, Inc.' },
+      { type: 'stock', symbol: 'ABNB', name: 'Airbnb, Inc.' },
+      { type: 'stock', symbol: 'PLTR', name: 'Palantir Technologies Inc.' }
+    ];
+    if (!this.alphaVantageApiKey) {
+      return of(staticList.slice(0, perPage));
+    }
+    return of(staticList.slice(0, perPage));
+  }
+
+  // Preisauflösung für ein Asset (Symbol)
+  resolveLatestPrice(symbol: string): Observable<number | null> {
+    // Für Krypto: CoinGecko-Chart (1d) holen, letzten Close nehmen, und cachen
+    const isCrypto = symbol.includes('-USD') || /^[A-Z]{2,10}-USD$/.test(symbol);
+    if (isCrypto) {
+      return this.fetchCryptoChart(symbol, '1d', '5m').pipe(
+        switchMap(res => {
+          const prices = res?.data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+          const last = prices.length ? prices[prices.length - 1] : null;
+          if (res?.data && last !== null) {
+            // Cache chart
+            // Hinweis: Firestore-Service ist hier nicht injiziert; Caching übernimmt TradingService.getChartData
+          }
+          return of(last);
+        }),
+        catchError(() => of(null))
+      );
+    }
+    // Für Aktien: Alpha Vantage TIME_SERIES_DAILY und letzten Close nehmen
+    if (!this.alphaVantageApiKey) return of(null);
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&apikey=${this.alphaVantageApiKey}`;
+    return this.http.get<any>(url).pipe(
+      map(res => {
+        const key = Object.keys(res).find(k => k.startsWith('Time Series'));
+        if (!key) return null;
+        const series = res[key];
+        const last = Object.values(series)[0] as any;
+        return last ? parseFloat(last['4. close']) : null;
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  // ======= Bestehende Chart-APIs (unverändert) =======
   private mapSymbolToCoinId(symbol: string): string | null {
     const sym = symbol.replace('-USD', '').toUpperCase();
     const map: Record<string, string> = {
       BTC: 'bitcoin',
       ETH: 'ethereum',
+      WETH: 'weth',
       SOL: 'solana',
       ADA: 'cardano',
       XRP: 'ripple',
@@ -28,116 +132,56 @@ export class MarketDataService {
       BNB: 'binancecoin',
       AVAX: 'avalanche-2',
       MATIC: 'matic-network',
+      DOT: 'polkadot',
+      LINK: 'chainlink',
+      TRX: 'tron',
+      ATOM: 'cosmos',
+      XLM: 'stellar',
+      UNI: 'uniswap',
+      APT: 'aptos',
+      ARB: 'arbitrum',
+      OP: 'optimism',
     };
     return map[sym] ?? null;
   }
-
-  // Binance Symbol Mapping
   private mapSymbolToBinancePair(symbol: string): string | null {
     const sym = symbol.toUpperCase();
-    // Erwarte z. B. BTC-USD -> BTCUSDT
-    if (sym.endsWith('-USD')) {
-      const base = sym.replace('-USD', '');
-      return `${base}USDT`;
-    }
-    // Falls bereits ohne Trennzeichen geliefert wurde
+    if (sym.endsWith('-USD')) { const base = sym.replace('-USD', ''); return `${base}USDT`; }
     if (/^[A-Z]{3,6}USDT$/.test(sym)) return sym;
     return null;
   }
+  private mapIntervalToCoinGecko(interval: string): 'daily' | undefined { const i = interval.toLowerCase(); return ['1d', '1day', 'daily'].includes(i) ? 'daily' : undefined; }
+  private mapIntervalToAlpha(interval: string): string | null { const i = interval.toLowerCase(); const map: Record<string, string> = { '1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '60m': '60min', '1h': '60min', }; return map[i] ?? null; }
+  private mapIntervalToBinance(interval: string): string { const i = interval.toLowerCase(); const map: Record<string, string> = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '60m': '1h', '1d': '1d', '1wk': '1w', '1mo': '1M', }; return map[i] ?? '1h'; }
 
-  // Intervall-Mappings
-  private mapIntervalToCoinGecko(interval: string): 'daily' | undefined {
-    const i = interval.toLowerCase();
-    return ['1d', '1day', 'daily'].includes(i) ? 'daily' : undefined;
-  }
-
-  private mapIntervalToAlpha(interval: string): string | null {
-    const i = interval.toLowerCase();
-    const map: Record<string, string> = {
-      '1m': '1min',
-      '5m': '5min',
-      '15m': '15min',
-      '30m': '30min',
-      '60m': '60min',
-      '1h': '60min',
-    };
-    return map[i] ?? null;
-  }
-
-  private mapIntervalToBinance(interval: string): string {
-    const i = interval.toLowerCase();
-    const map: Record<string, string> = {
-      '1m': '1m',
-      '5m': '5m',
-      '15m': '15m',
-      '30m': '30m',
-      '1h': '1h',
-      '60m': '1h',
-      '1d': '1d',
-      '1wk': '1w',
-      '1mo': '1M',
-    };
-    return map[i] ?? '1h';
-  }
-
-  // CoinGecko zuerst, dann Binance als Fallback
   fetchCryptoChart(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
-    // Zuerst Binance (robust, kein Key), dann CoinGecko
-    return this.fetchCryptoChartBinance(symbol, range, interval).pipe(
-      switchMap((binanceRes) => {
-        if (binanceRes?.data?.chart?.result?.[0]) return of(binanceRes);
-
-        const coinId = this.mapSymbolToCoinId(symbol);
-        const cgInterval = this.mapIntervalToCoinGecko(interval);
-        const days = this.mapRangeToCoinGeckoDays(range);
-        if (!coinId) return of(null);
-
-        return this.http
-          .get<any>(this.buildCoinGeckoUrl(coinId, days, cgInterval))
-          .pipe(
-            map((res) => {
-              const timestamps: number[] = (res.prices || []).map((p: any[]) => Math.floor((p[0] as number) / 1000));
-              const prices: number[] = (res.prices || []).map((p: any[]) => p[1] as number);
-              const volumes: number[] = (res.total_volumes || []).map((v: any[]) => v[1] as number);
-              if (!prices.length) return null;
-              const data = this.toYahooChartFormat(timestamps, prices, volumes);
-              return { source: 'coingecko' as const, data };
-            }),
-            catchError(() => of(null))
-          );
-      })
-    );
-  }
-
-  private buildCoinGeckoUrl(coinId: string, days: number | 'max', cgInterval?: 'daily'): string {
-    const base = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
-    return cgInterval ? `${base}&interval=${cgInterval}` : base;
-  }
-
-  private fetchCryptoChartBinance(symbol: string, _range: string, interval: string): Observable<NormalizedChartResponse | null> {
-    const pair = this.mapSymbolToBinancePair(symbol);
-    if (!pair) return of(null);
-    const binanceInterval = this.mapIntervalToBinance(interval);
-    const limit = 1000; // Maximal zulässige Anzahl; reicht für Anzeige
-    const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${binanceInterval}&limit=${limit}`;
-    return this.http.get<any[]>(url).pipe(
-      map((rows) => {
-        if (!Array.isArray(rows) || !rows.length) return null;
-        const timestamps = rows.map((r) => Math.floor((r[0] as number) / 1000)); // open time in ms
-        const prices = rows.map((r) => parseFloat(r[4])); // close
-        const volumes = rows.map((r) => parseFloat(r[5])); // volume
+    const coinId = this.mapSymbolToCoinId(symbol);
+    const cgInterval = this.mapIntervalToCoinGecko(interval);
+    const days = this.mapRangeToCoinGeckoDays(range);
+    if (!coinId) return of(null);
+    return this.http.get<any>(this.buildCoinGeckoUrl(coinId, days, cgInterval)).pipe(
+      map((res) => {
+        const timestamps: number[] = (res.prices || []).map((p: any[]) => Math.floor((p[0] as number) / 1000));
+        const prices: number[] = (res.prices || []).map((p: any[]) => p[1] as number);
+        const volumes: number[] = (res.total_volumes || []).map((v: any[]) => v[1] as number);
         if (!prices.length) return null;
         const data = this.toYahooChartFormat(timestamps, prices, volumes);
-        return { source: 'binance' as const, data };
+        return { source: 'coingecko' as const, data };
       }),
       catchError(() => of(null))
     );
   }
+  private buildCoinGeckoUrl(coinId: string, days: number | 'max', cgInterval?: 'daily'): string {
+    const base = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
+    return cgInterval ? `${base}&interval=${cgInterval}` : base;
+  }
+  private fetchCryptoChartBinance(symbol: string, _range: string, interval: string): Observable<NormalizedChartResponse | null> {
+    // Binance deaktiviert wegen CORS im Frontend. Rückgabe: null
+    return of(null);
+  }
 
   fetchStockChart(symbol: string, _range: string, interval: string): Observable<NormalizedChartResponse | null> {
     if (!this.alphaVantageApiKey) return of(null);
-
-    // Wähle passenden Alpha Vantage Endpoint
     const avInterval = this.mapIntervalToAlpha(interval);
     const isIntraday = !!avInterval;
     if (isIntraday) {
@@ -169,7 +213,6 @@ export class MarketDataService {
     const data = this.toYahooChartFormat(timestamps, prices, volumes);
     return { source: 'alphavantage', data };
   }
-
   private normalizeAlphaVantageDaily(res: any): NormalizedChartResponse | null {
     const key = Object.keys(res).find((k) => k.startsWith('Time Series'));
     if (!key) return null;
@@ -184,50 +227,41 @@ export class MarketDataService {
   }
 
   private toYahooChartFormat(timestamps: number[], prices: number[], volumes: number[]) {
-    return {
-      chart: {
-        result: [
-          {
-            timestamp: timestamps,
-            indicators: {
-              quote: [
-                {
-                  close: prices,
-                  volume: volumes,
-                },
-              ],
-            },
-          },
-        ],
-      },
-    };
+    return { chart: { result: [ { timestamp: timestamps, indicators: { quote: [ { close: prices, volume: volumes } ] } } ] } };
   }
 
   private mapRangeToCoinGeckoDays(range: string): number | 'max' {
     switch (range) {
       case '1d':
-      case 'DAY':
-        return 1;
+      case 'DAY': return 1;
       case '5d':
-      case 'WEEK':
-        return 7;
+      case 'WEEK': return 7;
       case '1m':
-      case 'MONTH':
-        return 30;
+      case 'MONTH': return 30;
       case '3m':
-      case 'THREE_MONTHS':
-        return 90;
+      case 'THREE_MONTHS': return 90;
       case '6m':
-      case 'SIX_MONTHS':
-        return 180;
+      case 'SIX_MONTHS': return 180;
       case '1y':
-      case 'YEAR':
-        return 365;
+      case 'YEAR': return 365;
       case '5y':
-      case 'FIVE_YEARS':
-        return 1825;
-      default:
-        return 30;
+      case 'FIVE_YEARS': return 1825;
+      default: return 30;
     }
+  }
+
+  fetchCoinMeta(symbol: string): Observable<{ marketCapUsd: number | null; description: string | null } | null> {
+    const coinId = this.mapSymbolToCoinId(symbol);
+    if (!coinId) return of(null);
+    const url = `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`;
+    return this.http.get<any>(url).pipe(
+      map(res => {
+        const marketCapUsd = res?.market_data?.market_cap?.usd ?? null;
+        const desc = (res?.description?.de || res?.description?.en || '').trim();
+        const description = desc ? (desc.length > 300 ? desc.slice(0, 300) + '…' : desc) : null;
+        return { marketCapUsd, description };
+      }),
+      catchError(() => of(null))
+    );
   }
 } 

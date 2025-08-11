@@ -130,10 +130,11 @@ service cloud.firestore {
     // Cached Data (richtiger Collection-Name im Frontend)
     match /cached_data/{docId} {
       allow read: if true; // Öffentlich lesbar für Preise/Charts
-      allow create, update: if isAdmin();
+      // erlaubt Schreibzugriff für angemeldete Nutzer, um Chart-/Preis-Caching zu ermöglichen
+      allow create, update: if isAuthenticated();
       allow delete: if isAdmin();
     }
-
+    
     // Transactions (richtiger Collection-Name im Frontend)
     match /transactions/{txId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());

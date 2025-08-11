@@ -1,17 +1,71 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>
-      Tab 2
-    </ion-title>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Markets</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 2</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="ion-padding">
+  <ion-item lines="none">
+    <ion-label>
+      <h2>Verfügbar</h2>
+      <p>{{ cryptoCount }} Kryptos • {{ stockCount }} Aktien</p>
+    </ion-label>
+  </ion-item>
 
-  <app-explore-container name="Tab 2 page"></app-explore-container>
+  <ion-segment
+    [(ngModel)]="selectedType"
+    (ionChange)="onTypeFilterChange()"
+    class="ion-margin-vertical"
+  >
+    <ion-segment-button value="all">Alle</ion-segment-button>
+    <ion-segment-button value="crypto">Krypto</ion-segment-button>
+    <ion-segment-button value="stock">Aktien</ion-segment-button>
+  </ion-segment>
+
+  <ion-item>
+    <ion-label position="floating">Suche</ion-label>
+    <ion-input
+      [(ngModel)]="searchTerm"
+      (ionChange)="onSearchChange()"
+    ></ion-input>
+  </ion-item>
+
+  <ion-item lines="none" class="ion-margin-top">
+    <ion-label>Sortieren nach</ion-label>
+    <ion-segment (ionChange)="applyFilters()">
+      <ion-segment-button value="nameAsc" (click)="sortBy='name'; sortDir='asc'"
+        >Name ↑</ion-segment-button
+      >
+      <ion-segment-button
+        value="nameDesc"
+        (click)="sortBy='name'; sortDir='desc'"
+        >Name ↓</ion-segment-button
+      >
+      <ion-segment-button
+        value="priceAsc"
+        (click)="sortBy='price'; sortDir='asc'"
+        >Preis ↑</ion-segment-button
+      >
+      <ion-segment-button
+        value="priceDesc"
+        (click)="sortBy='price'; sortDir='desc'"
+        >Preis ↓</ion-segment-button
+      >
+    </ion-segment>
+  </ion-item>
+
+  <ion-list class="list-tight">
+    <ion-item *ngFor="let asset of filteredAssets" (click)="goToDetail(asset)">
+      <ion-label>
+        <h3>{{ asset.name }}</h3>
+        <p>{{ asset.symbol }}</p>
+      </ion-label>
+      <ion-badge slot="end"
+        >{{ latestPrices[asset.symbol] | number:'1.2-2' }}</ion-badge
+      >
+    </ion-item>
+  </ion-list>
 </ion-content>
