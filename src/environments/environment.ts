@@ -12,5 +12,6 @@ export const environment = {
     appId: "1:207566815636:web:ae07f2765354195da7cf81",
     measurementId: "G-E6X1DE55WF"
   },
-  alphaVantageApiKey: '9QJ6GSSNRF9HCLUV'
+  alphaVantageApiKey: '9QJ6GSSNRF9HCLUV',
+  fmpApiKey: ''
 };

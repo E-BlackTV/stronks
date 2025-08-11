@@ -128,11 +128,10 @@ export class TradingService {
         if (cached?.data) {
           return of(this.normalizeChartPayload(cached.data));
         }
-        // Live-Fetch: zuerst CoinGecko (für Krypto), dann Alpha Vantage (für Aktien), sonst generischer Fallback
+        // Live-Fetch: zuerst CoinGecko (für Krypto), dann Alpha Vantage (für Aktien), dann Yahoo als Fallback, sonst generischer Fallback
         return this.marketData.fetchCryptoChart(symbol, range, interval).pipe(
           switchMap((cryptoRes) => {
             if (cryptoRes?.data?.chart?.result?.[0]) {
-              // Best-effort Cache (Schreibfehler ignorieren)
               return this.firestoreService
                 .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: cryptoRes.data, type: 'chart' })
                 .pipe(
@@ -150,9 +149,48 @@ export class TradingService {
                       catchError(() => of(stockRes.data))
                     );
                 }
-                // Fallback: Nimm die neueste Cached-Data ohne Range/Interval-Filter
-                return this.firestoreService.getCachedData(symbol).pipe(
-                  map((list) => this.normalizeChartPayload(list?.[0]?.data ?? { chart: { result: [] } }))
+                // Yahoo-Fallback
+                return this.marketData.fetchYahooChart(symbol, range, interval).pipe(
+                  switchMap((yhRes) => {
+                    if (yhRes?.data?.chart?.result?.[0]) {
+                      return this.firestoreService
+                        .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: yhRes.data, type: 'chart' })
+                        .pipe(
+                          map(() => yhRes.data),
+                          catchError(() => of(yhRes.data))
+                        );
+                    }
+                    // Stooq-Fallback (EOD)
+                    return this.marketData.fetchStockChartStooq(symbol, range, interval).pipe(
+                      switchMap((stqRes) => {
+                        if (stqRes?.data?.chart?.result?.[0]) {
+                          return this.firestoreService
+                            .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: stqRes.data, type: 'chart' })
+                            .pipe(
+                              map(() => stqRes.data),
+                              catchError(() => of(stqRes.data))
+                            );
+                        }
+                        // FMP-Fallback (optional)
+                        return this.marketData.fetchStockChartFmp(symbol, range, interval).pipe(
+                          switchMap((fmpRes) => {
+                            if (fmpRes?.data?.chart?.result?.[0]) {
+                              return this.firestoreService
+                                .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: fmpRes.data, type: 'chart' })
+                                .pipe(
+                                  map(() => fmpRes.data),
+                                  catchError(() => of(fmpRes.data))
+                                );
+                            }
+                            // Fallback: Nimm die neueste Cached-Data ohne Range/Interval-Filter
+                            return this.firestoreService.getCachedData(symbol).pipe(
+                              map((list) => this.normalizeChartPayload(list?.[0]?.data ?? { chart: { result: [] } }))
+                            );
+                          })
+                        );
+                      })
+                    );
+                  })
                 );
               })
             );
