@@ -24,7 +24,7 @@ export class AuthenticationService {
       .setPersistence(persistence)
       .then(() => this.afAuth.signInWithEmailAndPassword(email, password))
       .then(() => {
-        this.router.navigate(['/home']);
+        this.router.navigate(['/wallet']);
       })
       .catch((error) => {
         console.error('Login error:', error);

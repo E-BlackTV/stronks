@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { FirebaseAdminService } from './services/firebase-admin.service';
 import { FirestoreService } from './services/firestore.service';
 import { MenuService } from './services/menuService.service';
+import { AuthenticationService } from './services/authentication.service';
 
 @Component({
   selector: 'app-root',
@@ -20,16 +21,32 @@ export class AppComponent implements OnInit {
     private router: Router,
     private firebaseService: FirebaseAdminService,
     private firestore: FirestoreService,
+    private authService: AuthenticationService,
   ) {}
 
   ngOnInit() {
     const saved = localStorage.getItem('menuCollapsed');
     this.isMenuCollapsed = saved === '1';
 
-    const user = this.firebaseService.getCurrentUser();
-    if (user?.id) {
-      this.firestore.getUserBalance(user.id).subscribe((b) => (this.menuBalance = b || 0));
-    }
+    // Prüfe den Authentifizierungsstatus
+    this.authService.user$.subscribe(user => {
+      if (user) {
+        // Benutzer ist angemeldet
+        this.firestore.getUserBalance(user.uid).subscribe((b) => (this.menuBalance = b || 0));
+        
+        // Wenn wir auf der Login- oder Register-Seite sind, zur Wallet-Seite weiterleiten
+        const currentUrl = this.router.url;
+        if (currentUrl === '/login' || currentUrl === '/register' || currentUrl === '/') {
+          this.router.navigate(['/wallet']);
+        }
+      } else {
+        // Benutzer ist nicht angemeldet
+        const currentUrl = this.router.url;
+        if (currentUrl !== '/login' && currentUrl !== '/register' && currentUrl !== '/') {
+          this.router.navigate(['/login']);
+        }
+      }
+    });
   }
 
   get isAuthRoute(): boolean {

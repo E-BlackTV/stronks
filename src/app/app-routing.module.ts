@@ -6,8 +6,8 @@ import { DebugComponent } from './debug/debug.component';
 const routes: Routes = [
   {
     path: '',
-    loadChildren: () =>
-      import('./register/register.module').then((m) => m.RegisterPageModule),
+    redirectTo: '/login',
+    pathMatch: 'full'
   },
   {
     path: 'wallet',

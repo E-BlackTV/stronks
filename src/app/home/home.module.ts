@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { HomePageRoutingModule } from './home-routing.module';
 import { HomePage } from './home.page';
-import { LuckyWheelModule } from '../components/lucky-wheel/lucky-wheel.module';
 import { TradePopupModule } from '../components/trade-popup/trade-popup.module';
 
 @NgModule({
@@ -13,7 +12,6 @@ import { TradePopupModule } from '../components/trade-popup/trade-popup.module';
     FormsModule,
     IonicModule,
     HomePageRoutingModule,
-    LuckyWheelModule,
     TradePopupModule,
   ],
   declarations: [HomePage],

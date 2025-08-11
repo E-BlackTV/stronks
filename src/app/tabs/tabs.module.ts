@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { TabsPageRoutingModule } from './tabs-routing.module';
-import { LuckyWheelComponent } from '../components/lucky-wheel/lucky-wheel.component';
+import { LuckyWheelModule } from '../components/lucky-wheel/lucky-wheel.module';
 
 import { TabsPage } from './tabs.page';
 
@@ -13,8 +13,9 @@ import { TabsPage } from './tabs.page';
     IonicModule,
     CommonModule,
     FormsModule,
-    TabsPageRoutingModule
+    TabsPageRoutingModule,
+    LuckyWheelModule
   ],
-  declarations: [TabsPage, LuckyWheelComponent]
+  declarations: [TabsPage]
 })
 export class TabsPageModule {}
