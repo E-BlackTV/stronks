@@ -147,5 +147,25 @@ service cloud.firestore {
       allow read: if true; // Öffentlich lesbar
       allow write: if isAdmin();
     }
+    
+    // Trading Data Collection (für gescrapte TradingView-Daten)
+    match /trading_data/{docId} {
+      allow read: if true; // Öffentlich lesbar für Charts/Preise
+      allow create, update: if isAuthenticated(); // Erlaubt für angemeldete Nutzer
+      allow delete: if isAdmin(); // Nur Admin kann löschen
+    }
+    
+    // Apple Data Collections (für optimierte Apple-Daten)
+    match /apple_data_optimized/{docId} {
+      allow read: if true; // Öffentlich lesbar für Charts/Preise
+      allow create, update: if isAuthenticated(); // Erlaubt für angemeldete Nutzer
+      allow delete: if isAdmin(); // Nur Admin kann löschen
+    }
+    
+    match /apple_data_summary/{docId} {
+      allow read: if true; // Öffentlich lesbar für Statistiken
+      allow create, update: if isAuthenticated(); // Erlaubt für angemeldete Nutzer
+      allow delete: if isAdmin(); // Nur Admin kann löschen
+    }
   }
 }

@@ -19,11 +19,14 @@ export class AssetDetailPage implements OnInit, OnDestroy {
   chartData: any = null;
   chart: Chart | null = null;
   lastUpdated: Date | null = null;
-  range: '1d' | '1w' | '1m' | '1y' | '5y' | 'max' = '1d';
+  range: '1d' | '1w' | '1m' | '3m' | '6m' | '1y' | '5y' | 'max' = '1d';
   high: number | null = null;
   low: number | null = null;
   marketCapUsd: number | null = null;
   description: string | null = null;
+
+  // Auto-Update Intervall
+  private updateInterval: any = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -37,6 +40,7 @@ export class AssetDetailPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.symbol = this.route.snapshot.paramMap.get('symbol') || '';
+    
     const user = this.auth.getCurrentUser();
     if (user?.id) {
       this.tradingService.getBalance(user.id).subscribe((res) => {
@@ -44,8 +48,12 @@ export class AssetDetailPage implements OnInit, OnDestroy {
         this._userBalance = res?.balance ?? 0;
       });
     }
+    
     this.loadMeta();
     this.loadChart();
+    
+    // Starte automatische Updates alle 60 Sekunden
+    this.startAutoUpdate();
   }
 
   private _userBalance = 0;
@@ -55,13 +63,38 @@ export class AssetDetailPage implements OnInit, OnDestroy {
       this.chart.destroy();
       this.chart = null;
     }
+    
+    // Stoppe Auto-Update
+    this.stopAutoUpdate();
+  }
+
+  // Starte automatische Updates alle 60 Sekunden
+  private startAutoUpdate() {
+    this.updateInterval = setInterval(() => {
+      console.log(`Auto-Update für ${this.symbol}: Lade neue Daten...`);
+      this.loadChart();
+    }, 60000); // 60 Sekunden
+  }
+
+  // Stoppe automatische Updates
+  private stopAutoUpdate() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
   }
 
   private renderChart() {
     const ds = this.chartData?.chart?.result?.[0];
     const prices: number[] = ds?.indicators?.quote?.[0]?.close || [];
     const timestamps: number[] = ds?.timestamp || [];
-    if (!prices.length || !timestamps.length) return;
+    if (!prices.length || !timestamps.length) {
+      console.warn('Keine Preisdaten oder Zeitstempel für Chart gefunden');
+      return;
+    }
+
+    console.log(`Rendere Chart mit ${prices.length} Preispunkten und ${timestamps.length} Zeitstempeln`);
+    console.log(`Zeitraum: ${this.range}, Erste Zeit: ${new Date(timestamps[0] * 1000).toISOString()}, Letzte Zeit: ${new Date(timestamps[timestamps.length - 1] * 1000).toISOString()}`);
 
     const labels = timestamps.map((ts: number) => {
       const d = new Date(ts * 1000);
@@ -131,40 +164,112 @@ export class AssetDetailPage implements OnInit, OnDestroy {
         },
       }
     });
+    
+    console.log('Chart erfolgreich gerendert');
   }
 
   private pickInterval(range: string): string {
     switch (range) {
-      case '1d': return '5m';
-      case '1w': return '30m';
-      case '1m': return '1d';
-      case '1y': return '1d';
-      case '5y': return '1wk';
-      case 'max': return '1mo';
+      case '1d': return '5m';      // 5-Minuten-Intervalle für 1 Tag
+      case '1w': return '1d';      // Tägliche Daten für 1 Woche
+      case '1m': return '1d';      // Tägliche Daten für 1 Monat
+      case '3m': return '1d';      // Tägliche Daten für 3 Monate
+      case '6m': return '1d';      // Tägliche Daten für 6 Monate
+      case '1y': return '1d';      // Tägliche Daten für 1 Jahr
+      case '5y': return '1wk';     // Wöchentliche Daten für 5 Jahre
+      case 'max': return '1mo';    // Monatliche Daten für Max
       default: return '1d';
     }
   }
 
-  changeRange(r: any) {
-    if (this.range === r) return;
-    this.range = r;
-    this.loadChart();
+  changeRange(event: any) {
+    try {
+      console.log('changeRange Event erhalten:', event);
+      
+      let newRange: string;
+      
+      // Ionic CustomEvent mit detail.value behandeln
+      if (event && event.detail && event.detail.value) {
+        newRange = event.detail.value;
+        console.log('Zeitraum aus event.detail.value:', newRange);
+      } else if (event && typeof event === 'string') {
+        newRange = event;
+        console.log('Zeitraum aus String-Event:', newRange);
+      } else if (event && event.target && event.target.value) {
+        newRange = event.target.value;
+        console.log('Zeitraum aus event.target.value:', newRange);
+      } else {
+        console.error('Unbekanntes Event-Format:', event);
+        return;
+      }
+      
+      // Validiere den neuen Zeitraum
+      const validRanges: ('1d' | '1w' | '1m' | '3m' | '6m' | '1y' | '5y' | 'max')[] = ['1d', '1w', '1m', '3m', '6m', '1y', '5y', 'max'];
+      if (!validRanges.includes(newRange as any)) {
+        console.error('Ungültiger Zeitraum:', newRange);
+        return;
+      }
+      
+      if (this.range === newRange) {
+        console.log('Zeitraum hat sich nicht geändert, überspringe Update');
+        return;
+      }
+      
+      console.log(`Wechsle Zeitraum von ${this.range} zu ${newRange}`);
+      this.range = newRange as '1d' | '1w' | '1m' | '3m' | '6m' | '1y' | '5y' | 'max';
+      
+      // Lade neue Chart-Daten für den neuen Zeitraum
+      console.log('Lade Chart-Daten für neuen Zeitraum:', newRange);
+      this.loadChart();
+      
+    } catch (error) {
+      console.error('Fehler in changeRange:', error, 'Event:', event);
+    }
   }
 
   private loadChart() {
     const interval = this.pickInterval(this.range);
-    this.tradingService.getChartData(this.symbol, this.range, interval).subscribe((data: any) => {
-      this.chartData = data;
-      const ds = data?.chart?.result?.[0];
-      const ts: number[] = ds?.timestamp || [];
-      const prices: number[] = ds?.indicators?.quote?.[0]?.close || [];
-      this.lastUpdated = ts.length ? new Date(ts[ts.length - 1] * 1000) : null;
-      if (prices.length) {
-        this.high = Math.max(...prices);
-        this.low = Math.min(...prices);
-        this.price = prices[prices.length - 1];
+    console.log(`Lade Chart für ${this.symbol}, Zeitraum: ${this.range}, Intervall: ${interval}`);
+    
+    this.tradingService.getChartData(this.symbol, this.range, interval).subscribe({
+      next: (data: any) => {
+        console.log(`Chart-Daten erhalten für ${this.symbol}:`, data);
+        this.chartData = data;
+        const ds = data?.chart?.result?.[0];
+        const ts: number[] = ds?.timestamp || [];
+        const prices: number[] = ds?.indicators?.quote?.[0]?.close || [];
+        
+        console.log(`Verarbeite ${prices.length} Preispunkte für ${this.symbol}`);
+        
+        // Korrigiere Zeitstempel-Behandlung
+        if (ts.length > 0) {
+          // Verwende den neuesten Zeitstempel für lastUpdated
+          const latestTimestamp = ts[ts.length - 1];
+          this.lastUpdated = new Date(latestTimestamp * 1000);
+          
+          // Debug: Zeige Zeitstempel-Informationen
+          console.log(`Neuester Zeitstempel: ${latestTimestamp} -> ${this.lastUpdated.toISOString()}`);
+          console.log(`Aktuelle lokale Zeit: ${new Date().toISOString()}`);
+        } else {
+          this.lastUpdated = null;
+        }
+        
+        if (prices.length) {
+          this.high = Math.max(...prices);
+          this.low = Math.min(...prices);
+          this.price = prices[prices.length - 1];
+          console.log(`${this.symbol} - Aktueller Preis: $${this.price}, Hoch: $${this.high}, Tief: $${this.low}`);
+        } else {
+          console.warn(`Keine Preisdaten für ${this.symbol} gefunden`);
+        }
+        this.renderChart();
+      },
+      error: (error) => {
+        console.error(`Fehler beim Laden der Chart-Daten für ${this.symbol}:`, error);
+        // Fallback: Zeige leeren Chart
+        this.chartData = { chart: { result: [] } };
+        this.renderChart();
       }
-      this.renderChart();
     });
   }
 

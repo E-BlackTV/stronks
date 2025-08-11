@@ -9,13 +9,15 @@
 
 <ion-content class="ion-padding">
   <ion-segment
-    [(ngModel)]="range"
-    (ionChange)="changeRange(($event.detail.value || '1d'))"
+    [value]="range"
+    (ionChange)="changeRange($event)"
     class="ion-margin-bottom"
   >
     <ion-segment-button value="1d">1T</ion-segment-button>
     <ion-segment-button value="1w">1W</ion-segment-button>
     <ion-segment-button value="1m">1M</ion-segment-button>
+    <ion-segment-button value="3m">3M</ion-segment-button>
+    <ion-segment-button value="6m">6M</ion-segment-button>
     <ion-segment-button value="1y">1J</ion-segment-button>
     <ion-segment-button value="5y">5J</ion-segment-button>
     <ion-segment-button value="max">Max</ion-segment-button>
@@ -33,10 +35,6 @@
         <canvas #detailChart></canvas>
         <small *ngIf="!chartData?.chart?.result?.length">Lade Chart…</small>
       </div>
-      <ion-note color="medium"
-        >Tipp: Bewege den Cursor über den Chart, um den genauen Preis und
-        Zeitpunkt zu sehen.</ion-note
-      >
       <div class="ion-margin-top">
         <ion-grid>
           <ion-row>

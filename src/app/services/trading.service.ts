@@ -144,67 +144,37 @@ export class TradingService {
 
   // Chart-Daten (aus cached_data)
   getChartData(symbol: string, range: string = '1d', interval: string = '5m'): Observable<any> {
-    // Suche nach gecachten Daten für dieses Symbol
-    return this.firestoreService.getCachedData().pipe(
-      switchMap((cachedDataList) => {
-        const upperSym = symbol.toUpperCase();
-        // Finde Daten anhand der Tabelleninhalte (mit Guards)
-        let relevantData = cachedDataList.find((data) =>
-          Array.isArray((data as any)?.rows) &&
-          (data as any).rows.some((row: any) =>
-            Array.isArray(row?.cells) &&
-            row.cells.some((cell: any) =>
-              typeof cell === 'string' && cell.toUpperCase().includes(upperSym)
-            )
-          )
-        );
-
-        // Fallback: anhand der sourceId
-        if (!relevantData) {
-          relevantData = cachedDataList.find((d: any) =>
-            typeof d?.sourceId === 'string' && d.sourceId.toUpperCase().includes(upperSym)
-          );
+    // Direkter Live-Fetch: zuerst CoinGecko (für Krypto), dann Alpha Vantage (für Aktien), dann Yahoo als Fallback
+    return this.marketData.fetchCryptoChart(symbol, range, interval).pipe(
+      switchMap((cryptoRes) => {
+        if (cryptoRes?.data?.chart?.result?.[0]) {
+          return of(cryptoRes.data);
         }
-        
-        if (relevantData) {
-          // Konvertiere die Tabellendaten in das erwartete Chart-Format (bereichsabhängig)
-          const chartData = this.convertCachedDataToChart(relevantData, range);
-          return of(chartData);
-        }
-        
-        // Live-Fetch: zuerst CoinGecko (für Krypto), dann Alpha Vantage (für Aktien), dann Yahoo als Fallback, sonst generischer Fallback
-        return this.marketData.fetchCryptoChart(symbol, range, interval).pipe(
-          switchMap((cryptoRes) => {
-            if (cryptoRes?.data?.chart?.result?.[0]) {
-              return of(cryptoRes.data);
+        return this.marketData.fetchStockChart(symbol, range, interval).pipe(
+          switchMap((stockRes) => {
+            if (stockRes?.data?.chart?.result?.[0]) {
+              return of(stockRes.data);
             }
-            return this.marketData.fetchStockChart(symbol, range, interval).pipe(
-              switchMap((stockRes) => {
-                if (stockRes?.data?.chart?.result?.[0]) {
-                  return of(stockRes.data);
+            // Yahoo-Fallback
+            return this.marketData.fetchYahooChart(symbol, range, interval).pipe(
+              switchMap((yhRes) => {
+                if (yhRes?.data?.chart?.result?.[0]) {
+                  return of(yhRes.data);
                 }
-                // Yahoo-Fallback
-                return this.marketData.fetchYahooChart(symbol, range, interval).pipe(
-                  switchMap((yhRes) => {
-                    if (yhRes?.data?.chart?.result?.[0]) {
-                      return of(yhRes.data);
+                // Stooq-Fallback (EOD)
+                return this.marketData.fetchStockChartStooq(symbol, range, interval).pipe(
+                  switchMap((stqRes) => {
+                    if (stqRes?.data?.chart?.result?.[0]) {
+                      return of(stqRes.data);
                     }
-                    // Stooq-Fallback (EOD)
-                    return this.marketData.fetchStockChartStooq(symbol, range, interval).pipe(
-                      switchMap((stqRes) => {
-                        if (stqRes?.data?.chart?.result?.[0]) {
-                          return of(stqRes.data);
+                    // FMP-Fallback (optional)
+                    return this.marketData.fetchStockChartFmp(symbol, range, interval).pipe(
+                      switchMap((fmpRes) => {
+                        if (fmpRes?.data?.chart?.result?.[0]) {
+                          return of(fmpRes.data);
                         }
-                        // FMP-Fallback (optional)
-                        return this.marketData.fetchStockChartFmp(symbol, range, interval).pipe(
-                          switchMap((fmpRes) => {
-                            if (fmpRes?.data?.chart?.result?.[0]) {
-                              return of(fmpRes.data);
-                            }
-                            // Keine Daten gefunden
-                            return of({ chart: { result: [] } });
-                          })
-                        );
+                        // Keine Daten gefunden
+                        return of({ chart: { result: [] } });
                       })
                     );
                   })

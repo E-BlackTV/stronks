@@ -1,0 +1,273 @@
+<ion-content>
+  <ion-header>
+    <ion-toolbar class="custom-toolbar">
+      <ion-title class="custom-title">Firebase Debug & Diagnose</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-list>
+    <!-- Apple Scraping Section -->
+    <ion-item>
+      <ion-label>
+        <h2>🍎 Apple Aktien-Daten Scraping</h2>
+        <p>Lädt alle verfügbaren AAPL-Daten von Alpha Vantage und speichert sie in separater, optimierter Struktur</p>
+      </ion-label>
+      <ion-button
+        slot="end"
+        (click)="startScraping()"
+        [disabled]="scrapingLoading"
+      >
+        {{ scrapingLoading ? "Scrape..." : "Apple-Daten laden" }}
+      </ion-button>
+    </ion-item>
+
+    <!-- Apple Optimized Scraping Section -->
+    <ion-item>
+      <ion-label>
+        <h2>🍎 Apple Optimiertes Scraping</h2>
+        <p>Lädt 5 Jahre AAPL-Daten in separater, kompakter Struktur</p>
+      </ion-label>
+      <div slot="end">
+        <ion-button
+          size="small"
+          color="success"
+          (click)="handleAppleDataLoad()"
+          [disabled]="scrapingLoading"
+        >
+          Apple Daten laden
+        </ion-button>
+        <ion-button
+          size="small"
+          color="warning"
+          (click)="handleReloadAllAppleData()"
+          [disabled]="scrapingLoading"
+        >
+          Alle neu laden
+        </ion-button>
+        <ion-button
+          size="small"
+          color="danger"
+          (click)="handleClearOldAppleData()"
+          [disabled]="scrapingLoading"
+        >
+          Alte löschen
+        </ion-button>
+      </div>
+    </ion-item>
+
+    <!-- Apple Data Display -->
+    <ion-item>
+      <ion-label>
+        <h2>🍎 Apple-Daten (Optimiert)</h2>
+        <p>Lädt Apple-Daten aus der separaten Sammlung</p>
+        <ion-button size="small" (click)="loadAppleDataOptimized()">
+          Apple-Daten laden
+        </ion-button>
+        <ion-button size="small" color="primary" (click)="showAppleDataStats()">
+          Statistiken anzeigen
+        </ion-button>
+      </ion-label>
+    </ion-item>
+
+    <ion-item *ngIf="scrapingResult">
+      <ion-label>
+        <h3>
+          {{ scrapingResult.success ? "✅" : "❌" }}
+          {{ scrapingResult.message }}
+        </h3>
+        <p *ngIf="scrapingResult.data">
+          <strong>Gescrapte Daten:</strong> {{ scrapingResult.data | json }}
+        </p>
+      </ion-label>
+    </ion-item>
+
+    <!-- Chart Display -->
+    <ion-item *ngIf="chartData.length > 0">
+      <ion-label>
+        <h2>🍎 Apple Aktien-Chart</h2>
+        <div class="chart-controls">
+          <ion-button
+            size="small"
+            [color]="isLiveMode ? 'danger' : 'success'"
+            (click)="toggleLiveMode()"
+          >
+            <ion-icon
+              [name]="isLiveMode ? 'stop-circle' : 'play-circle'"
+              slot="start"
+            ></ion-icon>
+            {{ isLiveMode ? "Live stoppen" : "Live starten" }}
+          </ion-button>
+          <ion-button size="small" (click)="drawChart()">
+            <ion-icon name="refresh" slot="start"></ion-icon>
+            Chart aktualisieren
+          </ion-button>
+        </div>
+        <div class="chart-container">
+          <canvas #chartCanvas width="400" height="200"></canvas>
+        </div>
+        <div class="data-summary">
+          <p><strong>Anzahl Datenpunkte:</strong> {{ chartData.length }}</p>
+          <p><strong>Letzter Preis:</strong> ${{ getLastPrice() }}</p>
+          <p><strong>Zeitraum:</strong> {{ getTimeRange() }}</p>
+          <p>
+            <strong>Live-Modus:</strong> {{ isLiveMode ? "Aktiv" : "Inaktiv" }}
+          </p>
+        </div>
+      </ion-label>
+    </ion-item>
+
+    <!-- Firebase Data Display -->
+    <ion-item *ngIf="firebaseData.length > 0">
+      <ion-label>
+        <h2>Firebase gespeicherte Daten</h2>
+        <div class="firebase-data">
+          <ion-button size="small" (click)="loadFirebaseData()"
+            >Neu laden</ion-button
+          >
+          <div class="data-list">
+            <div
+              *ngFor="let item of firebaseData.slice(0, 5)"
+              class="data-item"
+            >
+              <span class="timestamp">{{
+                item.timestamp | date : "short"
+              }}</span>
+              <span class="price">${{ item.price }}</span>
+              <span class="volume">{{ item.volume }}</span>
+            </div>
+          </div>
+        </div>
+      </ion-label>
+    </ion-item>
+
+    <!-- Original Debug Items -->
+    <ion-item>
+      <ion-label>
+        <h2>Firebase Diagnose</h2>
+        <p>Testet die Firebase-Konfiguration und Verbindung</p>
+      </ion-label>
+      <ion-button slot="end" (click)="runDiagnostic()" [disabled]="loading">
+        {{ loading ? "Teste..." : "Diagnose starten" }}
+      </ion-button>
+    </ion-item>
+
+    <ion-item *ngIf="diagnosticResults.length > 0">
+      <ion-label>
+        <h2>Diagnose-Ergebnisse</h2>
+      </ion-label>
+    </ion-item>
+
+    <ion-item
+      *ngFor="let result of diagnosticResults"
+      [color]="result.success ? 'success' : 'danger'"
+    >
+      <ion-label>
+        <h3>{{ result.success ? "✅" : "❌" }} {{ result.message }}</h3>
+        <p *ngIf="result.details">
+          <strong>Details:</strong> {{ result.details | json }}
+        </p>
+        <div
+          *ngIf="result.recommendations && result.recommendations.length > 0"
+        >
+          <strong>Empfehlungen:</strong>
+          <ul>
+            <li *ngFor="let rec of result.recommendations">{{ rec }}</li>
+          </ul>
+        </div>
+      </ion-label>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>
+        <h2>Einfacher Login-Test</h2>
+        <p>Testet die Registrierung und Anmeldung</p>
+      </ion-label>
+      <ion-button slot="end" (click)="testAuth()" [disabled]="authLoading">
+        {{ authLoading ? "Teste..." : "Auth testen" }}
+      </ion-button>
+    </ion-item>
+
+    <ion-item *ngIf="authResult">
+      <ion-label>
+        <h3>{{ authResult.success ? "✅" : "❌" }} {{ authResult.message }}</h3>
+        <p *ngIf="authResult.user">
+          <strong>User:</strong> {{ authResult.user.username }} ({{
+            authResult.user.email
+          }})
+        </p>
+      </ion-label>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>
+        <h2>Design-Test</h2>
+        <p>Testet das neue Design</p>
+      </ion-label>
+      <ion-button slot="end" (click)="showDesignTest = !showDesignTest">
+        {{ showDesignTest ? "Verstecken" : "Anzeigen" }}
+      </ion-button>
+    </ion-item>
+
+    <ion-item *ngIf="showDesignTest">
+      <ion-label>
+        <h2>Design-Test Formular</h2>
+        <form [formGroup]="testForm" (ngSubmit)="onTestSubmit()">
+          <ion-item class="custom-item">
+            <ion-label position="stacked" class="custom-label"
+              >Test E-Mail/Benutzername</ion-label
+            >
+            <ion-input
+              formControlName="emailOrUsername"
+              placeholder="test@example.com oder testuser"
+              class="custom-input"
+            ></ion-input>
+          </ion-item>
+
+          <ion-item class="custom-item">
+            <ion-label position="stacked" class="custom-label"
+              >Test Passwort</ion-label
+            >
+            <ion-input
+              type="password"
+              formControlName="password"
+              placeholder="Testpasswort"
+              class="custom-input"
+            ></ion-input>
+          </ion-item>
+
+          <ion-button
+            expand="block"
+            type="submit"
+            [disabled]="!testForm.valid"
+            class="custom-button"
+          >
+            Test Login
+          </ion-button>
+        </form>
+      </ion-label>
+    </ion-item>
+
+    <ion-item *ngIf="testResult">
+      <ion-label>
+        <h3>{{ testResult.success ? "✅" : "❌" }} {{ testResult.message }}</h3>
+      </ion-label>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>
+        <h2>Konfiguration anzeigen</h2>
+        <p>Zeigt die aktuelle Firebase-Konfiguration</p>
+      </ion-label>
+      <ion-button slot="end" (click)="showConfig()">
+        Konfiguration anzeigen
+      </ion-button>
+    </ion-item>
+
+    <ion-item *ngIf="showConfigData">
+      <ion-label>
+        <h3>Firebase Konfiguration:</h3>
+        <pre>{{ configData | json }}</pre>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API-Proxy Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+      .info {
+        color: blue;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 3px;
+        overflow-x: auto;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>API-Proxy Test</h1>
+    <p>Diese Seite testet den lokalen PHP-Proxy für externe Finanz-APIs.</p>
+
+    <div class="test-section">
+      <h3>Yahoo Finance Test</h3>
+      <button onclick="testYahoo()">Yahoo Finance testen</button>
+      <div id="yahoo-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Stooq Test</h3>
+      <button onclick="testStooq()">Stooq testen</button>
+      <div id="stooq-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>FMP Test</h3>
+      <button onclick="testFMP()">Financial Modeling Prep testen</button>
+      <div id="fmp-result"></div>
+    </div>
+
+    <script>
+      async function testYahoo() {
+        const resultDiv = document.getElementById("yahoo-result");
+        resultDiv.innerHTML = '<p class="info">Teste Yahoo Finance...</p>';
+
+        try {
+          const response = await fetch(
+            "./api-proxy.php?api=yahoo&symbol=AAPL&range=1d&interval=5m"
+          );
+          const data = await response.json();
+
+          if (data.chart && data.chart.result && data.chart.result[0]) {
+            const timestamps = data.chart.result[0].timestamp || [];
+            const prices =
+              data.chart.result[0].indicators?.quote?.[0]?.close || [];
+            resultDiv.innerHTML = `
+                        <p class="success">✓ Yahoo Finance funktioniert!</p>
+                        <p>Zeitstempel: ${timestamps.length}</p>
+                        <p>Preise: ${prices.length}</p>
+                        <details>
+                            <summary>Daten anzeigen</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <p class="error">✗ Yahoo Finance: Keine gültigen Daten erhalten</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `<p class="error">✗ Yahoo Finance Fehler: ${error.message}</p>`;
+        }
+      }
+
+      async function testStooq() {
+        const resultDiv = document.getElementById("stooq-result");
+        resultDiv.innerHTML = '<p class="info">Teste Stooq...</p>';
+
+        try {
+          const response = await fetch(
+            "./api-proxy.php?api=stooq&symbol=aapl&range=1d&interval=1d"
+          );
+          const data = await response.json();
+
+          if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+            resultDiv.innerHTML = `
+                        <p class="success">✓ Stooq funktioniert!</p>
+                        <p>Einträge: ${data.data.length}</p>
+                        <details>
+                            <summary>Daten anzeigen</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <p class="error">✗ Stooq: Keine gültigen Daten erhalten</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `<p class="error">✗ Stooq Fehler: ${error.message}</p>`;
+        }
+      }
+
+      async function testFMP() {
+        const resultDiv = document.getElementById("fmp-result");
+        resultDiv.innerHTML =
+          '<p class="info">Teste Financial Modeling Prep...</p>';
+
+        try {
+          const response = await fetch(
+            "./api-proxy.php?api=fmp&symbol=AAPL&range=1d&interval=1d"
+          );
+          const data = await response.json();
+
+          if (
+            data.historical &&
+            Array.isArray(data.historical) &&
+            data.historical.length > 0
+          ) {
+            resultDiv.innerHTML = `
+                        <p class="success">✓ FMP funktioniert!</p>
+                        <p>Einträge: ${data.historical.length}</p>
+                        <details>
+                            <summary>Daten anzeigen</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <p class="error">✗ FMP: Keine gültigen Daten erhalten</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.innerHTML = `<p class="error">✗ FMP Fehler: ${error.message}</p>`;
+        }
+      }
+    </script>
+  </body>
+</html>

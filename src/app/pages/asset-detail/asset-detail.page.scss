@@ -1,1 +1,69 @@
 /* Asset Detail Styles */
+
+// Custom Design Variablen
+:root {
+  --primary: #30eb7e;
+  --secondary-navy: #0a0a1a;
+  --secondary-white: #ffffff;
+  --secondary-midgray: #888888;
+  --secondary-lightgray: #1a1a2e;
+  --status-negative: #ff4757;
+  --status-positive: #2ed573;
+  --background-dark: #0a0a1a;
+  --card-background: rgba(10, 10, 26, 0.8);
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
+// Dunkler Hintergrund für die gesamte Seite
+ion-content {
+  --background: var(--background-dark);
+}
+
+ion-segment {
+  --background: var(--card-background);
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid var(--border-color);
+}
+
+ion-segment-button {
+  --color: var(--secondary-white);
+  --color-checked: var(--primary);
+  --indicator-color: var(--primary);
+}
+
+ion-card {
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  --color: var(--secondary-white);
+}
+
+ion-card-header {
+  --background: transparent;
+}
+
+ion-card-title {
+  color: var(--secondary-white);
+}
+
+ion-card-subtitle {
+  color: var(--secondary-midgray);
+}
+
+ion-note {
+  color: var(--secondary-midgray);
+}
+
+canvas {
+  border-radius: 8px;
+}
+
+ion-button[expand="block"] {
+  margin-top: 16px;
+  border-radius: 8px;
+  --background: var(--primary);
+  --color: var(--secondary-navy);
+  font-weight: bold;
+}

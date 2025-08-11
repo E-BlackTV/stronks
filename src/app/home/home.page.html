@@ -4,8 +4,7 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title class="custom-title">Stronks</ion-title>
-    <ion-buttons slot="end">
-    </ion-buttons>
+    <ion-buttons slot="end"> </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -55,7 +54,7 @@
       <ion-card-content class="custom-card-content">
         <!-- Zeige nur eine kompakte, klare Zusammenfassung ohne Toggle-Buttons -->
         <div>
-          <p>Aktive Positionen: {{ userInvestments?.length || 0 }}</p>
+          <p>Aktive Positionen: {{ userInvestments.length || 0 }}</p>
           <ion-button fill="clear" (click)="loadPortfolio()">
             Aktualisieren
           </ion-button>

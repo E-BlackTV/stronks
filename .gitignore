@@ -74,6 +74,7 @@ config.json
 
 # Dependencies
 /node_modules
+/functions/node_modules
 
 # Build output
 /dist

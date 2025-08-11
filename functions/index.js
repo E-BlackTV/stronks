@@ -318,3 +318,164 @@ exports.getChartData = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+// HTTP-Endpunkte für Chart-APIs (CORS-frei)
+exports.yahooChart = functions.https.onRequest(async (req, res) => {
+  // CORS-Header setzen
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  // Preflight OPTIONS request behandeln
+  if (req.method === "OPTIONS") {
+    res.status(200).send();
+    return;
+  }
+
+  const { symbol, range = "1d", interval = "5m" } = req.query;
+
+  if (!symbol) {
+    res.status(400).json({ error: "Symbol parameter is required" });
+    return;
+  }
+
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}`;
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Stronks/1.0)",
+        Accept: "application/json",
+      },
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Yahoo Chart API Error:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch chart data",
+      details: error.message,
+    });
+  }
+});
+
+exports.stooqChart = functions.https.onRequest(async (req, res) => {
+  // CORS-Header setzen
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  // Preflight OPTIONS request behandeln
+  if (req.method === "OPTIONS") {
+    res.status(200).send();
+    return;
+  }
+
+  const { symbol, range = "1d", interval = "1d" } = req.query;
+
+  if (!symbol) {
+    res.status(400).json({ error: "Symbol parameter is required" });
+    return;
+  }
+
+  try {
+    const url = `https://stooq.com/q/d/l/?s=${symbol.toLowerCase()}&i=d`;
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Stronks/1.0)",
+      },
+    });
+
+    // CSV zu JSON konvertieren
+    const lines = response.data.trim().split("\n");
+    if (lines.length <= 1) {
+      res.status(500).json({ error: "Invalid CSV data from Stooq" });
+      return;
+    }
+
+    const headers = lines[0].toLowerCase().split(",");
+    const data = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim()) {
+        const values = lines[i].split(",");
+        if (values.length >= 5) {
+          data.push({
+            date: values[0],
+            open: parseFloat(values[1]) || 0,
+            high: parseFloat(values[2]) || 0,
+            low: parseFloat(values[3]) || 0,
+            close: parseFloat(values[4]) || 0,
+            volume: values[5] ? parseFloat(values[5]) : 0,
+          });
+        }
+      }
+    }
+
+    res.json({ data, source: "stooq" });
+  } catch (error) {
+    console.error("Stooq Chart API Error:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch chart data",
+      details: error.message,
+    });
+  }
+});
+
+exports.fmpChart = functions.https.onRequest(async (req, res) => {
+  // CORS-Header setzen
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  // Preflight OPTIONS request behandeln
+  if (req.method === "OPTIONS") {
+    res.status(200).send();
+    return;
+  }
+
+  const { symbol, range = "1d", interval = "1d" } = req.query;
+
+  if (!symbol) {
+    res.status(400).json({ error: "Symbol parameter is required" });
+    return;
+  }
+
+  try {
+    let url;
+    if (interval === "1d") {
+      // Daily-Daten
+      url = `https://financialmodelingprep.com/api/v3/historical-price-full/${symbol}?serietype=line&apikey=demo`;
+    } else {
+      // Intraday-Daten
+      const fmpInterval =
+        {
+          "1m": "1min",
+          "5m": "5min",
+          "15m": "5min",
+          "30m": "30min",
+          "60m": "1hour",
+          "1h": "1hour",
+        }[interval] || "5min";
+
+      url = `https://financialmodelingprep.com/api/v3/historical-chart/${fmpInterval}/${symbol}?apikey=demo`;
+    }
+
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Stronks/1.0)",
+        Accept: "application/json",
+      },
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("FMP Chart API Error:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch chart data",
+      details: error.message,
+    });
+  }
+});

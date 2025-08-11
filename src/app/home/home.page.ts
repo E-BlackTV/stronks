@@ -118,6 +118,9 @@ export class HomePage implements OnInit, OnDestroy {
   rangeOptions: RangeOption[] = [
     { label: 'Last Day', value: TimeRange.DAY },
     { label: 'Last Week', value: TimeRange.WEEK },
+    { label: 'Last Month', value: TimeRange.MONTH },
+    { label: 'Last 3 Months', value: TimeRange.THREE_MONTHS },
+    { label: 'Last 6 Months', value: TimeRange.SIX_MONTHS },
     { label: 'Last Year', value: TimeRange.YEAR },
     { label: 'Last 5 Years', value: TimeRange.FIVE_YEARS },
   ];

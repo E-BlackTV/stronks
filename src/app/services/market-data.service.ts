@@ -103,6 +103,7 @@ export class MarketDataService {
         catchError(() => of(null))
       );
     }
+
     // Für Aktien: Zuerst Alpha Vantage, ansonsten Yahoo als Fallback
     if (!this.alphaVantageApiKey) {
       return this.fetchYahooChart(symbol, '1d', '5m').pipe(
@@ -221,53 +222,101 @@ export class MarketDataService {
 
   // Yahoo-Fallback (für Crypto und Aktien)
   fetchYahooChart(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
-    return this.http.get<any>(url).pipe(
+    // Mappe Zeitintervalle für Yahoo Finance (Yahoo verwendet andere Werte)
+    const yahooRange = this.mapRangeToYahooRange(range);
+    
+    // Verwende CORS-Proxy anstatt direkten API-Aufruf
+    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${yahooRange}&interval=${interval}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    
+    return this.http.get<any>(proxyUrl).pipe(
       map((res) => {
         if (res?.chart?.result?.[0]) {
           return { source: 'yahoo' as const, data: res };
         }
         return null;
       }),
-      catchError(() => of(null))
+      catchError((error) => {
+        console.error('Yahoo Chart API Error:', error);
+        return of(null);
+      })
     );
+  }
+
+  // Mappe Zeitintervalle für Yahoo Finance
+  private mapRangeToYahooRange(range: string): string {
+    switch (range) {
+      case '1d': return '1d';
+      case '1w': return '5d';  // Yahoo verwendet 5d für 1 Woche
+      case '1m': return '1mo'; // Yahoo verwendet 1mo für 1 Monat
+      case '3m': return '3mo'; // Yahoo verwendet 3mo für 3 Monate
+      case '6m': return '6mo'; // Yahoo verwendet 6mo für 6 Monate
+      case '1y': return '1y';
+      case '5y': return '5y';
+      case 'max': return 'max';
+      default: return '1mo';
+    }
   }
 
   // Stooq-Fallback (EOD, kein Key). Degradiert bei Intraday-Anfrage auf Daily.
   fetchStockChartStooq(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
-    // Stooq bietet CSV: https://stooq.com/q/d/l/?s=aapl&i=d
-    // Wir nutzen Daily-Daten unabhängig vom angefragten Intervall (Fallback)
+    // Verwende CORS-Proxy anstatt direkten API-Aufruf
     const stooqSymbol = this.normalizeSymbolForStooq(symbol);
     if (!stooqSymbol) return of(null);
-    const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol)}&i=d`;
-    return this.http.get(url, { responseType: 'text' as 'json' }).pipe(
-      map((csvText: any) => {
-        const lines = String(csvText).trim().split(/\r?\n/);
+    
+    const targetUrl = `https://stooq.com/q/d/l/?s=${stooqSymbol}&i=d`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    
+    return this.http.get(proxyUrl, { responseType: 'text' }).pipe(
+      map((csvData) => {
+        if (!csvData || typeof csvData !== 'string') return null;
+        
+        // CSV zu JSON konvertieren
+        const lines = csvData.trim().split('\n');
         if (lines.length <= 1) return null;
-        const header = lines[0].toLowerCase();
-        if (!header.includes('date') || !header.includes('close')) return null;
+        
+        const data = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim()) {
+            const values = lines[i].split(',');
+            if (values.length >= 5) {
+              data.push({
+                date: values[0],
+                open: parseFloat(values[1]) || 0,
+                high: parseFloat(values[2]) || 0,
+                low: parseFloat(values[3]) || 0,
+                close: parseFloat(values[4]) || 0,
+                volume: values[5] ? parseFloat(values[5]) : 0
+              });
+            }
+          }
+        }
+        
+        if (!data.length) return null;
+        
+        // Konvertiere Stooq-Daten in das erwartete Format
         const timestamps: number[] = [];
         const prices: number[] = [];
         const volumes: number[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          const row = lines[i].split(',');
-          if (row.length < 5) continue;
-          const dateStr = row[0];
-          const closeStr = row[4];
-          const volumeStr = row[5] ?? '0';
-          const t = Math.floor(new Date(dateStr).getTime() / 1000);
-          const c = parseFloat(closeStr);
-          const v = parseFloat(volumeStr) || 0;
+        
+        for (const row of data) {
+          const t = Math.floor(new Date(row.date).getTime() / 1000);
+          const c = row.close;
+          const v = row.volume || 0;
           if (!isFinite(t) || !isFinite(c)) continue;
           timestamps.push(t);
           prices.push(c);
           volumes.push(v);
         }
+        
         if (!prices.length) return null;
-        const data = this.toYahooChartFormat(timestamps, prices, volumes);
-        return { source: 'stooq' as const, data };
+        const chartData = this.toYahooChartFormat(timestamps, prices, volumes);
+        return { source: 'stooq' as const, data: chartData };
       }),
-      catchError(() => of(null))
+      catchError((error) => {
+        console.error('Stooq Chart API Error:', error);
+        return of(null);
+      })
     );
   }
 
@@ -282,13 +331,16 @@ export class MarketDataService {
 
   // Financial Modeling Prep (FMP) optionaler Fallback (einfacher API-Key, demo funktioniert eingeschränkt)
   fetchStockChartFmp(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
+    // Verwende CORS-Proxy anstatt direkten API-Aufruf
     const apiKey = this.fmpApiKey || 'demo';
     // Intraday: 1, 5, 15, 30 min
-    const intradayMap: Record<string, string> = { '1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '60m': '1hour', '1h': '1hour' };
+    const intradayMap: Record<string, string> = { '1m': '1min', '5m': '5min', '15m': '5min', '30m': '30min', '60m': '1hour', '1h': '1hour' };
     const fmpInterval = intradayMap[interval.toLowerCase()];
     if (fmpInterval) {
-      const url = `https://financialmodelingprep.com/api/v3/historical-chart/${fmpInterval}/${encodeURIComponent(symbol)}?apikey=${apiKey}`;
-      return this.http.get<any[]>(url).pipe(
+      const targetUrl = `https://financialmodelingprep.com/api/v3/historical-chart/${fmpInterval}/${symbol}?apikey=${apiKey}`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+      
+      return this.http.get<any[]>(proxyUrl).pipe(
         map((rows) => {
           if (!Array.isArray(rows) || rows.length === 0) return null;
           // FMP gibt jüngste zuerst zurück
@@ -300,12 +352,17 @@ export class MarketDataService {
           const data = this.toYahooChartFormat(timestamps, prices, volumes);
           return { source: 'fmp' as const, data };
         }),
-        catchError(() => of(null))
+        catchError((error) => {
+          console.error('FMP Intraday Chart API Error:', error);
+          return of(null);
+        })
       );
     }
     // Daily
-    const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${encodeURIComponent(symbol)}?serietype=line&apikey=${apiKey}`;
-    return this.http.get<any>(url).pipe(
+    const targetUrl = `https://financialmodelingprep.com/api/v3/historical-price-full/${symbol}?serietype=line&apikey=${apiKey}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    
+    return this.http.get<any>(proxyUrl).pipe(
       map((res) => {
         const rows = res?.historical as any[];
         if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -317,7 +374,10 @@ export class MarketDataService {
         const data = this.toYahooChartFormat(timestamps, prices, volumes);
         return { source: 'fmp' as const, data };
       }),
-      catchError(() => of(null))
+      catchError((error) => {
+        console.error('FMP Daily Chart API Error:', error);
+        return of(null);
+      })
     );
   }
 

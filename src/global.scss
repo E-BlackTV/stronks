@@ -28,12 +28,24 @@
 // Custom Design Variablen für die gesamte App
 :root {
   --primary: #30eb7e;
-  --secondary-navy: #1a1a2e;
+  --secondary-navy: #0a0a1a;
   --secondary-white: #ffffff;
   --secondary-midgray: #888888;
-  --secondary-lightgray: #f8f9fa;
+  --secondary-lightgray: #1a1a2e;
   --status-negative: #ff4757;
   --status-positive: #2ed573;
+  --background-dark: #0a0a1a;
+  --card-background: rgba(10, 10, 26, 0.8);
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
+// Dunkler Hintergrund für die gesamte App
+ion-app {
+  --background: var(--background-dark);
+}
+
+ion-content {
+  --background: var(--background-dark);
 }
 
 .form-group {
@@ -41,7 +53,6 @@
   flex-direction: column; /* stapelt Label und Input */
   margin-bottom: 1rem; /* Abstand zum nächsten Feld */
 }
-
 
 .form-group label {
   width: 100%; /* Label nimmt die volle Breite ein */
@@ -70,14 +81,11 @@
   margin-top: 50px;
   margin-bottom: 50px;
 
-
   /* Mehrschichtiger Schatten für Tiefe */
   box-shadow:
-    /* äußere starke Schatten */
-    8px 8px 15px rgba(0, 0, 0, 0.9),
+    /* äußere starke Schatten */ 8px 8px 15px rgba(0, 0, 0, 0.9),
     -8px -8px 15px rgba(60, 60, 60, 0.4),
-    /* subtiler innerer Schatten */
-    inset 2px 2px 6px rgba(255, 255, 255, 0.07),
+    /* subtiler innerer Schatten */ inset 2px 2px 6px rgba(255, 255, 255, 0.07),
     inset -2px -2px 6px rgba(0, 0, 0, 0.7);
 
   /* Leichter Glanz oben */
@@ -85,7 +93,6 @@
 }
 
 ion-item {
-
   --color: var(--secondary-white);
   --border-color: rgba(255, 255, 255, 0.08);
   --highlight-color: var(--primary);
@@ -113,10 +120,6 @@ ion-button:hover {
 }
 ion-button:active {
   transform: translateY(1px);
-}
-
-ion-toolbar {
-  --color: var(--secondary-white);
 }
 
 // Typografie
@@ -250,7 +253,6 @@ ion-item {
 
 ion-item.ion-invalid {
   --border-color: var(--status-negative);
-
 }
 
 ion-input {
@@ -332,7 +334,8 @@ ion-item .input-wrapper {
     --padding-end: 10px;
   }
 
-  ion-input, ion-label {
+  ion-input,
+  ion-label {
     font-size: 14px;
   }
 
@@ -342,4 +345,3 @@ ion-item .input-wrapper {
     height: 45px;
   }
 }
-
