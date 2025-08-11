@@ -1,16 +1,15 @@
 <ion-app>
   <ion-split-pane
-    contentId="main-content"
-    when="lg"
-    [class.menu-collapsed]="isMenuCollapsed"
+  contentId="main-content"
+  when="lg"
+>
+  <ion-menu
+   *ngIf="!isAuthRoute"
+  contentId="main-content"
+  type="push"
+  class="app-menu app-container"
+  [class.hidden-menu]="isMenuCollapsed"
   >
-    <ion-menu
-      *ngIf="!isAuthRoute"
-      contentId="main-content-pc"
-      type="overlay"
-      class="app-menu app-container"
-      [class.collapsed]="isMenuCollapsed"
-    >
       <ion-header>
         <ion-toolbar class="menu-toolbar">
           <div class="brand" style="margin-left: 25px;" (click)="toggleMenuCollapsed()">
@@ -30,7 +29,7 @@
         </ion-toolbar>
       </ion-header>
 
-      <ion-content>
+      <ion-content class="display-toolbar">
         <ion-list class="menu-list">
           <ion-menu-toggle auto-hide="false">
             <ion-item

@@ -7,7 +7,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding ion-border-main">
   <ion-card>
     <ion-card-header>
       <ion-card-title>Vermögensentwicklung</ion-card-title>
@@ -22,7 +22,7 @@
     </ion-card-content>
   </ion-card>
 
-  <ion-list>
+  <ion-list class="ion-mg-important">
     <ion-list-header>Deine Assets</ion-list-header>
     <ion-item *ngFor="let a of assets">
       <ion-label>
@@ -32,7 +32,7 @@
           0)) | currency:'USD' }}
         </p>
       </ion-label>
-      <ion-button slot="end" color="warning" (click)="openSell(a)"
+      <ion-button class="verkaufen-btn main-border" slot="end" color="warning" (click)="openSell(a)"
         >Verkaufen</ion-button
       >
     </ion-item>
