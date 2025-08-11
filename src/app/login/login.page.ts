@@ -2,6 +2,10 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FirebaseAdminService } from '../services/firebase-admin.service';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap, take, map } from 'rxjs/operators';
+import { AuthenticationService } from '../services/authentication.service';
 
 @Component({
   selector: 'app-login',
@@ -15,6 +19,7 @@ export class LoginPage {
 
   constructor(
     private fb: FormBuilder,
+    private authService: AuthenticationService,
     private firebaseService: FirebaseAdminService,
     private router: Router
   ) {
@@ -68,49 +73,25 @@ export class LoginPage {
   }
 
   async onLogin() {
-    console.log('LoginPage: onLogin aufgerufen');
-    
-    // Markiere alle Felder als touched für bessere Validierung
-    Object.keys(this.loginForm.controls).forEach(key => {
-      const control = this.loginForm.get(key);
-      control?.markAsTouched();
-    });
+  if (this.loginForm.valid) {
+    this.loading = true;
+    this.error = '';
 
-    console.log('LoginPage: Form valid:', this.loginForm.valid);
-    console.log('LoginPage: Form values:', this.loginForm.value);
+    const email = this.loginForm.value.emailOrUsername;
+    const password = this.loginForm.value.password;
 
-    if (this.loginForm.valid) {
-      this.loading = true;
-      this.error = '';
-      
-      const { emailOrUsername, password } = this.loginForm.value;
-      
-      console.log('LoginPage: Versuche Login mit:', { emailOrUsername, password: '***' });
-      
-      try {
-        const result = await this.firebaseService.login(emailOrUsername, password);
-        
-        console.log('LoginPage: Login-Ergebnis:', result);
-        
-        if (result.success) {
-          console.log('LoginPage: Login erfolgreich, navigiere zu /home');
-          // Erfolgreicher Login - Navigiere zur Home-Seite
-          this.router.navigate(['/home']);
-        } else {
-          console.log('LoginPage: Login fehlgeschlagen:', result.message);
-          this.error = result.message;
-        }
-      } catch (error) {
-        console.error('LoginPage: Login error:', error);
-        this.error = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
-      } finally {
-        this.loading = false;
-      }
-    } else {
-      console.log('LoginPage: Form ist nicht gültig');
-      this.error = 'Bitte korrigiere die Fehler im Formular.';
+    try {
+      await this.authService.login(email, password);
+      // Navigation passiert im authService.login()
+    } catch (error: any) {
+      this.error = error.message || 'Login fehlgeschlagen';
+    } finally {
+      this.loading = false;
     }
+  } else {
+    this.error = 'Bitte alle Felder korrekt ausfüllen.';
   }
+}
 
   goToRegister() {
     console.log('LoginPage: Navigiere zu /register');
