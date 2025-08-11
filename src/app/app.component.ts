@@ -13,7 +13,6 @@ import { AuthenticationService } from './services/authentication.service';
 
 export class AppComponent implements OnInit {
   
-  isMenuCollapsed = false;
   menuBalance = 0;
 
   constructor(
@@ -25,9 +24,6 @@ export class AppComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const saved = localStorage.getItem('menuCollapsed');
-    this.isMenuCollapsed = saved === '1';
-
     // Prüfe den Authentifizierungsstatus
     this.authService.user$.subscribe(user => {
       if (user) {
@@ -52,11 +48,6 @@ export class AppComponent implements OnInit {
   get isAuthRoute(): boolean {
     const url = this.router.url.split('?')[0];
     return url === '/' || url.startsWith('/login') || url.startsWith('/register');
-  }
-
-  toggleMenuCollapsed() {
-    this.isMenuCollapsed = !this.isMenuCollapsed;
-    localStorage.setItem('menuCollapsed', this.isMenuCollapsed ? '1' : '0');
   }
 
   async logout() {
