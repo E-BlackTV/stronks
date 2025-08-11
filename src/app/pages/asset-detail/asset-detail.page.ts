@@ -62,7 +62,30 @@ export class AssetDetailPage implements OnInit, OnDestroy {
     const prices: number[] = ds?.indicators?.quote?.[0]?.close || [];
     const timestamps: number[] = ds?.timestamp || [];
     if (!prices.length || !timestamps.length) return;
-    const labels = timestamps.map((ts: number) => new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+    const labels = timestamps.map((ts: number) => {
+      const d = new Date(ts * 1000);
+      if (this.range === '1d') {
+        return d.toLocaleTimeString('de-DE', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false
+        });
+      }
+      if (this.range === '1w' || this.range === '1m') {
+        return d.toLocaleDateString('de-DE', {
+          day: '2-digit',
+          month: '2-digit'
+        });
+      }
+      if (this.range === '1y' || this.range === '5y') {
+        return d.toLocaleDateString('de-DE', {
+          month: '2-digit',
+          year: '2-digit'
+        });
+      }
+      return d.toLocaleDateString('de-DE');
+    });
 
     if (!this.detailChart?.nativeElement) return;
     if (this.chart) { this.chart.destroy(); this.chart = null; }
@@ -87,11 +110,25 @@ export class AssetDetailPage implements OnInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         scales: {
           x: { grid: { display: false } },
           y: { grid: { color: 'rgba(255,255,255,0.06)' } }
         },
-        plugins: { legend: { display: false } }
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            displayColors: false,
+            padding: 10,
+            callbacks: {
+              title: (items) => items[0]?.label || '',
+              label: (ctx) => `Preis: $${(ctx.parsed.y as number).toFixed(2)}`,
+            },
+          },
+        },
       }
     });
   }
@@ -99,11 +136,11 @@ export class AssetDetailPage implements OnInit, OnDestroy {
   private pickInterval(range: string): string {
     switch (range) {
       case '1d': return '5m';
-      case '1w': return '15m';
+      case '1w': return '30m';
       case '1m': return '1d';
       case '1y': return '1d';
       case '5y': return '1wk';
-      case 'max': return '1d';
+      case 'max': return '1mo';
       default: return '1d';
     }
   }

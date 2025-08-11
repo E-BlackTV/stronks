@@ -27,6 +27,7 @@ export class LoginPage {
     this.loginForm = this.fb.group({
       emailOrUsername: ['', [Validators.required, this.emailOrUsernameValidator()]],
       password: ['', Validators.required],
+      remember: [true]
     });
   }
 
@@ -79,9 +80,10 @@ export class LoginPage {
 
     const email = this.loginForm.value.emailOrUsername;
     const password = this.loginForm.value.password;
+    const remember = !!this.loginForm.value.remember;
 
     try {
-      await this.authService.login(email, password);
+      await this.authService.login(email, password, remember);
       // Navigation passiert im authService.login()
     } catch (error: any) {
       this.error = error.message || 'Login fehlgeschlagen';

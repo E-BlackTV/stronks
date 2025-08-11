@@ -940,31 +940,36 @@ export class HomePage implements OnInit, OnDestroy {
             const date = new Date(timestamp * 1000);
             switch (this.selectedRange) {
               case TimeRange.DAY:
-                return date.toLocaleTimeString([], {
+                return date.toLocaleTimeString('de-DE', {
                   hour: '2-digit',
                   minute: '2-digit',
+                  hour12: false
                 });
               case TimeRange.WEEK:
-                return date.toLocaleDateString([], { weekday: 'short' });
+                return date.toLocaleDateString('de-DE', { 
+                  weekday: 'short',
+                  day: '2-digit',
+                  month: '2-digit'
+                });
               case TimeRange.MONTH:
-                return date.toLocaleDateString([], {
-                  day: 'numeric',
-                  month: 'short',
+                return date.toLocaleDateString('de-DE', {
+                  day: '2-digit',
+                  month: '2-digit'
                 });
               case TimeRange.THREE_MONTHS:
               case TimeRange.SIX_MONTHS:
-                return date.toLocaleDateString([], {
-                  month: 'short',
-                  day: 'numeric',
+                return date.toLocaleDateString('de-DE', {
+                  day: '2-digit',
+                  month: '2-digit'
                 });
               case TimeRange.YEAR:
               case TimeRange.FIVE_YEARS:
-                return date.toLocaleDateString([], {
-                  month: 'short',
-                  year: '2-digit',
+                return date.toLocaleDateString('de-DE', {
+                  month: '2-digit',
+                  year: '2-digit'
                 });
               default:
-                return date.toLocaleDateString();
+                return date.toLocaleDateString('de-DE');
             }
           });
 
@@ -996,14 +1001,36 @@ export class HomePage implements OnInit, OnDestroy {
   formatDateLabel(date: Date): string {
     switch (this.selectedRange) {
       case TimeRange.DAY:
-        return date.toLocaleTimeString([], {
+        return date.toLocaleTimeString('de-DE', {
           hour: '2-digit',
           minute: '2-digit',
+          hour12: false
         });
       case TimeRange.WEEK:
-        return date.toLocaleDateString([], { weekday: 'short' });
+        return date.toLocaleDateString('de-DE', { 
+          weekday: 'short',
+          day: '2-digit',
+          month: '2-digit'
+        });
+      case TimeRange.MONTH:
+        return date.toLocaleDateString('de-DE', {
+          day: '2-digit',
+          month: '2-digit'
+        });
+      case TimeRange.THREE_MONTHS:
+      case TimeRange.SIX_MONTHS:
+        return date.toLocaleDateString('de-DE', {
+          day: '2-digit',
+          month: '2-digit'
+        });
+      case TimeRange.YEAR:
+      case TimeRange.FIVE_YEARS:
+        return date.toLocaleDateString('de-DE', {
+          month: '2-digit',
+          year: '2-digit'
+        });
       default:
-        return date.toLocaleDateString();
+        return date.toLocaleDateString('de-DE');
     }
   }
 
@@ -1113,31 +1140,36 @@ export class HomePage implements OnInit, OnDestroy {
         const date = new Date(timestamp * 1000);
         switch (this.selectedRange) {
           case TimeRange.DAY:
-            return date.toLocaleTimeString([], {
+            return date.toLocaleTimeString('de-DE', {
               hour: '2-digit',
               minute: '2-digit',
+              hour12: false
             });
           case TimeRange.WEEK:
-            return date.toLocaleDateString([], { weekday: 'short' });
+            return date.toLocaleDateString('de-DE', { 
+              weekday: 'short',
+              day: '2-digit',
+              month: '2-digit'
+            });
           case TimeRange.MONTH:
-            return date.toLocaleDateString([], {
-              day: 'numeric',
-              month: 'short',
+            return date.toLocaleDateString('de-DE', {
+              day: '2-digit',
+              month: '2-digit'
             });
           case TimeRange.THREE_MONTHS:
           case TimeRange.SIX_MONTHS:
-            return date.toLocaleDateString([], {
-              month: 'short',
-              day: 'numeric',
+            return date.toLocaleDateString('de-DE', {
+              day: '2-digit',
+              month: '2-digit'
             });
           case TimeRange.YEAR:
           case TimeRange.FIVE_YEARS:
-            return date.toLocaleDateString([], {
-              month: 'short',
-              year: '2-digit',
+            return date.toLocaleDateString('de-DE', {
+              month: '2-digit',
+              year: '2-digit'
             });
           default:
-            return date.toLocaleDateString();
+            return date.toLocaleDateString('de-DE');
         }
       });
 

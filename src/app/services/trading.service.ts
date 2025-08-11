@@ -111,11 +111,32 @@ export class TradingService {
 
   // Asset-Preis (aus cached_data; falls nicht vorhanden, leer zurück)
   getAssetPrice(symbol: string): Observable<any> {
-    return this.firestoreService.getLatestCachedData(symbol, '1d', '5m').pipe(
-      map((cached) => {
-        if (!cached) return { success: false };
-        const prices = cached.data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
-        const price = prices.length ? prices[prices.length - 1] : null;
+    // Suche nach gecachten Daten für dieses Symbol
+    return this.firestoreService.getCachedData().pipe(
+      map((cachedDataList) => {
+        const upperSym = symbol.toUpperCase();
+        // Finde Daten anhand der Tabelleninhalte (mit Guards)
+        let relevantData = cachedDataList.find((data) =>
+          Array.isArray((data as any)?.rows) &&
+          (data as any).rows.some((row: any) =>
+            Array.isArray(row?.cells) &&
+            row.cells.some((cell: any) =>
+              typeof cell === 'string' && cell.toUpperCase().includes(upperSym)
+            )
+          )
+        );
+
+        // Fallback: anhand der sourceId (z. B. "yahoo-AAPL")
+        if (!relevantData) {
+          relevantData = cachedDataList.find((d: any) =>
+            typeof d?.sourceId === 'string' && d.sourceId.toUpperCase().includes(upperSym)
+          );
+        }
+        
+        if (!relevantData) return { success: false };
+        
+        // Extrahiere den Preis aus den Tabellendaten (robust)
+        const price = this.extractPriceFromCachedData(relevantData);
         return price ? { success: true, price, symbol } : { success: false };
       })
     );
@@ -123,69 +144,65 @@ export class TradingService {
 
   // Chart-Daten (aus cached_data)
   getChartData(symbol: string, range: string = '1d', interval: string = '5m'): Observable<any> {
-    return this.firestoreService.getLatestCachedData(symbol, range, interval).pipe(
-      switchMap((cached) => {
-        if (cached?.data) {
-          return of(this.normalizeChartPayload(cached.data));
+    // Suche nach gecachten Daten für dieses Symbol
+    return this.firestoreService.getCachedData().pipe(
+      switchMap((cachedDataList) => {
+        const upperSym = symbol.toUpperCase();
+        // Finde Daten anhand der Tabelleninhalte (mit Guards)
+        let relevantData = cachedDataList.find((data) =>
+          Array.isArray((data as any)?.rows) &&
+          (data as any).rows.some((row: any) =>
+            Array.isArray(row?.cells) &&
+            row.cells.some((cell: any) =>
+              typeof cell === 'string' && cell.toUpperCase().includes(upperSym)
+            )
+          )
+        );
+
+        // Fallback: anhand der sourceId
+        if (!relevantData) {
+          relevantData = cachedDataList.find((d: any) =>
+            typeof d?.sourceId === 'string' && d.sourceId.toUpperCase().includes(upperSym)
+          );
         }
+        
+        if (relevantData) {
+          // Konvertiere die Tabellendaten in das erwartete Chart-Format (bereichsabhängig)
+          const chartData = this.convertCachedDataToChart(relevantData, range);
+          return of(chartData);
+        }
+        
         // Live-Fetch: zuerst CoinGecko (für Krypto), dann Alpha Vantage (für Aktien), dann Yahoo als Fallback, sonst generischer Fallback
         return this.marketData.fetchCryptoChart(symbol, range, interval).pipe(
           switchMap((cryptoRes) => {
             if (cryptoRes?.data?.chart?.result?.[0]) {
-              return this.firestoreService
-                .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: cryptoRes.data, type: 'chart' })
-                .pipe(
-                  map(() => cryptoRes.data),
-                  catchError(() => of(cryptoRes.data))
-                );
+              return of(cryptoRes.data);
             }
             return this.marketData.fetchStockChart(symbol, range, interval).pipe(
               switchMap((stockRes) => {
                 if (stockRes?.data?.chart?.result?.[0]) {
-                  return this.firestoreService
-                    .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: stockRes.data, type: 'chart' })
-                    .pipe(
-                      map(() => stockRes.data),
-                      catchError(() => of(stockRes.data))
-                    );
+                  return of(stockRes.data);
                 }
                 // Yahoo-Fallback
                 return this.marketData.fetchYahooChart(symbol, range, interval).pipe(
                   switchMap((yhRes) => {
                     if (yhRes?.data?.chart?.result?.[0]) {
-                      return this.firestoreService
-                        .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: yhRes.data, type: 'chart' })
-                        .pipe(
-                          map(() => yhRes.data),
-                          catchError(() => of(yhRes.data))
-                        );
+                      return of(yhRes.data);
                     }
                     // Stooq-Fallback (EOD)
                     return this.marketData.fetchStockChartStooq(symbol, range, interval).pipe(
                       switchMap((stqRes) => {
                         if (stqRes?.data?.chart?.result?.[0]) {
-                          return this.firestoreService
-                            .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: stqRes.data, type: 'chart' })
-                            .pipe(
-                              map(() => stqRes.data),
-                              catchError(() => of(stqRes.data))
-                            );
+                          return of(stqRes.data);
                         }
                         // FMP-Fallback (optional)
                         return this.marketData.fetchStockChartFmp(symbol, range, interval).pipe(
                           switchMap((fmpRes) => {
                             if (fmpRes?.data?.chart?.result?.[0]) {
-                              return this.firestoreService
-                                .upsertCachedData({ symbol, rangePeriod: range, intervalPeriod: interval, data: fmpRes.data, type: 'chart' })
-                                .pipe(
-                                  map(() => fmpRes.data),
-                                  catchError(() => of(fmpRes.data))
-                                );
+                              return of(fmpRes.data);
                             }
-                            // Fallback: Nimm die neueste Cached-Data ohne Range/Interval-Filter
-                            return this.firestoreService.getCachedData(symbol).pipe(
-                              map((list) => this.normalizeChartPayload(list?.[0]?.data ?? { chart: { result: [] } }))
-                            );
+                            // Keine Daten gefunden
+                            return of({ chart: { result: [] } });
                           })
                         );
                       })
@@ -200,25 +217,307 @@ export class TradingService {
     );
   }
 
-  private normalizeChartPayload(payload: any): any {
+  // Extrahiert den Preis aus gecachten Daten
+  private extractPriceFromCachedData(cachedData: any): number | null {
     try {
-      // Falls String gespeichert wurde
-      if (typeof payload === 'string') {
-        const parsed = JSON.parse(payload);
-        return this.normalizeChartPayload(parsed);
+      if (!cachedData || !Array.isArray(cachedData.rows) || cachedData.rows.length < 2) return null;
+      
+      // Erste Zeile enthält Spaltenüberschriften
+      const headers = Array.isArray(cachedData.rows[0]?.cells) ? (cachedData.rows[0].cells as string[]) : [];
+      if (headers.length === 0) return null;
+      
+      // Finde die Preisspalte
+      const priceColumnIndex = this.findPriceColumnIndex(headers);
+      if (priceColumnIndex === -1) return null;
+      
+      // Nimm den neuesten Preis (letzte Zeile)
+      const lastRow = cachedData.rows[cachedData.rows.length - 1];
+      if (!lastRow || !Array.isArray(lastRow.cells)) return null;
+      if (lastRow.cells.length > priceColumnIndex) {
+        const priceStr = lastRow.cells[priceColumnIndex];
+        const price = parseFloat(priceStr);
+        return !isNaN(price) && price > 0 ? price : null;
       }
-      // Direkte Yahoo-Struktur
-      if (payload?.chart?.result?.[0]) {
-        return payload;
+      
+      return null;
+    } catch (error) {
+      console.error('Fehler beim Extrahieren des Preises:', error);
+      return null;
+    }
+  }
+
+  // Konvertiert gecachte Daten in das Chart-Format (mit Bereichsbegrenzung)
+  private convertCachedDataToChart(cachedData: any, range?: string): any {
+    try {
+      if (!cachedData || !Array.isArray(cachedData.rows) || cachedData.rows.length < 2) {
+        return { chart: { result: [] } };
       }
-      // Verschachtelt unter data
-      if (payload?.data?.chart?.result?.[0]) {
-        return payload.data;
+      
+      // Erste Zeile enthält Spaltenüberschriften
+      const headers = Array.isArray(cachedData.rows[0]?.cells) ? (cachedData.rows[0].cells as string[]) : [];
+      if (headers.length === 0) {
+        return { chart: { result: [] } };
       }
-      // Standard-Fallback
+      
+      // Finde relevante Spalten
+      const timeColumnIndex = this.findTimeColumnIndex(headers);
+      const priceColumnIndex = this.findPriceColumnIndex(headers);
+      const volumeColumnIndex = this.findVolumeColumnIndex(headers);
+      
+      if (priceColumnIndex === -1) {
+        return { chart: { result: [] } };
+      }
+
+      // Filtere Daten nach Zeitraum (basierend auf der Dokumentation)
+      const filteredRows = this.filterDataByTimeframe(cachedData.rows, range);
+      if (filteredRows.length < 2) {
+        return { chart: { result: [] } };
+      }
+      
+      // Konvertiere die gefilterten Daten
+      const timestamps: number[] = [];
+      const prices: number[] = [];
+      const volumes: number[] = [];
+      
+      // Verarbeite alle Zeilen und sammle gültige Daten
+      for (let i = 1; i < filteredRows.length; i++) {
+        const row = filteredRows[i];
+        if (!row || !Array.isArray(row.cells)) continue;
+        
+        let hasValidData = false;
+        let timestamp: number | null = null;
+        let price: number | null = null;
+        let volume: number | null = null;
+        
+        // Preis
+        if (row.cells.length > priceColumnIndex) {
+          const priceStr = row.cells[priceColumnIndex];
+          price = parseFloat(priceStr);
+          if (!isNaN(price) && price > 0) {
+            hasValidData = true;
+          }
+        }
+        
+        // Zeitstempel
+        if (timeColumnIndex !== -1 && row.cells[timeColumnIndex]) {
+          const timeStr = row.cells[timeColumnIndex];
+          timestamp = this.parseTimeString(timeStr);
+        }
+        
+        // Volumen
+        if (volumeColumnIndex !== -1 && row.cells[volumeColumnIndex]) {
+          const volumeStr = row.cells[volumeColumnIndex];
+          volume = parseFloat(volumeStr);
+          if (isNaN(volume)) volume = null;
+        }
+        
+        // Nur hinzufügen, wenn gültige Daten vorhanden sind
+        if (hasValidData && timestamp) {
+          timestamps.push(timestamp);
+          prices.push(price!);
+          volumes.push(volume || 0);
+        }
+      }
+      
+      // Mindestens 10 Datenpunkte für eine sinnvolle Darstellung
+      if (prices.length < 10) {
+        console.warn(`Zu wenige Datenpunkte gefunden: ${prices.length}. Versuche alle verfügbaren Daten zu verwenden.`);
+        
+        // Verwende alle verfügbaren Daten ohne Zeitfilterung
+        const allRows = cachedData.rows.slice(1);
+        for (let i = 0; i < allRows.length; i++) {
+          const row = allRows[i];
+          if (!row || !Array.isArray(row.cells)) continue;
+          
+          if (row.cells.length > priceColumnIndex) {
+            const priceStr = row.cells[priceColumnIndex];
+            const price = parseFloat(priceStr);
+            if (!isNaN(price) && price > 0) {
+              prices.push(price);
+              
+              // Zeitstempel
+              if (timeColumnIndex !== -1 && row.cells[timeColumnIndex]) {
+                const timeStr = row.cells[timeColumnIndex];
+                const timestamp = this.parseTimeString(timeStr);
+                if (timestamp) timestamps.push(timestamp);
+              }
+              
+              // Volumen
+              if (volumeColumnIndex !== -1 && row.cells[volumeColumnIndex]) {
+                const volumeStr = row.cells[volumeColumnIndex];
+                const volume = parseFloat(volumeStr);
+                volumes.push(isNaN(volume) ? 0 : volume);
+              }
+            }
+          }
+        }
+      }
+      
+      // Erstelle das Chart-Format
+      return {
+        chart: {
+          result: [{
+            timestamp: timestamps.length > 0 ? timestamps : undefined,
+            indicators: {
+              quote: [{
+                close: prices,
+                volume: volumes.length > 0 ? volumes : undefined
+              }]
+            }
+          }]
+        }
+      };
+    } catch (error) {
+      console.error('Fehler beim Konvertieren der gecachten Daten:', error);
       return { chart: { result: [] } };
-    } catch (_e) {
-      return { chart: { result: [] } };
+    }
+  }
+
+  // Filtert Daten nach Zeitraum (basierend auf der Dokumentation)
+  private filterDataByTimeframe(rows: any[], timeframe?: string): any[] {
+    if (!rows || rows.length < 2) return [];
+    
+    const header = rows[0];
+    const dataRows = rows.slice(1); // Erste Zeile ist Header
+    
+    if (dataRows.length === 0) return [header];
+    
+    // Finde die Zeitstempel-Spalte
+    const timeColumnIndex = this.findTimeColumnIndex(header.cells);
+    if (timeColumnIndex === -1) {
+      // Keine Zeitstempel-Spalte gefunden, gib alle Daten zurück
+      return rows;
+    }
+    
+    // Zeitstempel der letzten Zeile
+    const lastRow = dataRows[dataRows.length - 1];
+    if (!lastRow || !Array.isArray(lastRow.cells) || lastRow.cells.length <= timeColumnIndex) {
+      return rows;
+    }
+    
+    const lastTimestamp = this.parseTimeString(lastRow.cells[timeColumnIndex]);
+    if (!lastTimestamp) {
+      return rows;
+    }
+    
+    const lastTime = new Date(lastTimestamp * 1000);
+    const now = new Date();
+    
+    let startTime: Date;
+    
+    switch (timeframe) {
+      case '1d':
+        // Für 1 Tag: Behalte alle Daten der letzten 24 Stunden + zusätzliche Daten für bessere Darstellung
+        startTime = new Date(now.getTime() - 36 * 60 * 60 * 1000); // 36 Stunden zurück
+        break;
+      case '1w':
+        // Für 1 Woche: Behalte alle Daten der letzten 8 Tage
+        startTime = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+        break;
+      case '1m':
+        // Für 1 Monat: Behalte alle Daten der letzten 35 Tage
+        startTime = new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000);
+        break;
+      case '1y':
+        // Für 1 Jahr: Behalte alle Daten der letzten 370 Tage
+        startTime = new Date(now.getTime() - 370 * 24 * 60 * 60 * 1000);
+        break;
+      case '5y':
+        // Für 5 Jahre: Behalte alle Daten der letzten 5.5 Jahre
+        startTime = new Date(now.getTime() - 5.5 * 365 * 24 * 60 * 60 * 1000);
+        break;
+      case 'max':
+        startTime = new Date(0); // Alle verfügbaren Daten
+        break;
+      default:
+        startTime = new Date(now.getTime() - 36 * 60 * 60 * 1000); // Standard: 36 Stunden
+    }
+    
+    // Filtere Daten nach Zeitraum, aber behalte mindestens 50 Datenpunkte
+    const filteredRows = dataRows.filter(row => {
+      if (!row || !Array.isArray(row.cells) || row.cells.length <= timeColumnIndex) {
+        return false;
+      }
+      
+      const rowTimeStr = row.cells[timeColumnIndex];
+      const rowTimestamp = this.parseTimeString(rowTimeStr);
+      if (!rowTimestamp) return false;
+      
+      const rowTime = new Date(rowTimestamp * 1000);
+      return rowTime >= startTime;
+    });
+    
+    // Wenn zu wenige Daten gefiltert wurden, nimm mehr Daten
+    if (filteredRows.length < 50 && dataRows.length > 50) {
+      // Nimm die letzten 100 Datenpunkte oder alle verfügbaren
+      const minDataPoints = Math.min(100, dataRows.length);
+      const additionalRows = dataRows.slice(-minDataPoints);
+      return [header, ...additionalRows];
+    }
+    
+    // Füge Header hinzu
+    return [header, ...filteredRows];
+  }
+
+  private pickSliceCount(range?: string): number {
+    switch ((range || '').toLowerCase()) {
+      case '1d': return 288;   // 24 Stunden * 12 (5-Minuten-Intervalle)
+      case '1w': return 336;   // 7 Tage * 48 (5-Minuten-Intervalle)
+      case '1m': return 1440;  // 30 Tage * 48 (5-Minuten-Intervalle)
+      case '1y': return 365;   // 365 Tage (täglich)
+      case '5y': return 1825;  // 5 Jahre * 365 Tage
+      case 'max':
+      default:
+        return Infinity;
+    }
+  }
+
+  // Hilfsfunktionen für Spaltenerkennung
+  private findPriceColumnIndex(headers: string[]): number {
+    const priceKeywords = ['price', 'close', 'last', 'current', 'value', 'kurs', 'zamkniecie'];
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toLowerCase();
+      if (priceKeywords.some(keyword => header.includes(keyword))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private findTimeColumnIndex(headers: string[]): number {
+    const timeKeywords = ['time', 'date', 'timestamp', 'zeit', 'datum', 'data'];
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toLowerCase();
+      if (timeKeywords.some(keyword => header.includes(keyword))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private findVolumeColumnIndex(headers: string[]): number {
+    const volumeKeywords = ['volume', 'vol', 'volumen', 'wolumen'];
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i].toLowerCase();
+      if (volumeKeywords.some(keyword => header.includes(keyword))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private parseTimeString(timeStr: string): number | null {
+    try {
+      // Versuche verschiedene Zeitformate zu parsen
+      const date = new Date(timeStr);
+      if (!isNaN(date.getTime())) {
+        return Math.floor(date.getTime() / 1000);
+      }
+      
+      // Fallback: Aktueller Zeitstempel
+      return Math.floor(Date.now() / 1000);
+    } catch (error) {
+      return Math.floor(Date.now() / 1000);
     }
   }
 }
