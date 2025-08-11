@@ -6,15 +6,15 @@
   >
     <ion-menu
       *ngIf="!isAuthRoute"
-      contentId="main-content"
+      contentId="main-content-pc"
       type="overlay"
-      class="app-menu"
+      class="app-menu app-container"
       [class.collapsed]="isMenuCollapsed"
     >
       <ion-header>
         <ion-toolbar class="menu-toolbar">
-          <div class="brand" (click)="toggleMenuCollapsed()">
-            <span class="brand-text">stronks</span>
+          <div class="brand" style="margin-left: 25px;" (click)="toggleMenuCollapsed()">
+            <span class="brand-text">Menu</span>
           </div>
           <ion-buttons slot="end">
             <ion-button fill="clear" (click)="toggleMenuCollapsed()">
@@ -49,6 +49,11 @@
               <ion-icon slot="start" name="bar-chart-outline"></ion-icon>
               <ion-label *ngIf="!isMenuCollapsed">Markets</ion-label>
             </ion-item>
+            <ion-item routerLink="/wallet/wallet" routerDirection="root">
+              <ion-icon slot="start" name="wallet-outline"></ion-icon>
+              <ion-label *ngIf="!isMenuCollapsed">Wallet</ion-label>
+            </ion-item>
+
             <ion-item routerLink="/rewards" routerDirection="root" lines="none">
               <ion-icon slot="start" name="gift-outline"></ion-icon>
               <ion-label *ngIf="!isMenuCollapsed">Daily Rewards</ion-label>
@@ -65,7 +70,7 @@
         </ion-list>
 
         <div class="menu-footer">
-          <ion-button expand="block" color="danger" (click)="logout()">
+          <ion-button expand="block" class="ion-danger-btn" color="danger" (click)="logout()">
             <ion-icon name="log-out-outline" slot="start"></ion-icon>
             <span *ngIf="!isMenuCollapsed">Abmelden</span>
           </ion-button>

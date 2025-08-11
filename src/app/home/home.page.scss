@@ -40,7 +40,6 @@ canvas {
   background: transparent;
   color: var(--secondary-white);
   border-radius: 14px 14px 0 0;
-  border-bottom: 1px solid rgba(48, 235, 126, 0.25);
 }
 
 .custom-card-content {
@@ -67,7 +66,6 @@ canvas {
 }
 
 .custom-content {
-  --background: var(--secondary-navy);
   --padding: 20px;
 }
 
@@ -167,6 +165,7 @@ ion-content {
 .balance-container {
   display: flex;
   justify-content: space-between;
+  padding: 16px;
   gap: 16px;
 }
 @media (max-width: 767px) {

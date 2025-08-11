@@ -4,7 +4,7 @@
 }
 
 .app-menu {
-  --ion-background-color: var(--secondary-navy);
+  --background: rgba(26, 26, 46, 0);
   --ion-text-color: var(--secondary-white);
   /* Kritisch: echte Breite des Menüs über CSS-Variablen von Ion Menu steuern */
   --width: var(--menu-width);
@@ -20,7 +20,6 @@
 }
 
 .menu-toolbar {
-  --background: var(--secondary-navy);
   --color: var(--secondary-white);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -113,4 +112,14 @@ ion-split-pane {
 ion-split-pane.menu-collapsed {
   --side-width: var(--menu-width-collapsed);
   --side-width-lg: var(--menu-width-collapsed);
+}
+
+.ion-danger-btn{
+  --box-shadow: 0 6px 18px rgba(235, 48, 48, 0.35);
+}
+
+@media (max-width: 992px) {
+  .app-container{
+    display: none;
+  }
 }
