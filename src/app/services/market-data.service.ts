@@ -4,7 +4,7 @@ import { Observable, of, map, catchError, switchMap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface NormalizedChartResponse {
-  source: 'coingecko' | 'alphavantage' | 'binance';
+  source: 'coingecko' | 'alphavantage' | 'binance' | 'yahoo' | 'stooq' | 'fmp';
   data: any; // Yahoo-Chart-Format
 }
 
@@ -18,6 +18,7 @@ export interface MarketAsset {
 @Injectable({ providedIn: 'root' })
 export class MarketDataService {
   private alphaVantageApiKey = (environment as any).alphaVantageApiKey as string | undefined;
+  private fmpApiKey = (environment as any).fmpApiKey as string | undefined;
 
   constructor(private http: HttpClient) {}
 
@@ -102,8 +103,16 @@ export class MarketDataService {
         catchError(() => of(null))
       );
     }
-    // Für Aktien: Alpha Vantage TIME_SERIES_DAILY und letzten Close nehmen
-    if (!this.alphaVantageApiKey) return of(null);
+    // Für Aktien: Zuerst Alpha Vantage, ansonsten Yahoo als Fallback
+    if (!this.alphaVantageApiKey) {
+      return this.fetchYahooChart(symbol, '1d', '5m').pipe(
+        map(res => {
+          const prices = res?.data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+          return prices.length ? prices[prices.length - 1] : null;
+        }),
+        catchError(() => of(null))
+      );
+    }
     const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&apikey=${this.alphaVantageApiKey}`;
     return this.http.get<any>(url).pipe(
       map(res => {
@@ -111,9 +120,18 @@ export class MarketDataService {
         if (!key) return null;
         const series = res[key];
         const last = Object.values(series)[0] as any;
-        return last ? parseFloat(last['4. close']) : null;
+        return last ? parseFloat((last as any)['4. close']) : null;
       }),
-      catchError(() => of(null))
+      catchError(() =>
+        // Fallback auf Yahoo, falls Alpha Vantage fehl schlägt (Rate-Limit etc.)
+        this.fetchYahooChart(symbol, '1d', '5m').pipe(
+          map(res => {
+            const prices = res?.data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+            return prices.length ? prices[prices.length - 1] : null;
+          }),
+          catchError(() => of(null))
+        )
+      )
     );
   }
 
@@ -199,6 +217,108 @@ export class MarketDataService {
         catchError(() => of(null))
       );
     }
+  }
+
+  // Yahoo-Fallback (für Crypto und Aktien)
+  fetchYahooChart(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
+    return this.http.get<any>(url).pipe(
+      map((res) => {
+        if (res?.chart?.result?.[0]) {
+          return { source: 'yahoo' as const, data: res };
+        }
+        return null;
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  // Stooq-Fallback (EOD, kein Key). Degradiert bei Intraday-Anfrage auf Daily.
+  fetchStockChartStooq(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
+    // Stooq bietet CSV: https://stooq.com/q/d/l/?s=aapl&i=d
+    // Wir nutzen Daily-Daten unabhängig vom angefragten Intervall (Fallback)
+    const stooqSymbol = this.normalizeSymbolForStooq(symbol);
+    if (!stooqSymbol) return of(null);
+    const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol)}&i=d`;
+    return this.http.get(url, { responseType: 'text' as 'json' }).pipe(
+      map((csvText: any) => {
+        const lines = String(csvText).trim().split(/\r?\n/);
+        if (lines.length <= 1) return null;
+        const header = lines[0].toLowerCase();
+        if (!header.includes('date') || !header.includes('close')) return null;
+        const timestamps: number[] = [];
+        const prices: number[] = [];
+        const volumes: number[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].split(',');
+          if (row.length < 5) continue;
+          const dateStr = row[0];
+          const closeStr = row[4];
+          const volumeStr = row[5] ?? '0';
+          const t = Math.floor(new Date(dateStr).getTime() / 1000);
+          const c = parseFloat(closeStr);
+          const v = parseFloat(volumeStr) || 0;
+          if (!isFinite(t) || !isFinite(c)) continue;
+          timestamps.push(t);
+          prices.push(c);
+          volumes.push(v);
+        }
+        if (!prices.length) return null;
+        const data = this.toYahooChartFormat(timestamps, prices, volumes);
+        return { source: 'stooq' as const, data };
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  private normalizeSymbolForStooq(symbol: string): string | null {
+    // Stooq verwendet lower-case Symbole, Punkte oft zu '-' oder ohne Suffixe
+    const s = symbol.trim().toLowerCase();
+    // Crypto ignorieren
+    if (/-usd$/.test(s)) return null;
+    // BRK.B -> brk-b, RDS.A -> rds-a etc.
+    return s.replace(/\./g, '-');
+  }
+
+  // Financial Modeling Prep (FMP) optionaler Fallback (einfacher API-Key, demo funktioniert eingeschränkt)
+  fetchStockChartFmp(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
+    const apiKey = this.fmpApiKey || 'demo';
+    // Intraday: 1, 5, 15, 30 min
+    const intradayMap: Record<string, string> = { '1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '60m': '1hour', '1h': '1hour' };
+    const fmpInterval = intradayMap[interval.toLowerCase()];
+    if (fmpInterval) {
+      const url = `https://financialmodelingprep.com/api/v3/historical-chart/${fmpInterval}/${encodeURIComponent(symbol)}?apikey=${apiKey}`;
+      return this.http.get<any[]>(url).pipe(
+        map((rows) => {
+          if (!Array.isArray(rows) || rows.length === 0) return null;
+          // FMP gibt jüngste zuerst zurück
+          const sorted = rows.slice().reverse();
+          const timestamps = sorted.map(r => Math.floor(new Date(r.date).getTime() / 1000));
+          const prices = sorted.map(r => parseFloat(r.close));
+          const volumes = sorted.map(r => parseFloat(r.volume ?? 0));
+          if (!prices.length) return null;
+          const data = this.toYahooChartFormat(timestamps, prices, volumes);
+          return { source: 'fmp' as const, data };
+        }),
+        catchError(() => of(null))
+      );
+    }
+    // Daily
+    const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${encodeURIComponent(symbol)}?serietype=line&apikey=${apiKey}`;
+    return this.http.get<any>(url).pipe(
+      map((res) => {
+        const rows = res?.historical as any[];
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const sorted = rows.slice().reverse();
+        const timestamps = sorted.map(r => Math.floor(new Date(r.date).getTime() / 1000));
+        const prices = sorted.map(r => parseFloat(r.close));
+        const volumes = sorted.map(_r => 0);
+        if (!prices.length) return null;
+        const data = this.toYahooChartFormat(timestamps, prices, volumes);
+        return { source: 'fmp' as const, data };
+      }),
+      catchError(() => of(null))
+    );
   }
 
   private normalizeAlphaVantageIntraday(res: any): NormalizedChartResponse | null {

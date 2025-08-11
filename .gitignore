@@ -117,3 +117,12 @@ ui-debug.log
 /ios 
 /capacitor.config.ts
 
+# Protect Firebase Admin SDK credentials (common download names)
+*firebase-adminsdk-*.json
+functions/*firebase-adminsdk-*.json
+functions/**/serviceAccount*.json
+
+# Local data dumps (avoid leaking test/import data)
+web053.json
+scripts/**/*.secret.json
+
