@@ -30,6 +30,10 @@ const routes: Routes = [
         loadChildren: () => import('../pages/rewards/rewards.module').then(m => m.RewardsPageModule),
       },
       {
+        path: 'asset-detail/:symbol',
+        loadChildren: () => import('../pages/asset-detail/asset-detail.module').then(m => m.AssetDetailPageModule),
+      },
+      {
         path: '',
         redirectTo: 'home',
         pathMatch: 'full',
