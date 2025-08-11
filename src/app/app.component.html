@@ -2,32 +2,19 @@
   <ion-split-pane
     contentId="main-content"
     when="lg"
-    [class.menu-collapsed]="isMenuCollapsed"
   >
     <ion-menu
       *ngIf="!isAuthRoute"
       contentId="main-content"
       type="overlay"
       class="app-menu"
-      [class.collapsed]="isMenuCollapsed"
       side="start"
     >
       <ion-header>
         <ion-toolbar class="menu-toolbar">
-          <div class="brand" (click)="toggleMenuCollapsed()">
+          <div class="brand">
             <span class="brand-text">Menu</span>
           </div>
-          <ion-buttons slot="end">
-            <ion-button fill="clear" (click)="toggleMenuCollapsed()">
-              <ion-icon
-                [name]="
-                  isMenuCollapsed
-                    ? 'chevron-forward-outline'
-                    : 'chevron-back-outline'
-                "
-              ></ion-icon>
-            </ion-button>
-          </ion-buttons>
         </ion-toolbar>
       </ion-header>
 
