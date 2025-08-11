@@ -7,8 +7,8 @@ import { environment } from '../../environments/environment';
 @Injectable()
 export class CorsInterceptor implements HttpInterceptor {
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // Füge CORS-Header für lokale Entwicklung hinzu
-    if (!environment.production) {
+    // Füge CORS-Header NUR für lokale APIs hinzu, nicht für externe APIs
+    if (!environment.production && this.isLocalApi(request.url)) {
       request = request.clone({
         setHeaders: {
           'Access-Control-Allow-Origin': '*',
@@ -27,5 +27,14 @@ export class CorsInterceptor implements HttpInterceptor {
         return throwError(() => error);
       })
     );
+  }
+
+  private isLocalApi(url: string): boolean {
+    // Prüfe ob es eine lokale API ist (localhost, relative URL, oder eigene Domain)
+    return url.startsWith('/') || 
+           url.includes('localhost') || 
+           url.includes('127.0.0.1') ||
+           url.includes('stronks-d3008.web.app') ||
+           url.includes('stronks-d3008.firebaseapp.com');
   }
 } 
