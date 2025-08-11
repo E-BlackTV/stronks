@@ -1,0 +1,63 @@
+.price-info {
+  text-align: right;
+
+  .price {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 2px;
+  }
+
+  .price-change {
+    font-size: 0.8em;
+
+    &.positive {
+      color: var(--ion-color-success);
+    }
+
+    &.negative {
+      color: var(--ion-color-danger);
+    }
+  }
+}
+
+.source-info,
+.update-info {
+  font-size: 0.8em;
+  color: var(--ion-color-medium);
+  margin: 2px 0;
+
+  ion-icon {
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--ion-color-medium);
+
+  ion-icon {
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 16px 0 8px 0;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 8px 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+  }
+}
+
+.list-tight {
+  ion-item {
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+  }
+}

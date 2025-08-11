@@ -36,13 +36,13 @@ export interface Asset {
 
 export interface CachedData {
   id?: string;
-  symbol: string;
-  rangePeriod: string;
-  intervalPeriod: string;
-  data: any;
-  type: string;
-  lastUpdated: Timestamp;
-  createdAt: Timestamp;
+  sourceId: string;     // Eindeutige ID der Datenquelle
+  type: "crypto" | "stock" | "generic";  // Datentyp
+  url: string;          // URL der ursprünglichen Datenquelle
+  fetchedAt: Timestamp; // Zeitstempel des Abrufs
+  rows: Array<{         // Array der Tabellendaten
+    cells: string[];    // Jede Zeile enthält ein Array von Zellen
+  }>;
 }
 
 export interface User {
@@ -186,42 +186,73 @@ export class FirestoreService {
   // ==================== CACHED DATA ====================
 
   /**
-   * Cached Data für ein Symbol abrufen
+   * Gecachte Daten abrufen
    */
-  getCachedData(symbol: string, rangePeriod?: string, intervalPeriod?: string): Observable<CachedData[]> {
+  getCachedData(type?: "crypto" | "stock" | "generic", limitCount: number = 100): Observable<CachedData[]> {
     const cachedDataRef = collection(this.firestore, 'cached_data');
-    let q = query(cachedDataRef, where('symbol', '==', symbol));
     
-    if (rangePeriod) {
-      q = query(q, where('rangePeriod', '==', rangePeriod));
-    }
-    if (intervalPeriod) {
-      q = query(q, where('intervalPeriod', '==', intervalPeriod));
-    }
-    
-    q = query(q, orderBy('lastUpdated', 'desc'), limit(10));
-    
-    return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => 
-        snapshot.docs.map(doc => ({
+    // Verwende eine einfachere Abfrage ohne zusammengesetzten Index
+    return from(getDocs(cachedDataRef)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        let allData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        } as CachedData))
-      )
+        } as CachedData));
+        
+        // Filtere nach Typ, falls angegeben
+        if (type) {
+          allData = allData.filter(data => data.type === type);
+        }
+        
+        // Sortiere nach fetchedAt (neueste zuerst)
+        allData.sort((a, b) => {
+          const aTime = a.fetchedAt?.toMillis?.() || 0;
+          const bTime = b.fetchedAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
+        
+        // Limitiere die Anzahl der Einträge
+        return allData.slice(0, limitCount);
+      })
     );
   }
 
   /**
-   * Neueste Cached Data für ein Symbol
+   * Neueste gecachte Daten für einen bestimmten Typ
    */
-  getLatestCachedData(symbol: string, rangePeriod: string, intervalPeriod: string): Observable<CachedData | null> {
+  getLatestCachedData(type: "crypto" | "stock" | "generic"): Observable<CachedData[]> {
+    const cachedDataRef = collection(this.firestore, 'cached_data');
+    
+    // Verwende eine einfachere Abfrage ohne zusammengesetzten Index
+    return from(getDocs(cachedDataRef)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        const allData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as CachedData));
+        
+        // Filtere nach Typ und sortiere nach fetchedAt
+        return allData
+          .filter(data => data.type === type)
+          .sort((a, b) => {
+            const aTime = a.fetchedAt?.toMillis?.() || 0;
+            const bTime = b.fetchedAt?.toMillis?.() || 0;
+            return bTime - aTime; // Neueste zuerst
+          })
+          .slice(0, 50); // Limitiere auf 50 Einträge
+      })
+    );
+  }
+
+  /**
+   * Gecachte Daten für eine spezifische Quelle abrufen
+   */
+  getCachedDataBySource(sourceId: string): Observable<CachedData | null> {
     const cachedDataRef = collection(this.firestore, 'cached_data');
     const q = query(
       cachedDataRef,
-      where('symbol', '==', symbol),
-      where('rangePeriod', '==', rangePeriod),
-      where('intervalPeriod', '==', intervalPeriod),
-      orderBy('lastUpdated', 'desc'),
+      where('sourceId', '==', sourceId),
+      orderBy('fetchedAt', 'desc'),
       limit(1)
     );
     
@@ -240,15 +271,13 @@ export class FirestoreService {
   }
 
   /** cached_data schreiben/aktualisieren */
-  upsertCachedData(entry: { symbol: string; rangePeriod: string; intervalPeriod: string; data: any; type?: string }): Observable<void> {
-    const { symbol, rangePeriod, intervalPeriod, data, type } = entry;
+  upsertCachedData(entry: { sourceId: string; type: "crypto" | "stock" | "generic"; url: string; rows: Array<{ cells: string[] }> }): Observable<void> {
+    const { sourceId, type, url, rows } = entry;
     const cachedDataRef = collection(this.firestore, 'cached_data');
     const q = query(
       cachedDataRef,
-      where('symbol', '==', symbol),
-      where('rangePeriod', '==', rangePeriod),
-      where('intervalPeriod', '==', intervalPeriod),
-      orderBy('lastUpdated', 'desc'),
+      where('sourceId', '==', sourceId),
+      orderBy('fetchedAt', 'desc'),
       limit(1)
     );
     return from(getDocs(q)).pipe(
@@ -256,21 +285,20 @@ export class FirestoreService {
         if (!snapshot.empty) {
           const existing = snapshot.docs[0];
           const ref = doc(this.firestore, 'cached_data', existing.id);
-          const existingData = existing.data() as any;
           return from(updateDoc(ref, {
-            data,
-            type: type ?? existingData['type'] ?? 'chart',
-            lastUpdated: serverTimestamp(),
+            rows,
+            url,
+            type,
+            fetchedAt: serverTimestamp(),
           })) as unknown as Observable<void>;
         }
         return from(addDoc(cachedDataRef, {
-          symbol,
-          rangePeriod,
-          intervalPeriod,
-          data,
-          type: type ?? 'chart',
+          sourceId,
+          type,
+          url,
+          rows,
           createdAt: serverTimestamp(),
-          lastUpdated: serverTimestamp(),
+          fetchedAt: serverTimestamp(),
         })).pipe(map(() => void 0));
       })
     );
@@ -553,4 +581,4 @@ export class FirestoreService {
       throw error;
     };
   }
-} 
+}

@@ -355,6 +355,7 @@ export class MarketDataService {
       case '1d':
       case 'DAY': return 1;
       case '5d':
+      case '1w':
       case 'WEEK': return 7;
       case '1m':
       case 'MONTH': return 30;
@@ -366,6 +367,8 @@ export class MarketDataService {
       case 'YEAR': return 365;
       case '5y':
       case 'FIVE_YEARS': return 1825;
+      case 'max':
+      case 'MAX': return 'max';
       default: return 30;
     }
   }

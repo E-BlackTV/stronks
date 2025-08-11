@@ -15,19 +15,12 @@
     </ion-label>
   </ion-item>
 
-  <!-- Banner (kurz) -->
-  <ion-note color="medium" class="ion-margin-bottom">
-    Nur aktuell synchronisierte Kryptowährungen werden angezeigt. Aktien und
-    nicht synchronisierte Assets sind vorübergehend ausgeblendet.
-  </ion-note>
-
   <!-- Info-Hinweis (mittel) + Tooltip -->
   <ion-item lines="none" class="ion-margin-bottom">
     <ion-label>
-      In dieser Ansicht zeigen wir ausschließlich Kryptowährungen, die wir über
-      unseren eigenen Datenimport (z. B. Binance) heruntergeladen und zuletzt
-      aktualisiert haben. Einige Symbole können fehlen. Wir erweitern die
-      Abdeckung laufend.
+      In dieser Ansicht zeigen wir alle verfügbaren Marktdaten aus unserer
+      Datenbank an. Die Daten werden automatisch aus verschiedenen Quellen
+      geladen und aktualisiert.
     </ion-label>
     <ion-button fill="clear" slot="end" id="info-tip">
       <ion-icon name="information-circle-outline"></ion-icon>
@@ -35,9 +28,10 @@
   </ion-item>
   <ion-popover trigger="info-tip" triggerAction="click">
     <ng-template>
-      <ion-content class="ion-padding"
-        >Zeigt nur intern synchronisierte Kryptowerte.</ion-content
-      >
+      <ion-content class="ion-padding">
+        Zeigt alle verfügbaren Marktdaten aus der Datenbank an, einschließlich
+        Krypto, Aktien und andere Finanzinstrumente.
+      </ion-content>
     </ng-template>
   </ion-popover>
 
@@ -88,17 +82,106 @@
       <ion-label>
         <h3>{{ asset.name }}</h3>
         <p>{{ asset.symbol }}</p>
+        <p *ngIf="asset.sourceId" class="source-info">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          {{ asset.sourceId }}
+        </p>
+        <p *ngIf="asset.lastUpdated" class="update-info">
+          <ion-icon name="time-outline"></ion-icon>
+          {{ asset.lastUpdated | date:'short' }}
+        </p>
       </ion-label>
-      <ion-badge slot="end"
-        >{{ latestPrices[asset.symbol] | number:'1.2-2' }}</ion-badge
-      >
+      <div slot="end" class="price-info">
+        <div class="price">{{ asset.price | number:'1.2-2' || 'N/A' }}</div>
+        <div
+          *ngIf="asset.priceChange !== undefined"
+          class="price-change"
+          [class.positive]="asset.priceChange >= 0"
+          [class.negative]="asset.priceChange < 0"
+        >
+          {{ asset.priceChange >= 0 ? '+' : '' }}{{ asset.priceChange |
+          number:'1.2-2' }} ({{ asset.priceChangePercent | number:'1.1-1' }}%)
+        </div>
+      </div>
     </ion-item>
   </ion-list>
+
+  <!-- Keine Daten verfügbar -->
+  <div *ngIf="!loading && filteredAssets.length === 0" class="no-data">
+    <ion-icon
+      name="alert-circle-outline"
+      size="large"
+      color="medium"
+    ></ion-icon>
+    <h3>Keine Marktdaten verfügbar</h3>
+    <p>Es wurden keine gecachten Marktdaten in der Datenbank gefunden.</p>
+    <p>Verwende die Debug-Buttons unten, um die Datenbank zu überprüfen.</p>
+  </div>
 
   <!-- Optional detailliert (Modal/FAQ) -->
   <ion-button expand="block" fill="outline" id="faq-open" class="ion-margin-top"
     >Mehr Infos</ion-button
   >
+
+  <!-- Debug-Button (nur für Entwicklung) -->
+  <ion-button
+    expand="block"
+    fill="clear"
+    color="medium"
+    class="ion-margin-top"
+    (click)="debugAllCachedData()"
+  >
+    Debug: Alle gecachten Daten anzeigen
+  </ion-button>
+
+  <!-- Refresh-Button -->
+  <ion-button
+    expand="block"
+    fill="outline"
+    color="primary"
+    class="ion-margin-top"
+    (click)="refreshData()"
+    [disabled]="loading"
+  >
+    <ion-icon name="refresh-outline" slot="start"></ion-icon>
+    {{ loading ? 'Aktualisiere...' : 'Daten aktualisieren' }}
+  </ion-button>
+
+  <!-- Test-Button -->
+  <ion-button
+    expand="block"
+    fill="outline"
+    color="secondary"
+    class="ion-margin-top"
+    (click)="testFirestoreConnection()"
+  >
+    <ion-icon name="bug-outline" slot="start"></ion-icon>
+    Firestore-Verbindung testen
+  </ion-button>
+
+  <!-- Collections überprüfen -->
+  <ion-button
+    expand="block"
+    fill="outline"
+    color="tertiary"
+    class="ion-margin-top"
+    (click)="checkAllCollections()"
+  >
+    <ion-icon name="folder-outline" slot="start"></ion-icon>
+    Alle Collections überprüfen
+  </ion-button>
+
+  <!-- Datenstruktur analysieren -->
+  <ion-button
+    expand="block"
+    fill="outline"
+    color="warning"
+    class="ion-margin-top"
+    (click)="analyzeDataStructure()"
+  >
+    <ion-icon name="analytics-outline" slot="start"></ion-icon>
+    Datenstruktur analysieren
+  </ion-button>
   <ion-modal trigger="faq-open">
     <ng-template>
       <ion-header>
