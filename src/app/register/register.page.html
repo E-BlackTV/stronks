@@ -5,8 +5,10 @@
     </ion-card-header>
       <form [formGroup]="registerForm" (ngSubmit)="onRegister()" style="margin-bottom: 25px">
         <ion-item [class.ion-invalid]="hasError('username')" class="form-group">
-          <ion-label position="stacked">Benutzername *</ion-label>
+          <ion-icon name="person-outline" class="ion-mg-right"></ion-icon>
           <ion-input
+            type="text"
+            class="ion-text-size"
             formControlName="username"
             placeholder="Dein Benutzername"
             [class.ion-invalid]="hasError('username')"
@@ -18,7 +20,7 @@
         </ion-item>
 
         <ion-item [class.ion-invalid]="hasError('email')">
-          <ion-label position="stacked">E-Mail *</ion-label>
+          <ion-icon name="mail-outline" class="ion-mg-right"></ion-icon>
           <ion-input
             type="email"
             formControlName="email"
@@ -30,11 +32,11 @@
         </ion-item>
 
         <ion-item [class.ion-invalid]="hasError('password')">
-          <ion-label position="stacked">Passwort *</ion-label>
+          <ion-icon name="lock-closed-outline" class="ion-mg-right"></ion-icon>
           <ion-input
             type="password"
             formControlName="password"
-            placeholder="Mindestens 6 Zeichen"
+            placeholder="Gibt dein Passwort ein"
             [class.ion-invalid]="hasError('password')"
           >
           </ion-input>
@@ -46,7 +48,7 @@
         <ion-item
           [class.ion-invalid]="hasError('confirmPassword') || passwordMismatchError"
         >
-          <ion-label position="stacked">Passwort bestätigen *</ion-label>
+        <ion-icon name="lock-closed-outline" class="ion-mg-right"></ion-icon>
           <ion-input
             type="password"
             formControlName="confirmPassword"
