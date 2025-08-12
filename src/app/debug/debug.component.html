@@ -8,26 +8,36 @@
   <ion-list>
     <!-- Apple Scraping Section -->
     <ion-item>
+      <div class="btns-container">
+      <div class="box box1">
       <ion-label>
         <h2>🍎 Apple Aktien-Daten Scraping</h2>
         <p>Lädt alle verfügbaren AAPL-Daten von Alpha Vantage und speichert sie in separater, optimierter Struktur</p>
       </ion-label>
+      </div>
+      <div class="box box2">
       <ion-button
+        class="color-text resp-btn"
         slot="end"
         (click)="startScraping()"
         [disabled]="scrapingLoading"
       >
         {{ scrapingLoading ? "Scrape..." : "Apple-Daten laden" }}
       </ion-button>
+      </div>
+      </div>
     </ion-item>
 
     <!-- Apple Optimized Scraping Section -->
     <ion-item>
-      <ion-label>
-        <h2>🍎 Apple Optimiertes Scraping</h2>
-        <p>Lädt 5 Jahre AAPL-Daten in separater, kompakter Struktur</p>
-      </ion-label>
-      <div slot="end">
+      <div class="btns-container">
+      <div class="box box1">
+        <ion-label>
+          <h2>🍎 Apple Optimiertes Scraping</h2>
+          <p>Lädt 5 Jahre AAPL-Daten in separater, kompakter Struktur</p>
+        </ion-label>
+      </div>
+      <div slot="end" class="box box2">
         <ion-button
           size="small"
           color="success"
@@ -39,6 +49,7 @@
         <ion-button
           size="small"
           color="warning"
+          class="ion-warning-btn"
           (click)="handleReloadAllAppleData()"
           [disabled]="scrapingLoading"
         >
@@ -46,12 +57,14 @@
         </ion-button>
         <ion-button
           size="small"
+          class="ion-danger-btn"
           color="danger"
           (click)="handleClearOldAppleData()"
           [disabled]="scrapingLoading"
         >
           Alte löschen
         </ion-button>
+      </div>
       </div>
     </ion-item>
 
@@ -142,13 +155,19 @@
 
     <!-- Original Debug Items -->
     <ion-item>
+      <div class="btns-container">
+      <div class="box box1">
       <ion-label>
         <h2>Firebase Diagnose</h2>
         <p>Testet die Firebase-Konfiguration und Verbindung</p>
       </ion-label>
+      </div>
+      <div class="box box2">
       <ion-button slot="end" (click)="runDiagnostic()" [disabled]="loading">
         {{ loading ? "Teste..." : "Diagnose starten" }}
       </ion-button>
+      </div>
+    </div>
     </ion-item>
 
     <ion-item *ngIf="diagnosticResults.length > 0">
@@ -178,13 +197,19 @@
     </ion-item>
 
     <ion-item>
+       <div class="btns-container">
+      <div class="box box1">
       <ion-label>
         <h2>Einfacher Login-Test</h2>
         <p>Testet die Registrierung und Anmeldung</p>
       </ion-label>
+      </div>
+      <div class="box box2">
       <ion-button slot="end" (click)="testAuth()" [disabled]="authLoading">
         {{ authLoading ? "Teste..." : "Auth testen" }}
       </ion-button>
+      </div>
+    </div>
     </ion-item>
 
     <ion-item *ngIf="authResult">
@@ -199,16 +224,23 @@
     </ion-item>
 
     <ion-item>
+      <div class="btns-container">
+      <div class="box box1">
       <ion-label>
         <h2>Design-Test</h2>
         <p>Testet das neue Design</p>
       </ion-label>
+      </div>
+      <div>
       <ion-button slot="end" (click)="showDesignTest = !showDesignTest">
         {{ showDesignTest ? "Verstecken" : "Anzeigen" }}
       </ion-button>
+      </div>
+      </div>
     </ion-item>
 
     <ion-item *ngIf="showDesignTest">
+      
       <ion-label>
         <h2>Design-Test Formular</h2>
         <form [formGroup]="testForm" (ngSubmit)="onTestSubmit()">
@@ -254,13 +286,19 @@
     </ion-item>
 
     <ion-item>
+      <div class="btns-container">
+      <div class="box box1">
       <ion-label>
         <h2>Konfiguration anzeigen</h2>
         <p>Zeigt die aktuelle Firebase-Konfiguration</p>
       </ion-label>
+      </div>
+      <div class="box box2">
       <ion-button slot="end" (click)="showConfig()">
         Konfiguration anzeigen
       </ion-button>
+      </div>
+      </div>
     </ion-item>
 
     <ion-item *ngIf="showConfigData">

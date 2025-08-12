@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { TabsPage } from './tabs.page';
 import { AuthGuard } from '../guards/auth.guard'; // falls benötigt
+import { DebugComponent } from '../debug/debug.component';
 
 const routes: Routes = [
   {
@@ -39,6 +40,10 @@ const routes: Routes = [
         redirectTo: 'home',
         pathMatch: 'full',
       },
+      {
+          path: 'debug',
+          component: DebugComponent,
+        },
     ],
   },
 ];

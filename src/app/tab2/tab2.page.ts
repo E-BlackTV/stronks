@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { TradePopupComponent } from '../components/trade-popup/trade-popup.component';
 import { TradingService } from '../services/trading.service';
@@ -22,6 +22,7 @@ interface ListAsset {
   styleUrls: ['tab2.page.scss']
 })
 export class Tab2Page implements OnInit {
+   isMobile = false;
   assets: ListAsset[] = [];
   filteredAssets: ListAsset[] = [];
   selectedType: 'all' | 'crypto' | 'stock' | 'forex' = 'all';
@@ -42,6 +43,7 @@ export class Tab2Page implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.checkScreenSize();
     this.loading = true;
 
     // Lade zuerst die Assets aus der assets-Collection
@@ -67,6 +69,11 @@ export class Tab2Page implements OnInit {
         this.loading = false;
       }
     }, 3000);
+  }
+
+  @HostListener('window:resize')
+  checkScreenSize() {
+    this.isMobile = window.innerWidth < 500;
   }
 
   // Debug-Funktion: Zeige alle verfügbaren gecachten Daten für ein Symbol

@@ -317,12 +317,48 @@ ion-item .input-wrapper {
   --box-shadow: 0 6px 18px rgba(235, 48, 48, 0.35);
 }
 
+.ion-warning-btn{
+  --box-shadow: 0 6px 18px rgba(235, 198, 48, 0.35);
+}
+
 .box-shadow-off{
   --box-shadow: 0 6px 18px rgba(48, 235, 126, 0);
 }
 
+.color-text{
+  color: var(--secondary-navy)
+}
+
 .ion-mg-right {
   margin-right: 10px;
+}
+
+.resp-btn {
+  width: 30%;
+  font-size: 0.8rem;
+}
+
+.btns-container {
+  display: flex;
+  flex-direction: column; /* stapelt die Divs vertikal */
+  margin-bottom: 10px;
+}
+
+.box {
+  flex: 1; /* nimmt gleichen Platz ein */
+  display: flex;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.box1 {
+ text-align: left;
+ align-items: left;
+ justify-content: left;
+}
+
+.box2 {
+
 }
 
 .ion-text-size{
