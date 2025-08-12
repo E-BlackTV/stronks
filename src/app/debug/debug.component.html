@@ -2,6 +2,11 @@
   <ion-header>
     <ion-toolbar class="custom-toolbar">
       <ion-title class="custom-title">Firebase Debug & Diagnose</ion-title>
+      <ion-buttons slot="end">
+          <ion-button (click)="goBack()">
+            <ion-icon name="arrow-back"></ion-icon>
+          </ion-button>
+        </ion-buttons>
     </ion-toolbar>
   </ion-header>
 
@@ -17,7 +22,7 @@
       </div>
       <div class="box box2">
       <ion-button
-        class="color-text resp-btn"
+        class="color-text resp-btn resp-btn-single"
         slot="end"
         (click)="startScraping()"
         [disabled]="scrapingLoading"

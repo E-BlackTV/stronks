@@ -5,6 +5,8 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { collection, addDoc, getDocs, query, orderBy, limit, Timestamp, deleteDoc } from '@angular/fire/firestore';
 import { Firestore } from '@angular/fire/firestore';
 import { environment } from '../../environments/environment';
+import { ModalController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 
 @Component({
   selector: 'app-debug',
@@ -29,6 +31,8 @@ export class DebugComponent implements OnInit, OnDestroy {
   isLiveMode = false;
 
   constructor(
+    private navCtrl: NavController,
+    private modalController: ModalController,
     private firebaseTestService: FirebaseTestService,
     private firebaseAdminService: FirebaseAdminService,
     private firestore: Firestore,
@@ -45,6 +49,10 @@ export class DebugComponent implements OnInit, OnDestroy {
     this.loadFirebaseData();
     
     // Automatisches Laden der Apple-Daten entfernt - wird nur noch manuell ausgeführt
+  }
+
+  goBack() {
+    this.navCtrl.back();
   }
 
   ngOnDestroy() {

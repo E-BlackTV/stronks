@@ -132,3 +132,9 @@ li {
   --background: #6c757d;
   --box-shadow: none;
 }
+
+@media (max-width: 650px) {
+  .resp-btn-single{
+    width: 100%;
+  }
+}

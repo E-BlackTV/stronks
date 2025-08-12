@@ -16,7 +16,7 @@
   </ion-card>
 
   <ion-card class="balance-card custom-card">
-    <ion-card-header class="custom-card-header">
+    <ion-card-header class="custom-card-header custom-port-header">
       <ion-card-subtitle class="custom-subtitle"
         >Portfoliowert</ion-card-subtitle
       >
@@ -49,27 +49,43 @@
       </ion-card-header>
 
       <ion-card-content class="custom-card-content">
-        <div>
-          <p>Aktive Positionen: {{ userInvestments.length || 0 }}</p>
+        <div class="btns-container">
+          <div class="box box1">
+            <ion-label>
+              <h2>Aktuelle Investitionen</h2>
+              <p>Hier siehst du deine aktiven Investitionen und deren Performance.</p>
+              <p>Aktiv: {{ userInvestments.length || 0 }}</p>
+            </ion-label>
+          </div>
+          <div class="box box2 box-btn">
           <ion-button fill="clear" (click)="loadPortfolio()">
             Aktualisieren
           </ion-button>
+          </div>
         </div>
 
         <!-- Liste der Investitionen -->
-        <ion-list *ngIf="userInvestments.length > 0">
+        <ion-list *ngIf="userInvestments.length > 0" class="border-main" style="margin-top:20px;">
           <ion-item *ngFor="let investment of userInvestments"
                    [routerLink]="['/wallet/asset', investment.asset_symbol]"
                    detail="true">
-            <ion-label>
-              <h2>{{ investment.asset_symbol }}</h2>
-              <p>Menge: {{ investment.quantity | number:'1.2-8' }}</p>
-              <p>Wert: {{ investment.currentValue | currency:'USD':'symbol':'1.2-2' }}</p>
-            </ion-label>
-            <ion-note slot="end"
-                     [color]="investment.profit_loss >= 0 ? 'success' : 'danger'">
-              {{ investment.profit_loss_percent | number:'1.2-2' }}%
-            </ion-note>
+            <div>
+              <div class="box-investment">
+            <div >
+              <ion-label>
+                <h2>{{ investment.asset_symbol }}</h2>
+                <p>Menge: {{ investment.quantity | number:'1.2-8' }}</p>
+                <p>Wert: {{ investment.currentValue | currency:'USD':'symbol':'1.2-2' }}</p>
+              </ion-label>
+            </div>
+            <div>
+              <ion-note slot="end"
+                      [color]="investment.profit_loss >= 0 ? 'success' : 'danger'">
+                {{ investment.profit_loss_percent | number:'1.2-2' }}%
+              </ion-note>
+            </div>
+            </div>
+            </div>
           </ion-item>
         </ion-list>
 

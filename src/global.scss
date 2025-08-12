@@ -361,12 +361,36 @@ ion-item .input-wrapper {
 
 }
 
+.box-btn {
+  margin: auto;
+}
+
+.text-size-head{
+  font-size: 0.7rem;
+}
+
+
 .ion-text-size{
   font-weight: 300;
 }
 
 .time-responsive{
   width: 80%;
+}
+
+.box-investment{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 100px; /* optionaler Abstand */
+}
+
+@media (max-width: 450px) {
+  .box-investment {
+    gap: 100%;
+    flex-direction: column;
+    align-items: flex-start; /* optional */
+  }
 }
 
 // Responsive Design
