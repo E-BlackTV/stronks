@@ -214,6 +214,14 @@ ion-card-title {
   margin-left: 8px;
 }
 
+.text-success {
+  color: var(--ion-color-success);
+}
+
+.text-danger {
+  color: var(--ion-color-danger);
+} 
+
 ion-note {
   font-size: 1em;
   display: block;

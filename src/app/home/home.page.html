@@ -71,7 +71,7 @@
                    detail="true">
             <div>
               <div class="box-investment">
-            <div >
+            <div>
               <ion-label>
                 <h2>{{ investment.asset_symbol }}</h2>
                 <p>Menge: {{ investment.quantity | number:'1.2-8' }}</p>
@@ -79,10 +79,12 @@
               </ion-label>
             </div>
             <div>
-              <ion-note slot="end"
-                      [color]="investment.profit_loss >= 0 ? 'success' : 'danger'">
-                {{ investment.profit_loss_percent | number:'1.2-2' }}%
-              </ion-note>
+            <ion-note 
+              slot="end"
+              [class.text-success]="investment.profit_loss >= 0"
+              [class.text-danger]="investment.profit_loss < 0">
+              {{ investment.profit_loss_percent | number:'1.2-2' }}%
+            </ion-note>
             </div>
             </div>
             </div>
