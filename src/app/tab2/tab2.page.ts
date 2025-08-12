@@ -43,22 +43,22 @@ export class Tab2Page implements OnInit {
 
   ngOnInit() {
     this.loading = true;
-    
+
     // Lade zuerst die Assets aus der assets-Collection
     this.firestore.getAssetsRealtime().subscribe((assets: Asset[]) => {
       const deduped = this.deduplicateBySymbol(assets);
       this.assets = deduped.map((a) => ({ type: a.type, symbol: a.symbol, name: a.name }));
       this.cryptoCount = this.assets.filter(a => a.type === 'crypto').length;
       this.stockCount = this.assets.filter(a => a.type === 'stock').length;
-      
+
       console.log('Geladene Assets aus assets-Collection:', this.assets);
-      
+
       // Lade dann die gecachten Daten
       this.loadCachedPrices();
-      
+
       this.loading = false;
     });
-    
+
     // Fallback: Wenn keine Assets geladen werden, lade direkt die gecachten Daten
     setTimeout(() => {
       if (this.assets.length === 0) {
@@ -72,18 +72,18 @@ export class Tab2Page implements OnInit {
   // Debug-Funktion: Zeige alle verfügbaren gecachten Daten für ein Symbol
   debugCachedData(symbol: string) {
     console.log(`Debug: Suche nach gecachten Daten für ${symbol}`);
-    
+
     // Suche nach Daten, die dieses Symbol enthalten
     this.firestore.getCachedData().subscribe(
       (dataList) => {
-        const relevantData = dataList.filter(data => 
-          data.rows.some(row => 
-            row.cells.some(cell => 
+        const relevantData = dataList.filter(data =>
+          data.rows.some(row =>
+            row.cells.some(cell =>
               cell && cell.toUpperCase().includes(symbol.toUpperCase())
             )
           )
         );
-        
+
         if (relevantData.length > 0) {
           console.log(`Gefundene Daten für ${symbol}:`, relevantData);
         } else {
@@ -96,22 +96,22 @@ export class Tab2Page implements OnInit {
   // Debug-Funktion: Zeige alle verfügbaren gecachten Daten in der Datenbank
   debugAllCachedData() {
     console.log('Debug: Suche nach allen verfügbaren gecachten Daten...');
-    
+
     // Lade alle verfügbaren Daten
     this.firestore.getCachedData().subscribe(
       (dataList) => {
         if (dataList && dataList.length > 0) {
           console.log('Alle verfügbaren gecachten Daten:', dataList);
-          
+
           // Gruppiere nach Typ
           const byType = dataList.reduce((acc, data) => {
             if (!acc[data.type]) acc[data.type] = [];
             acc[data.type].push(data);
             return acc;
           }, {} as Record<string, CachedData[]>);
-          
+
           console.log('Gruppiert nach Typ:', byType);
-          
+
           // Zeige Details für jeden Typ
           Object.entries(byType).forEach(([type, dataList]) => {
             console.log(`${type.toUpperCase()} Daten (${dataList.length} Einträge):`);
@@ -119,7 +119,7 @@ export class Tab2Page implements OnInit {
               console.log(`  - ${data.sourceId}: ${data.rows.length} Zeilen, aktualisiert: ${data.fetchedAt?.toDate?.()}`);
             });
           });
-          
+
           // Wenn Daten vorhanden sind, lade sie neu
           if (Object.keys(byType).length > 0) {
             console.log('Gecachte Daten gefunden, lade sie neu...');
@@ -145,10 +145,10 @@ export class Tab2Page implements OnInit {
   refreshData() {
     this.loading = true;
     console.log('Aktualisiere Daten...');
-    
+
     // Lade alle Daten neu
     this.loadCachedPrices();
-    
+
     setTimeout(() => {
       this.loading = false;
       console.log('Datenaktualisierung abgeschlossen');
@@ -158,7 +158,7 @@ export class Tab2Page implements OnInit {
   // Funktion: Firestore-Verbindung testen
   testFirestoreConnection() {
     console.log('Teste Firestore-Verbindung...');
-    
+
     // Teste den Zugriff auf eine einfache Collection
     this.firestore.getCachedData('crypto', 1).subscribe(
       (data) => {
@@ -175,13 +175,13 @@ export class Tab2Page implements OnInit {
   // Funktion: Alle verfügbaren Collections überprüfen
   checkAllCollections() {
     console.log('Überprüfe alle verfügbaren Collections...');
-    
+
     // Teste verschiedene Collection-Namen
     const collections = ['cached_data', 'assets', 'users', 'portfolios'];
-    
+
     collections.forEach(collectionName => {
       console.log(`Teste Collection: ${collectionName}`);
-      
+
       // Verwende eine einfache Abfrage für jede Collection
       this.firestore.getCachedData().subscribe(
         (data) => {
@@ -197,12 +197,12 @@ export class Tab2Page implements OnInit {
   // Funktion: Datenstruktur analysieren
   analyzeDataStructure() {
     console.log('Analysiere Datenstruktur...');
-    
+
     this.firestore.getCachedData().subscribe(
       (dataList) => {
         if (dataList && dataList.length > 0) {
           console.log('=== DATENSTRUKTUR-ANALYSE ===');
-          
+
           dataList.forEach((data, index) => {
             console.log(`\n--- Dokument ${index + 1} ---`);
             console.log('ID:', data.id);
@@ -211,7 +211,7 @@ export class Tab2Page implements OnInit {
             console.log('URL:', data.url);
             console.log('Fetched At:', data.fetchedAt?.toDate?.());
             console.log('Rows Count:', data.rows?.length || 0);
-            
+
             if (data.rows && data.rows.length > 0) {
               console.log('Erste Zeile (Headers):', data.rows[0].cells);
               if (data.rows.length > 1) {
@@ -280,11 +280,11 @@ export class Tab2Page implements OnInit {
 
   private loadCachedPrices() {
     console.log('Lade gecachte Preise...');
-    
+
     // Lade gecachte Preise für Krypto und Aktien
     this.loadCachedDataByType('crypto');
     this.loadCachedDataByType('stock');
-    
+
     // Aktualisiere die gefilterte Liste nach dem Laden
     setTimeout(() => {
       this.applyFilters();
@@ -295,11 +295,11 @@ export class Tab2Page implements OnInit {
     this.firestore.getLatestCachedData(type).subscribe(
       (cachedDataList: CachedData[]) => {
         console.log(`Geladene ${type}-Daten:`, cachedDataList);
-        
+
         // Überprüfe die Datenstruktur vor der Verarbeitung
         const validData = cachedDataList.filter(data => this.validateCachedDataStructure(data));
         console.log(`Gültige ${type}-Daten:`, validData.length, 'von', cachedDataList.length);
-        
+
         validData.forEach(cachedData => {
           this.processCachedData(cachedData);
         });
@@ -385,7 +385,7 @@ export class Tab2Page implements OnInit {
         console.warn(`Keine gültigen Spaltenüberschriften für ${cachedData.sourceId}`);
         return;
       }
-      
+
       console.log('Spalten:', headers);
 
       // Finde die relevanten Spalten
@@ -499,7 +499,7 @@ export class Tab2Page implements OnInit {
 
       // Aktualisiere das Asset mit Preisinformationen
       let assetIndex = this.assets.findIndex(a => a.symbol === symbol);
-      
+
       if (assetIndex === -1) {
         // Asset existiert nicht, füge es hinzu
         const newAsset: ListAsset = {
@@ -511,24 +511,24 @@ export class Tab2Page implements OnInit {
           lastUpdated: fetchedAt?.toDate?.() || new Date()
         };
         this.assets.push(newAsset);
-        
+
         // Aktualisiere die Zähler
         if (type === 'crypto') this.cryptoCount++;
         if (type === 'stock') this.stockCount++;
-        
+
         console.log(`Neues Asset hinzugefügt: ${symbol} (${type}) mit Preis ${price}`);
       } else {
         // Asset existiert, aktualisiere es
         this.assets[assetIndex].price = price;
         this.assets[assetIndex].sourceId = sourceId;
         this.assets[assetIndex].lastUpdated = fetchedAt?.toDate?.() || new Date();
-        
+
         console.log(`Asset aktualisiert: ${symbol} mit neuem Preis ${price}`);
       }
 
       // Aktualisiere die Preise
       this.latestPrices[symbol] = price;
-      
+
       // Aktualisiere die gefilterte Liste
       this.applyFilters();
     } catch (error) {
@@ -551,5 +551,5 @@ export class Tab2Page implements OnInit {
     await modal.present();
   }
 
-  goToDetail(asset: ListAsset) { this.router.navigate(['/asset', asset.symbol]); }
+  goToDetail(asset: ListAsset) { this.router.navigate(['/wallet/asset-detail', asset.symbol]); }
 }

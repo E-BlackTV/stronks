@@ -195,8 +195,11 @@ export class HomePage implements OnInit, OnDestroy {
     private marketData: MarketDataService
   ) {
     Chart.register(...registerables);
-    this.refreshSubscription = interval(10000).subscribe(() => {
+    // Reduce polling frequency to 30 seconds to improve performance
+    this.refreshSubscription = interval(30000).subscribe(() => {
       this.fetchAccountBalance();
+      this.calculatePortfolioValue(); // Update user investments and portfolio value
+      this.fetchAllCurrentPrices(); // Update stock prices
     });
 
     const currentUser = this.firebaseService.getCurrentUser();
@@ -348,53 +351,86 @@ export class HomePage implements OnInit, OnDestroy {
   async fetchAccountBalance() {
     try {
       const user = this.firebaseService.getCurrentUser();
-      if (user) {
-        // Balance über Firebase Functions abrufen
-        this.tradingService.getBalance(user.id).subscribe({
-          next: (response: any) => {
-            if (response.success) {
-              this.accountBalance = response.balance;
-              console.log(
-                'Account balance loaded from Firebase:',
-                this.accountBalance
-              );
-
-              // Aktualisiere auch den localStorage
-              const currentUser = this.firebaseService.getCurrentUser();
-              if (currentUser) {
-                const userData = {
-                  ...currentUser,
-                  accountbalance: this.accountBalance
-                };
-                localStorage.setItem(
-                  'currentUser',
-                  JSON.stringify(userData)
-                );
-              }
-            } else {
-              console.error('Error loading balance:', response.message);
-            }
-          },
-          error: (error) => {
-            console.error('Error fetching balance from Firebase:', error);
-            // Fallback auf localStorage
-            const userData = localStorage.getItem('currentUser');
-            if (userData) {
-              const parsedUser = JSON.parse(userData);
-              this.accountBalance = parsedUser.accountbalance || 0;
-            } else {
-              this.accountBalance = 0;
-            }
-          },
-        });
-      } else {
+      if (!user) {
         console.error('No user found');
         this.accountBalance = 0;
+        return;
       }
+
+      // Check if we have a cached balance and it's less than 5 seconds old
+      const cachedBalance = localStorage.getItem('cachedAccountBalance');
+      const cachedTimestamp = localStorage.getItem('cachedAccountBalanceTimestamp');
+
+      if (cachedBalance && cachedTimestamp) {
+        const now = Date.now();
+        const timestamp = parseInt(cachedTimestamp, 10);
+        const age = now - timestamp;
+
+        // Use cached balance if it's less than 5 seconds old
+        if (age < 5000) {
+          this.accountBalance = parseFloat(cachedBalance);
+          console.log('Using cached account balance:', this.accountBalance);
+          return;
+        }
+      }
+
+      // Balance über Firebase Functions abrufen
+      this.tradingService.getBalance(user.id).subscribe({
+        next: (response: any) => {
+          if (response.success) {
+            this.accountBalance = response.balance;
+            console.log(
+              'Account balance loaded from Firebase:',
+              this.accountBalance
+            );
+
+            // Cache the balance
+            localStorage.setItem('cachedAccountBalance', this.accountBalance.toString());
+            localStorage.setItem('cachedAccountBalanceTimestamp', Date.now().toString());
+
+            // Aktualisiere auch den localStorage für den User
+            const currentUser = this.firebaseService.getCurrentUser();
+            if (currentUser) {
+              const userData = {
+                ...currentUser,
+                accountbalance: this.accountBalance
+              };
+              localStorage.setItem(
+                'currentUser',
+                JSON.stringify(userData)
+              );
+            }
+
+            // Recalculate portfolio value with the new balance
+            this.calculatePortfolioValue();
+          } else {
+            console.error('Error loading balance:', response.message);
+            this.tryFallbackBalance();
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching balance from Firebase:', error);
+          this.tryFallbackBalance();
+        },
+      });
     } catch (error) {
       console.error('Error fetching balance:', error);
+      this.tryFallbackBalance();
+    }
+  }
+
+  // Helper method to try fallback balance sources
+  private tryFallbackBalance() {
+    // Fallback auf localStorage
+    const userData = localStorage.getItem('currentUser');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      this.accountBalance = parsedUser.accountbalance || 0;
+    } else {
       this.accountBalance = 0;
     }
+    // Even with fallback balance, try to recalculate portfolio
+    this.calculatePortfolioValue();
   }
 
   async fetchData() {
@@ -613,6 +649,12 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
+      // Make sure we have the latest account balance
+      // If we don't have a balance yet, fetch it first
+      if (this.accountBalance === 0) {
+        await this.fetchAccountBalance();
+      }
+
       // Verwende Firebase Functions für Portfolio
       this.tradingService.getPortfolio(user.id).subscribe({
         next: (response) => {
@@ -631,25 +673,36 @@ export class HomePage implements OnInit, OnDestroy {
               });
             }
 
+            // Always use the most up-to-date account balance
+            // First try response.cashBalance, then this.accountBalance, then default to 0
             const cashBalance = response.cashBalance ?? this.accountBalance ?? 0;
+
+            // Update portfolio value with the cash balance
             this.portfolioValue = cashBalance + assetsCurrentValue;
             this.initialInvestment = totalInvested;
             this.profitLoss = totalProfitLoss;
             this.profitLossPercentage = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
 
-            this.userInvestments = response.assets?.map((asset: any) => ({
-              id: asset.symbol,
-              asset_symbol: asset.symbol,
-              investments: asset.symbol,
-              calculatedShares: asset.quantity,
-              currentValue: asset.quantity * (asset.currentPrice || 0),
-              purchase_price: asset.totalInvested / asset.quantity,
-              amount: asset.totalInvested,
-              quantity: asset.quantity,
-              profit_loss: (asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested,
-              profit_loss_percent: asset.totalInvested > 0 ? 
-                (((asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested) / asset.totalInvested) * 100 : 0,
-            })) || [];
+            // Update user investments with consistent profit/loss calculation
+            this.userInvestments = response.assets?.map((asset: any) => {
+              const currentValue = asset.quantity * (asset.currentPrice || 0);
+              const profitLoss = currentValue - asset.totalInvested;
+              const profitLossPercent = asset.totalInvested > 0 ?
+                (profitLoss / asset.totalInvested) * 100 : 0;
+
+              return {
+                id: asset.symbol,
+                asset_symbol: asset.symbol,
+                investments: asset.symbol,
+                calculatedShares: asset.quantity,
+                currentValue: currentValue,
+                purchase_price: asset.quantity > 0 ? asset.totalInvested / asset.quantity : 0,
+                amount: asset.totalInvested,
+                quantity: asset.quantity,
+                profit_loss: profitLoss,
+                profit_loss_percent: profitLossPercent,
+              };
+            }) || [];
 
             console.log('Portfolio updated:', {
               totalValue: this.portfolioValue,
@@ -657,27 +710,30 @@ export class HomePage implements OnInit, OnDestroy {
               profitLossPercentage: this.profitLossPercentage,
               totalInvested: this.initialInvestment,
               cashBalance,
+              assetsCount: this.userInvestments.length
             });
           } else {
             console.error('Portfolio response not successful:', response);
-            this.portfolioValue = 0;
-            this.profitLoss = 0;
-            this.profitLossPercentage = 0;
+            this.resetPortfolioValues();
           }
         },
         error: (error) => {
           console.error('Error fetching portfolio:', error);
-          this.portfolioValue = 0;
-          this.profitLoss = 0;
-          this.profitLossPercentage = 0;
+          this.resetPortfolioValues();
         },
       });
     } catch (error) {
       console.error('Error calculating portfolio value:', error);
-      this.portfolioValue = 0;
-      this.profitLoss = 0;
-      this.profitLossPercentage = 0;
+      this.resetPortfolioValues();
     }
+  }
+
+  // Helper method to reset portfolio values
+  private resetPortfolioValues() {
+    this.portfolioValue = this.accountBalance || 0; // Set to account balance if available
+    this.profitLoss = 0;
+    this.profitLossPercentage = 0;
+    this.userInvestments = [];
   }
 
   calculatePercentageChange(
@@ -748,50 +804,22 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
-      // Verwende Firebase Functions für Portfolio
-      this.tradingService.getPortfolio(user.id).subscribe({
-        next: (response) => {
-          if (response.success) {
-            // Konvertiere Portfolio-Daten in das alte Format für Kompatibilität
-            this.userInvestments = response.assets?.map((asset: any) => ({
-              id: asset.symbol,
-              asset_symbol: asset.symbol,
-              investments: asset.symbol,
-              calculatedShares: asset.quantity,
-              currentValue: asset.quantity * (asset.currentPrice || 0),
-              purchase_price: asset.totalInvested / asset.quantity,
-              amount: asset.totalInvested,
-              quantity: asset.quantity,
-              profit_loss: (asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested,
-              profit_loss_percent: asset.totalInvested > 0 ? 
-                (((asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested) / asset.totalInvested) * 100 : 0,
-            })) || [];
+      // Use calculatePortfolioValue instead of duplicating logic
+      // This will update this.userInvestments with the latest data
+      await this.calculatePortfolioValue();
 
-            console.log(
-              'User investments updated:',
-              this.userInvestments.length,
-              'items'
-            );
-          } else {
-            console.error('Portfolio response not successful:', response);
-            this.userInvestments = [];
-          }
-        },
-        error: (error) => {
-          console.error('Error fetching investments:', error);
-          this.userInvestments = [];
-        },
-      });
+      console.log(
+        'User investments updated via calculatePortfolioValue:',
+        this.userInvestments.length,
+        'items'
+      );
     } catch (error) {
       console.error('Error fetching user investments:', error);
       this.userInvestments = [];
     }
   }
 
-  async sellInvestment(investmentId: number) {
-    // Diese Methode wird nicht mehr verwendet - Verkauf läuft über das Trade-Popup
-    console.log('sellInvestment deprecated - use Trade-Popup instead');
-  }
+  // Methode entfernt: sellInvestment - nicht mehr verwendet, Verkauf läuft über das Trade-Popup
 
   async loadPortfolio() {
     try {
@@ -801,57 +829,12 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
-      this.tradingService.getPortfolio(user.id).subscribe({
-        next: (response) => {
-          if (response.success) {
-            // Berechne Portfolio-Werte: Cash + aktueller Wert der Assets
-            let assetsCurrentValue = 0;
-            let totalInvested = 0;
-            let totalProfitLoss = 0;
-
-            if (response.assets && response.assets.length > 0) {
-              response.assets.forEach((asset: any) => {
-                const currentValue = asset.quantity * (asset.currentPrice || 0);
-                const profitLoss = currentValue - asset.totalInvested;
-                
-                assetsCurrentValue += currentValue;
-                totalInvested += asset.totalInvested;
-                totalProfitLoss += profitLoss;
-              });
-            }
-
-            const cashBalance2 = this.accountBalance || 0;
-            this.portfolioValue = cashBalance2 + assetsCurrentValue;
-            this.initialInvestment = totalInvested;
-            this.profitLoss = totalProfitLoss;
-            this.profitLossPercentage = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
-
-            // Aktualisiere auch die userInvestments
-            this.userInvestments = response.assets?.map((asset: any) => ({
-              id: asset.symbol,
-              asset_symbol: asset.symbol,
-              investments: asset.symbol,
-              calculatedShares: asset.quantity,
-              currentValue: asset.quantity * (asset.currentPrice || 0),
-              purchase_price: asset.totalInvested / asset.quantity,
-              amount: asset.totalInvested,
-              quantity: asset.quantity,
-              profit_loss: (asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested,
-              profit_loss_percent: asset.totalInvested > 0 ? 
-                (((asset.quantity * (asset.currentPrice || 0)) - asset.totalInvested) / asset.totalInvested) * 100 : 0,
-            })) || [];
-
-            console.log('Portfolio loaded successfully');
-          } else {
-            console.error('Fehler beim Laden des Portfolios:', response);
-          }
-        },
-        error: (error) => {
-          console.error('Fehler beim Laden des Portfolios:', error);
-        },
-      });
+      // Use the optimized calculatePortfolioValue method instead of duplicating logic
+      await this.calculatePortfolioValue();
+      console.log('Portfolio loaded successfully via calculatePortfolioValue');
     } catch (error) {
       console.error('Fehler beim Laden des Portfolios:', error);
+      this.resetPortfolioValues();
     }
   }
 
@@ -950,7 +933,7 @@ export class HomePage implements OnInit, OnDestroy {
                   hour12: false
                 });
               case TimeRange.WEEK:
-                return date.toLocaleDateString('de-DE', { 
+                return date.toLocaleDateString('de-DE', {
                   weekday: 'short',
                   day: '2-digit',
                   month: '2-digit'
@@ -1011,7 +994,7 @@ export class HomePage implements OnInit, OnDestroy {
           hour12: false
         });
       case TimeRange.WEEK:
-        return date.toLocaleDateString('de-DE', { 
+        return date.toLocaleDateString('de-DE', {
           weekday: 'short',
           day: '2-digit',
           month: '2-digit'
@@ -1096,10 +1079,10 @@ export class HomePage implements OnInit, OnDestroy {
     this.selectedCrypto = asset;
     this.selectedCryptoSymbol = `${asset.symbol}-USD`;
     this.selectedCryptoName = asset.name;
-    
+
     // Update the chart and data for the selected crypto
     await this.fetchDataForSelectedCrypto();
-    
+
     console.log('Selected crypto:', {
       name: this.selectedCryptoName,
       symbol: this.selectedCryptoSymbol,
@@ -1107,7 +1090,7 @@ export class HomePage implements OnInit, OnDestroy {
     });
   }
 
-  // Add method to fetch data for the selected crypto
+  // Fetch data for the selected crypto using the caching mechanism
   async fetchDataForSelectedCrypto() {
     try {
       const selectedIntervalOption = this.intervalOptions.find(
@@ -1118,20 +1101,19 @@ export class HomePage implements OnInit, OnDestroy {
         console.error('No valid interval selected');
         return;
       }
-      const resp = await firstValueFrom(
-        this.marketData.fetchCryptoChart(
+
+      // Verwende tradingService.getChartData statt direktem API-Aufruf
+      // Dies nutzt den Caching-Mechanismus
+      const data = await firstValueFrom(
+        this.tradingService.getChartData(
           this.selectedCryptoSymbol,
           this.selectedRange,
           this.selectedInterval
         )
       );
-      if (!resp || !resp.data) {
-        console.error('Keine Marktdaten empfangen');
-        return;
-      }
-      const data = resp.data;
-      if (!data.chart?.result?.[0]) {
-        console.error('Unexpected data format:', data);
+
+      if (!data?.chart?.result?.[0]) {
+        console.error('Keine Marktdaten empfangen oder unerwartetes Format:', data);
         return;
       }
 
@@ -1150,7 +1132,7 @@ export class HomePage implements OnInit, OnDestroy {
               hour12: false
             });
           case TimeRange.WEEK:
-            return date.toLocaleDateString('de-DE', { 
+            return date.toLocaleDateString('de-DE', {
               weekday: 'short',
               day: '2-digit',
               month: '2-digit'
@@ -1353,8 +1335,7 @@ export class HomePage implements OnInit, OnDestroy {
       'DOT-USD': 'Polkadot',
       'MATIC-USD': 'Polygon'
     };
-    
+
     return symbolMap[symbol] || symbol;
   }
 }
-

@@ -163,15 +163,23 @@ export class MarketDataService {
     };
     return map[sym] ?? null;
   }
-  private mapSymbolToBinancePair(symbol: string): string | null {
-    const sym = symbol.toUpperCase();
-    if (sym.endsWith('-USD')) { const base = sym.replace('-USD', ''); return `${base}USDT`; }
-    if (/^[A-Z]{3,6}USDT$/.test(sym)) return sym;
-    return null;
+  private mapIntervalToCoinGecko(interval: string): 'daily' | undefined {
+    const i = interval.toLowerCase();
+    return ['1d', '1day', 'daily'].includes(i) ? 'daily' : undefined;
   }
-  private mapIntervalToCoinGecko(interval: string): 'daily' | undefined { const i = interval.toLowerCase(); return ['1d', '1day', 'daily'].includes(i) ? 'daily' : undefined; }
-  private mapIntervalToAlpha(interval: string): string | null { const i = interval.toLowerCase(); const map: Record<string, string> = { '1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '60m': '60min', '1h': '60min', }; return map[i] ?? null; }
-  private mapIntervalToBinance(interval: string): string { const i = interval.toLowerCase(); const map: Record<string, string> = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '60m': '1h', '1d': '1d', '1wk': '1w', '1mo': '1M', }; return map[i] ?? '1h'; }
+
+  private mapIntervalToAlpha(interval: string): string | null {
+    const i = interval.toLowerCase();
+    const map: Record<string, string> = {
+      '1m': '1min',
+      '5m': '5min',
+      '15m': '15min',
+      '30m': '30min',
+      '60m': '60min',
+      '1h': '60min',
+    };
+    return map[i] ?? null;
+  }
 
   fetchCryptoChart(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
     const coinId = this.mapSymbolToCoinId(symbol);
@@ -193,10 +201,6 @@ export class MarketDataService {
   private buildCoinGeckoUrl(coinId: string, days: number | 'max', cgInterval?: 'daily'): string {
     const base = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`;
     return cgInterval ? `${base}&interval=${cgInterval}` : base;
-  }
-  private fetchCryptoChartBinance(symbol: string, _range: string, interval: string): Observable<NormalizedChartResponse | null> {
-    // Binance deaktiviert wegen CORS im Frontend. Rückgabe: null
-    return of(null);
   }
 
   fetchStockChart(symbol: string, _range: string, interval: string): Observable<NormalizedChartResponse | null> {
@@ -224,11 +228,11 @@ export class MarketDataService {
   fetchYahooChart(symbol: string, range: string, interval: string): Observable<NormalizedChartResponse | null> {
     // Mappe Zeitintervalle für Yahoo Finance (Yahoo verwendet andere Werte)
     const yahooRange = this.mapRangeToYahooRange(range);
-    
+
     // Verwende CORS-Proxy anstatt direkten API-Aufruf
     const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${yahooRange}&interval=${interval}`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-    
+
     return this.http.get<any>(proxyUrl).pipe(
       map((res) => {
         if (res?.chart?.result?.[0]) {
@@ -247,7 +251,7 @@ export class MarketDataService {
   private mapRangeToYahooRange(range: string): string {
     switch (range) {
       case '1d': return '1d';
-      case '1w': return '5d';  // Yahoo verwendet 5d für 1 Woche
+      case '1w': return '7d';  // Korrigiert: Yahoo verwendet 7d für 1 Woche
       case '1m': return '1mo'; // Yahoo verwendet 1mo für 1 Monat
       case '3m': return '3mo'; // Yahoo verwendet 3mo für 3 Monate
       case '6m': return '6mo'; // Yahoo verwendet 6mo für 6 Monate
@@ -263,18 +267,18 @@ export class MarketDataService {
     // Verwende CORS-Proxy anstatt direkten API-Aufruf
     const stooqSymbol = this.normalizeSymbolForStooq(symbol);
     if (!stooqSymbol) return of(null);
-    
+
     const targetUrl = `https://stooq.com/q/d/l/?s=${stooqSymbol}&i=d`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-    
+
     return this.http.get(proxyUrl, { responseType: 'text' }).pipe(
       map((csvData) => {
         if (!csvData || typeof csvData !== 'string') return null;
-        
+
         // CSV zu JSON konvertieren
         const lines = csvData.trim().split('\n');
         if (lines.length <= 1) return null;
-        
+
         const data = [];
         for (let i = 1; i < lines.length; i++) {
           if (lines[i].trim()) {
@@ -291,14 +295,14 @@ export class MarketDataService {
             }
           }
         }
-        
+
         if (!data.length) return null;
-        
+
         // Konvertiere Stooq-Daten in das erwartete Format
         const timestamps: number[] = [];
         const prices: number[] = [];
         const volumes: number[] = [];
-        
+
         for (const row of data) {
           const t = Math.floor(new Date(row.date).getTime() / 1000);
           const c = row.close;
@@ -308,7 +312,7 @@ export class MarketDataService {
           prices.push(c);
           volumes.push(v);
         }
-        
+
         if (!prices.length) return null;
         const chartData = this.toYahooChartFormat(timestamps, prices, volumes);
         return { source: 'stooq' as const, data: chartData };
@@ -339,7 +343,7 @@ export class MarketDataService {
     if (fmpInterval) {
       const targetUrl = `https://financialmodelingprep.com/api/v3/historical-chart/${fmpInterval}/${symbol}?apikey=${apiKey}`;
       const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-      
+
       return this.http.get<any[]>(proxyUrl).pipe(
         map((rows) => {
           if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -361,7 +365,7 @@ export class MarketDataService {
     // Daily
     const targetUrl = `https://financialmodelingprep.com/api/v3/historical-price-full/${symbol}?serietype=line&apikey=${apiKey}`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-    
+
     return this.http.get<any>(proxyUrl).pipe(
       map((res) => {
         const rows = res?.historical as any[];
@@ -414,11 +418,11 @@ export class MarketDataService {
     switch (range) {
       case '1d':
       case 'DAY': return 1;
-      case '5d':
+      case '5d': return 5;
       case '1w':
-      case 'WEEK': return 7;
+      case 'WEEK': return 7;  // Konsistent mit Yahoo 7d
       case '1m':
-      case 'MONTH': return 30;
+      case 'MONTH': return 31;  // Korrigiert auf 31 Tage für einen vollen Monat
       case '3m':
       case 'THREE_MONTHS': return 90;
       case '6m':
@@ -447,4 +451,4 @@ export class MarketDataService {
       catchError(() => of(null))
     );
   }
-} 
+}

@@ -71,9 +71,14 @@
         </ion-grid>
       </div>
 
-      <ion-button expand="block" (click)="openBuy()">
+      <ion-button expand="block" (click)="openBuy()" color="success">
         <ion-icon name="add-circle" slot="start"></ion-icon>
         Kaufen
+      </ion-button>
+
+      <ion-button expand="block" (click)="openSell()" color="danger" class="ion-margin-top ion-danger-btn" [disabled]="!userOwnsAsset">
+        <ion-icon name="remove-circle" slot="start"></ion-icon>
+        Verkaufen
       </ion-button>
     </ion-card-content>
   </ion-card>

@@ -49,12 +49,32 @@
       </ion-card-header>
 
       <ion-card-content class="custom-card-content">
-        <!-- Zeige nur eine kompakte, klare Zusammenfassung ohne Toggle-Buttons -->
         <div>
           <p>Aktive Positionen: {{ userInvestments.length || 0 }}</p>
           <ion-button fill="clear" (click)="loadPortfolio()">
             Aktualisieren
           </ion-button>
+        </div>
+
+        <!-- Liste der Investitionen -->
+        <ion-list *ngIf="userInvestments.length > 0">
+          <ion-item *ngFor="let investment of userInvestments"
+                   [routerLink]="['/wallet/asset-detail', investment.asset_symbol]"
+                   detail="true">
+            <ion-label>
+              <h2>{{ investment.asset_symbol }}</h2>
+              <p>Menge: {{ investment.quantity | number:'1.2-8' }}</p>
+              <p>Wert: {{ investment.currentValue | currency:'USD':'symbol':'1.2-2' }}</p>
+            </ion-label>
+            <ion-note slot="end"
+                     [color]="investment.profit_loss >= 0 ? 'success' : 'danger'">
+              {{ investment.profit_loss_percent | number:'1.2-2' }}%
+            </ion-note>
+          </ion-item>
+        </ion-list>
+
+        <div *ngIf="userInvestments.length === 0" class="ion-text-center ion-padding">
+          <p>Keine Investitionen vorhanden</p>
         </div>
       </ion-card-content>
     </ion-card>

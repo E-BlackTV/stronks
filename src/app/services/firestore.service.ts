@@ -1,17 +1,17 @@
 import { Injectable } from '@angular/core';
-import { 
-  Firestore, 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
+import {
+  Firestore,
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
   onSnapshot,
   DocumentData,
   QuerySnapshot,
@@ -73,7 +73,7 @@ export interface PortfolioAsset {
 
 /**
  * Firestore Service für die Frontend-Integration
- * 
+ *
  * Best Practices:
  * 1. Verwende Observables für reaktive Daten
  * 2. Implementiere Error Handling
@@ -96,9 +96,9 @@ export class FirestoreService {
   getAssets(): Observable<Asset[]> {
     const assetsRef = collection(this.firestore, 'assets');
     const q = query(assetsRef, where('isActive', '==', true));
-    
+
     return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => 
+      map((snapshot: QuerySnapshot<DocumentData>) =>
         snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -113,13 +113,13 @@ export class FirestoreService {
   getAssetsByType(type: 'crypto' | 'stock' | 'forex'): Observable<Asset[]> {
     const assetsRef = collection(this.firestore, 'assets');
     const q = query(
-      assetsRef, 
+      assetsRef,
       where('type', '==', type),
       where('isActive', '==', true)
     );
-    
+
     return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => 
+      map((snapshot: QuerySnapshot<DocumentData>) =>
         snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -133,7 +133,7 @@ export class FirestoreService {
    */
   getAsset(id: string): Observable<Asset | null> {
     const assetRef = doc(this.firestore, 'assets', id);
-    
+
     return from(getDoc(assetRef)).pipe(
       map((snapshot: DocumentSnapshot<DocumentData>) => {
         if (snapshot.exists()) {
@@ -157,7 +157,7 @@ export class FirestoreService {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
-    
+
     return from(addDoc(assetsRef, newAsset)).pipe(
       map(docRef => docRef.id)
     );
@@ -172,7 +172,7 @@ export class FirestoreService {
       ...updates,
       updatedAt: serverTimestamp()
     };
-    
+
     return from(updateDoc(assetRef, updateData));
   }
 
@@ -190,7 +190,7 @@ export class FirestoreService {
    */
   getCachedData(type?: "crypto" | "stock" | "generic", limitCount: number = 100): Observable<CachedData[]> {
     const cachedDataRef = collection(this.firestore, 'cached_data');
-    
+
     // Verwende eine einfachere Abfrage ohne zusammengesetzten Index
     return from(getDocs(cachedDataRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
@@ -198,19 +198,19 @@ export class FirestoreService {
           id: doc.id,
           ...doc.data()
         } as CachedData));
-        
+
         // Filtere nach Typ, falls angegeben
         if (type) {
           allData = allData.filter(data => data.type === type);
         }
-        
+
         // Sortiere nach fetchedAt (neueste zuerst)
         allData.sort((a, b) => {
           const aTime = a.fetchedAt?.toMillis?.() || 0;
           const bTime = b.fetchedAt?.toMillis?.() || 0;
           return bTime - aTime;
         });
-        
+
         // Limitiere die Anzahl der Einträge
         return allData.slice(0, limitCount);
       })
@@ -222,7 +222,7 @@ export class FirestoreService {
    */
   getLatestCachedData(type: "crypto" | "stock" | "generic"): Observable<CachedData[]> {
     const cachedDataRef = collection(this.firestore, 'cached_data');
-    
+
     // Verwende eine einfachere Abfrage ohne zusammengesetzten Index
     return from(getDocs(cachedDataRef)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
@@ -230,7 +230,7 @@ export class FirestoreService {
           id: doc.id,
           ...doc.data()
         } as CachedData));
-        
+
         // Filtere nach Typ und sortiere nach fetchedAt
         return allData
           .filter(data => data.type === type)
@@ -249,17 +249,23 @@ export class FirestoreService {
    */
   getCachedDataBySource(sourceId: string): Observable<CachedData | null> {
     const cachedDataRef = collection(this.firestore, 'cached_data');
+    // Use only the where clause without orderBy to avoid needing a composite index
     const q = query(
       cachedDataRef,
-      where('sourceId', '==', sourceId),
-      orderBy('fetchedAt', 'desc'),
-      limit(1)
+      where('sourceId', '==', sourceId)
     );
-    
+
     return from(getDocs(q)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
         if (!snapshot.empty) {
-          const doc = snapshot.docs[0];
+          // Sort the documents in memory by fetchedAt
+          const sortedDocs = snapshot.docs.sort((a, b) => {
+            const aTime = a.data()['fetchedAt']?.toMillis?.() || 0;
+            const bTime = b.data()['fetchedAt']?.toMillis?.() || 0;
+            return bTime - aTime; // Newest first
+          });
+
+          const doc = sortedDocs[0]; // Get the newest document
           return {
             id: doc.id,
             ...doc.data()
@@ -274,16 +280,22 @@ export class FirestoreService {
   upsertCachedData(entry: { sourceId: string; type: "crypto" | "stock" | "generic"; url: string; rows: Array<{ cells: string[] }> }): Observable<void> {
     const { sourceId, type, url, rows } = entry;
     const cachedDataRef = collection(this.firestore, 'cached_data');
+    // Use only the where clause without orderBy to avoid needing a composite index
     const q = query(
       cachedDataRef,
-      where('sourceId', '==', sourceId),
-      orderBy('fetchedAt', 'desc'),
-      limit(1)
+      where('sourceId', '==', sourceId)
     );
     return from(getDocs(q)).pipe(
       switchMap((snapshot: QuerySnapshot<DocumentData>) => {
         if (!snapshot.empty) {
-          const existing = snapshot.docs[0];
+          // Sort the documents in memory by fetchedAt
+          const sortedDocs = snapshot.docs.sort((a, b) => {
+            const aTime = a.data()['fetchedAt']?.toMillis?.() || 0;
+            const bTime = b.data()['fetchedAt']?.toMillis?.() || 0;
+            return bTime - aTime; // Newest first
+          });
+
+          const existing = sortedDocs[0]; // Get the newest document
           const ref = doc(this.firestore, 'cached_data', existing.id);
           return from(updateDoc(ref, {
             rows,
@@ -338,7 +350,7 @@ export class FirestoreService {
   }
 
   /** Asset im Portfolio hinzufügen/aktualisieren (portfolios/{userId}) */
-  upsertPortfolioAsset(params: { 
+  upsertPortfolioAsset(params: {
     userId: string;
     symbol: string;
     quantityDelta: number; // positiv bei Kauf, negativ bei Verkauf
@@ -461,7 +473,7 @@ export class FirestoreService {
   getAssetsRealtime(): Observable<Asset[]> {
     const assetsRef = collection(this.firestore, 'assets');
     const q = query(assetsRef, where('isActive', '==', true));
-    
+
     return new Observable(observer => {
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const assets = snapshot.docs.map(doc => ({
@@ -472,7 +484,7 @@ export class FirestoreService {
       }, (error) => {
         observer.error(error);
       });
-      
+
       return unsubscribe;
     });
   }
@@ -482,7 +494,7 @@ export class FirestoreService {
    */
   getAssetRealtime(id: string): Observable<Asset | null> {
     const assetRef = doc(this.firestore, 'assets', id);
-    
+
     return new Observable(observer => {
       const unsubscribe = onSnapshot(assetRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -497,7 +509,7 @@ export class FirestoreService {
       }, (error) => {
         observer.error(error);
       });
-      
+
       return unsubscribe;
     });
   }
@@ -509,7 +521,7 @@ export class FirestoreService {
    */
   createAssetsBatch(assets: Omit<Asset, 'id' | 'createdAt' | 'updatedAt'>[]): Observable<void> {
     const batch = writeBatch(this.firestore);
-    
+
     assets.forEach(asset => {
       const docRef = doc(collection(this.firestore, 'assets'));
       const newAsset = {
@@ -519,7 +531,7 @@ export class FirestoreService {
       };
       batch.set(docRef, newAsset);
     });
-    
+
     return from(batch.commit());
   }
 
@@ -537,9 +549,9 @@ export class FirestoreService {
       where('isActive', '==', true),
       limit(20)
     );
-    
+
     return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => 
+      map((snapshot: QuerySnapshot<DocumentData>) =>
         snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -560,7 +572,7 @@ export class FirestoreService {
           acc[asset.type] = (acc[asset.type] || 0) + 1;
           return acc;
         }, {} as { [key: string]: number });
-        
+
         return {
           total: assets.length,
           byType

@@ -24,6 +24,8 @@ export class AssetDetailPage implements OnInit, OnDestroy {
   low: number | null = null;
   marketCapUsd: number | null = null;
   description: string | null = null;
+  userOwnsAsset: boolean = false;
+  availableQuantity: number = 0;
 
   // Auto-Update Intervall
   private updateInterval: any = null;
@@ -40,20 +42,47 @@ export class AssetDetailPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.symbol = this.route.snapshot.paramMap.get('symbol') || '';
-    
+
     const user = this.auth.getCurrentUser();
     if (user?.id) {
       this.tradingService.getBalance(user.id).subscribe((res) => {
         // nur zwischenspeichern; beim OpenBuy übergeben
         this._userBalance = res?.balance ?? 0;
       });
+
+      // Check if user owns this asset
+      this.checkUserOwnsAsset(user.id);
     }
-    
+
     this.loadMeta();
     this.loadChart();
-    
+
     // Starte automatische Updates alle 60 Sekunden
     this.startAutoUpdate();
+  }
+
+  // Check if user owns this asset and update userOwnsAsset property
+  private checkUserOwnsAsset(userId: string) {
+    this.tradingService.getPortfolio(userId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Find the asset in the portfolio
+          const asset = response.assets.find((a: any) => a.symbol === this.symbol);
+          this.availableQuantity = asset ? asset.quantity : 0;
+          this.userOwnsAsset = this.availableQuantity > 0;
+          console.log(`User owns ${this.availableQuantity} of ${this.symbol}: ${this.userOwnsAsset}`);
+        } else {
+          console.error('Failed to get portfolio:', response);
+          this.userOwnsAsset = false;
+          this.availableQuantity = 0;
+        }
+      },
+      error: (error) => {
+        console.error('Error getting portfolio:', error);
+        this.userOwnsAsset = false;
+        this.availableQuantity = 0;
+      }
+    });
   }
 
   private _userBalance = 0;
@@ -63,7 +92,7 @@ export class AssetDetailPage implements OnInit, OnDestroy {
       this.chart.destroy();
       this.chart = null;
     }
-    
+
     // Stoppe Auto-Update
     this.stopAutoUpdate();
   }
@@ -73,6 +102,12 @@ export class AssetDetailPage implements OnInit, OnDestroy {
     this.updateInterval = setInterval(() => {
       console.log(`Auto-Update für ${this.symbol}: Lade neue Daten...`);
       this.loadChart();
+
+      // Also refresh user ownership status
+      const user = this.auth.getCurrentUser();
+      if (user?.id) {
+        this.checkUserOwnsAsset(user.id);
+      }
     }, 60000); // 60 Sekunden
   }
 
@@ -99,8 +134,8 @@ export class AssetDetailPage implements OnInit, OnDestroy {
     const labels = timestamps.map((ts: number) => {
       const d = new Date(ts * 1000);
       if (this.range === '1d') {
-        return d.toLocaleTimeString('de-DE', { 
-          hour: '2-digit', 
+        return d.toLocaleTimeString('de-DE', {
+          hour: '2-digit',
           minute: '2-digit',
           hour12: false
         });
@@ -164,7 +199,7 @@ export class AssetDetailPage implements OnInit, OnDestroy {
         },
       }
     });
-    
+
     console.log('Chart erfolgreich gerendert');
   }
 
@@ -185,9 +220,9 @@ export class AssetDetailPage implements OnInit, OnDestroy {
   changeRange(event: any) {
     try {
       console.log('changeRange Event erhalten:', event);
-      
+
       let newRange: string;
-      
+
       // Ionic CustomEvent mit detail.value behandeln
       if (event && event.detail && event.detail.value) {
         newRange = event.detail.value;
@@ -202,26 +237,26 @@ export class AssetDetailPage implements OnInit, OnDestroy {
         console.error('Unbekanntes Event-Format:', event);
         return;
       }
-      
+
       // Validiere den neuen Zeitraum
       const validRanges: ('1d' | '1w' | '1m' | '3m' | '6m' | '1y' | '5y' | 'max')[] = ['1d', '1w', '1m', '3m', '6m', '1y', '5y', 'max'];
       if (!validRanges.includes(newRange as any)) {
         console.error('Ungültiger Zeitraum:', newRange);
         return;
       }
-      
+
       if (this.range === newRange) {
         console.log('Zeitraum hat sich nicht geändert, überspringe Update');
         return;
       }
-      
+
       console.log(`Wechsle Zeitraum von ${this.range} zu ${newRange}`);
       this.range = newRange as '1d' | '1w' | '1m' | '3m' | '6m' | '1y' | '5y' | 'max';
-      
+
       // Lade neue Chart-Daten für den neuen Zeitraum
       console.log('Lade Chart-Daten für neuen Zeitraum:', newRange);
       this.loadChart();
-      
+
     } catch (error) {
       console.error('Fehler in changeRange:', error, 'Event:', event);
     }
@@ -230,7 +265,7 @@ export class AssetDetailPage implements OnInit, OnDestroy {
   private loadChart() {
     const interval = this.pickInterval(this.range);
     console.log(`Lade Chart für ${this.symbol}, Zeitraum: ${this.range}, Intervall: ${interval}`);
-    
+
     this.tradingService.getChartData(this.symbol, this.range, interval).subscribe({
       next: (data: any) => {
         console.log(`Chart-Daten erhalten für ${this.symbol}:`, data);
@@ -238,22 +273,22 @@ export class AssetDetailPage implements OnInit, OnDestroy {
         const ds = data?.chart?.result?.[0];
         const ts: number[] = ds?.timestamp || [];
         const prices: number[] = ds?.indicators?.quote?.[0]?.close || [];
-        
+
         console.log(`Verarbeite ${prices.length} Preispunkte für ${this.symbol}`);
-        
+
         // Korrigiere Zeitstempel-Behandlung
         if (ts.length > 0) {
           // Verwende den neuesten Zeitstempel für lastUpdated
           const latestTimestamp = ts[ts.length - 1];
           this.lastUpdated = new Date(latestTimestamp * 1000);
-          
+
           // Debug: Zeige Zeitstempel-Informationen
           console.log(`Neuester Zeitstempel: ${latestTimestamp} -> ${this.lastUpdated.toISOString()}`);
           console.log(`Aktuelle lokale Zeit: ${new Date().toISOString()}`);
         } else {
           this.lastUpdated = null;
         }
-        
+
         if (prices.length) {
           this.high = Math.max(...prices);
           this.low = Math.min(...prices);
@@ -294,5 +329,57 @@ export class AssetDetailPage implements OnInit, OnDestroy {
       }
     });
     await modal.present();
+
+    const result = await modal.onDidDismiss();
+    if (result.data?.refresh) {
+      this.loadChart(); // Refresh data after trade
+    }
   }
-} 
+
+  async openSell() {
+    // Get user's available quantity of this asset
+    const user = this.auth.getCurrentUser();
+    if (!user?.id) {
+      console.error('User not logged in');
+      return;
+    }
+
+    // Use the availableQuantity property that we're already tracking
+    if (this.availableQuantity <= 0) {
+      // Show alert if user doesn't own any of this asset
+      const alert = await this.modalController.create({
+        component: 'ion-alert',
+        componentProps: {
+          header: 'Keine Bestände',
+          message: `Du besitzt keine ${this.symbol} zum Verkaufen.`,
+          buttons: ['OK']
+        }
+      });
+      await alert.present();
+      return;
+    }
+
+    // Open sell modal
+    const modal = await this.modalController.create({
+      component: TradePopupComponent,
+      componentProps: {
+        action: 'sell',
+        assetSymbol: this.symbol,
+        currentPrice: this.price || 0,
+        userBalance: this._userBalance,
+        availableQuantity: this.availableQuantity,
+      }
+    });
+    await modal.present();
+
+    const result = await modal.onDidDismiss();
+    if (result.data?.refresh) {
+      this.loadChart(); // Refresh data after trade
+
+      // Also refresh user ownership status after trade
+      if (user?.id) {
+        this.checkUserOwnsAsset(user.id);
+      }
+    }
+  }
+}

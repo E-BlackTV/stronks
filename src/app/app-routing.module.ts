@@ -1,7 +1,23 @@
-import { NgModule } from '@angular/core';
-import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+import { Component, NgModule, OnInit } from '@angular/core';
+import { PreloadAllModules, RouterModule, Routes, ActivatedRoute, Router } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
 import { DebugComponent } from './debug/debug.component';
+
+@Component({
+  template: ''
+})
+export class AssetRedirectComponent implements OnInit {
+  constructor(private route: ActivatedRoute, private router: Router) {}
+
+  ngOnInit() {
+    const symbol = this.route.snapshot.paramMap.get('symbol');
+    if (symbol) {
+      this.router.navigate(['/wallet/asset-detail', symbol]);
+    } else {
+      this.router.navigate(['/wallet/home']);
+    }
+  }
+}
 
 const routes: Routes = [
   {
@@ -24,7 +40,7 @@ const routes: Routes = [
   {
     path: 'asset/:symbol',
     canActivate: [AuthGuard],
-    loadChildren: () => import('./pages/asset-detail/asset-detail.module').then(m => m.AssetDetailPageModule)
+    component: AssetRedirectComponent
   },
   {
     path: 'rewards',
@@ -48,6 +64,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
+  declarations: [AssetRedirectComponent],
   imports: [
     RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules }),
   ],
