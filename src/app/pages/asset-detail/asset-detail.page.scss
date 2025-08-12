@@ -28,7 +28,7 @@ ion-segment {
 
 ion-segment-button {
   --color: var(--secondary-white);
-  --color-checked: var(--primary);
+  --color-checked: #000000; /* Schwarze Schrift für bessere Lesbarkeit bei Auswahl */
   --indicator-color: var(--primary);
 }
 

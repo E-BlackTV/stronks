@@ -2,6 +2,11 @@
   <ion-header>
     <ion-toolbar class="custom-toolbar">
       <ion-title class="custom-title">Firebase Debug & Diagnose</ion-title>
+      <ion-buttons slot="end">
+        <ion-button (click)="close()" class="close-button" color="medium" fill="solid" shape="round">
+          <ion-icon name="close" size="large"></ion-icon>
+        </ion-button>
+      </ion-buttons>
     </ion-toolbar>
   </ion-header>
 
@@ -240,7 +245,7 @@
     </ion-item>
 
     <ion-item *ngIf="showDesignTest">
-      
+
       <ion-label>
         <h2>Design-Test Formular</h2>
         <form [formGroup]="testForm" (ngSubmit)="onTestSubmit()">
