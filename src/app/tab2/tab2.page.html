@@ -50,29 +50,25 @@
     ></ion-input>
   </ion-item>
 
-  <ion-item lines="none" class="ion-margin-top">
-    <ion-label>Sortieren nach</ion-label>
-    <ion-segment (ionChange)="applyFilters()">
-      <ion-segment-button value="nameAsc" (click)="sortBy='name'; sortDir='asc'"
-        >Name ↑</ion-segment-button
-      >
-      <ion-segment-button
-        value="nameDesc"
-        (click)="sortBy='name'; sortDir='desc'"
-        >Name ↓</ion-segment-button
-      >
-      <ion-segment-button
-        value="priceAsc"
-        (click)="sortBy='price'; sortDir='asc'"
-        >Preis ↑</ion-segment-button
-      >
-      <ion-segment-button
-        value="priceDesc"
-        (click)="sortBy='price'; sortDir='desc'"
-        >Preis ↓</ion-segment-button
-      >
-    </ion-segment>
-  </ion-item>
+<ion-item lines="none" class="ion-margin-top">
+  <ion-label>Sortieren nach</ion-label>
+
+  <!-- Mobile view: dropdown -->
+  <ion-select *ngIf="isMobile" [(ngModel)]="sortBy" (ionChange)="applyFilters()">
+    <ion-select-option value="nameAsc" (click)="sortBy='name'; sortDir='asc'">Name ↑</ion-select-option>
+    <ion-select-option value="nameDesc" (click)="sortBy='name'; sortDir='desc'">Name ↓</ion-select-option>
+    <ion-select-option value="priceAsc" (click)="sortBy='price'; sortDir='asc'">Preis ↑</ion-select-option>
+    <ion-select-option value="priceDesc" (click)="sortBy='price'; sortDir='desc'">Preis ↓</ion-select-option>
+  </ion-select>
+
+  <!-- Desktop view: segment -->
+  <ion-segment *ngIf="!isMobile" (ionChange)="applyFilters()">
+    <ion-segment-button value="nameAsc" (click)="sortBy='name'; sortDir='asc'">Name ↑</ion-segment-button>
+    <ion-segment-button value="nameDesc" (click)="sortBy='name'; sortDir='desc'">Name ↓</ion-segment-button>
+    <ion-segment-button value="priceAsc" (click)="sortBy='price'; sortDir='asc'">Preis ↑</ion-segment-button>
+    <ion-segment-button value="priceDesc" (click)="sortBy='price'; sortDir='desc'">Preis ↓</ion-segment-button>
+  </ion-segment>
+</ion-item>
 
   <ion-list class="list-tight border-main">
     <ion-item *ngFor="let asset of filteredAssets" (click)="goToDetail(asset)">
