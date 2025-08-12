@@ -54,11 +54,11 @@
   <ion-label>Sortieren nach</ion-label>
 
   <!-- Mobile view: dropdown -->
-  <ion-select *ngIf="isMobile" [(ngModel)]="sortBy" (ionChange)="applyFilters()">
-    <ion-select-option value="nameAsc" (click)="sortBy='name'; sortDir='asc'">Name ↑</ion-select-option>
-    <ion-select-option value="nameDesc" (click)="sortBy='name'; sortDir='desc'">Name ↓</ion-select-option>
-    <ion-select-option value="priceAsc" (click)="sortBy='price'; sortDir='asc'">Preis ↑</ion-select-option>
-    <ion-select-option value="priceDesc" (click)="sortBy='price'; sortDir='desc'">Preis ↓</ion-select-option>
+  <ion-select *ngIf="isMobile" (ionChange)="onSortOptionChange($event)">
+    <ion-select-option value="nameAsc">Name ↑</ion-select-option>
+    <ion-select-option value="nameDesc">Name ↓</ion-select-option>
+    <ion-select-option value="priceAsc">Preis ↑</ion-select-option>
+    <ion-select-option value="priceDesc">Preis ↓</ion-select-option>
   </ion-select>
 
   <!-- Desktop view: segment -->
@@ -85,7 +85,7 @@
         </p>
       </ion-label>
       <div slot="end" class="price-info">
-        <div class="price">{{ asset.price | number:'1.2-2' || 'N/A' }}</div>
+        <div class="price">{{ latestPrices[asset.symbol] | number:'1.2-2' || asset.price | number:'1.2-2' || 'N/A' }}</div>
         <div
           *ngIf="asset.priceChange !== undefined"
           class="price-change"

@@ -195,8 +195,8 @@ export class HomePage implements OnInit, OnDestroy {
     private marketData: MarketDataService
   ) {
     Chart.register(...registerables);
-    // Reduce polling frequency to 30 seconds to improve performance
-    this.refreshSubscription = interval(30000).subscribe(() => {
+    // Set polling frequency to 7 seconds for more responsive live updates
+    this.refreshSubscription = interval(7000).subscribe(() => {
       this.fetchAccountBalance();
       this.calculatePortfolioValue(); // Update user investments and portfolio value
       this.fetchAllCurrentPrices(); // Update stock prices
@@ -622,7 +622,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   async fetchAllCurrentPrices() {
     try {
-
+      // First, update Bitcoin price (main asset)
       this.tradingService.getAssetPrice('BTC-USD').subscribe({
         next: (response) => {
           if (response && response.success) {
@@ -631,9 +631,50 @@ export class HomePage implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error fetching current prices:', error);
+          console.error('Error fetching Bitcoin price:', error);
         },
       });
+
+      // Then update prices for all assets in the user's portfolio
+      if (this.userInvestments && this.userInvestments.length > 0) {
+        // Get unique symbols from user investments
+        const symbols = [...new Set(this.userInvestments.map(inv => inv.asset_symbol))];
+
+        // Update prices for each asset
+        symbols.forEach(symbol => {
+          if (symbol && symbol !== 'BTC-USD') { // Skip Bitcoin as it's already updated
+            this.tradingService.getAssetPrice(symbol).subscribe({
+              next: (response) => {
+                if (response && response.success) {
+                  // Update price in the investments list
+                  this.userInvestments.forEach(inv => {
+                    if (inv.asset_symbol === symbol) {
+                      const oldPrice = inv.currentPrice || 0;
+                      const newPrice = response.price;
+
+                      // Only update if price has changed
+                      if (oldPrice !== newPrice) {
+                        inv.currentPrice = newPrice;
+                        inv.currentValue = inv.quantity * newPrice;
+                        inv.profit_loss = inv.currentValue - inv.amount;
+                        inv.profit_loss_percent = inv.amount > 0 ? (inv.profit_loss / inv.amount) * 100 : 0;
+
+                        console.log(`Updated price for ${symbol}: ${oldPrice} → ${newPrice}`);
+                      }
+                    }
+                  });
+
+                  // Also update in the currentPrices object
+                  this.currentPrices[symbol] = response.price;
+                }
+              },
+              error: (error) => {
+                console.error(`Error fetching price for ${symbol}:`, error);
+              },
+            });
+          }
+        });
+      }
     } catch (error) {
       console.error('Error fetching current prices:', error);
     }

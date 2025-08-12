@@ -83,6 +83,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   canSpin = true;
   prizes: Prize[] = [];
   spinResult: Prize | null = null;
+  resolvedPrizeValue: number = 0;
 
   // Daily Spin Logic
   lastSpinTime: Date | null = null;
@@ -391,7 +392,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
             if (response.success) {
               console.log('Gewinn erfolgreich gespeichert:', response);
               this.showToast(`Gewinn erfolgreich hinzugefügt! ${response.prizeAmount}€`, 'success');
-              
+
               // Aktualisiere das Benutzer-Vermögen im localStorage und im Service
               if (currentUser) {
                 const userData = {
@@ -431,16 +432,17 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  showResult(prize: Prize) {
-    // Lade aktuelles Vermögen für die Berechnung
-    const currentUser = this.firebaseService.getCurrentUser();
-    const currentBalance = currentUser?.balance || 10000;
-    const actualPrizeValue = Math.round((currentBalance * prize.percentage) / 100);
+  async showResult(prize: Prize) {
+    // Berechne den tatsächlichen Gewinnwert basierend auf dem Gesamtvermögen
+    const actualPrizeValue = await this.getActualPrizeValue(prize);
+
+    // Store the resolved value for use in the template
+    this.resolvedPrizeValue = actualPrizeValue;
 
     let message = `Glückwunsch! Sie haben ${prize.name} gewonnen!`;
 
     if (prize.type === 'euro') {
-      message += ` ${actualPrizeValue}€ (${prize.percentage}% Ihres Vermögens) wurden Ihrem Konto gutgeschrieben!`;
+      message += ` ${actualPrizeValue}€ (max. 100€) wurden Ihrem Konto gutgeschrieben!`;
     } else if (prize.type === 'btc') {
       message += ` ${actualPrizeValue} BTC wurden Ihrem Portfolio hinzugefügt!`;
     }
@@ -463,21 +465,83 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     this.modalController.dismiss();
   }
 
-  getActualPrizeValue(prize: Prize): number {
-    const currentUser = this.firebaseService.getCurrentUser();
-    const currentBalance = currentUser?.balance || 10000;
-    return Math.round((currentBalance * prize.percentage) / 100);
+  // Get total assets including balance and investments
+  async getTotalAssets(): Promise<number> {
+    try {
+      const user = this.firebaseService.getCurrentUser();
+      if (!user) return 0;
+
+      // Return a promise that resolves with the total assets value
+      return new Promise((resolve) => {
+        this.tradingService.getPortfolio(user.id).subscribe({
+          next: (response) => {
+            if (response.success) {
+              let assetsCurrentValue = 0;
+
+              // Calculate value of all assets
+              if (response.assets && response.assets.length > 0) {
+                response.assets.forEach((asset: any) => {
+                  const currentValue = asset.quantity * (asset.currentPrice || 0);
+                  assetsCurrentValue += currentValue;
+                });
+              }
+
+              // Get cash balance
+              const cashBalance = response.cashBalance ?? user.balance ?? 0;
+
+              // Total assets = cash + investments
+              const totalAssets = cashBalance + assetsCurrentValue;
+              console.log('Total assets calculated:', totalAssets);
+              resolve(totalAssets);
+            } else {
+              console.error('Portfolio response not successful:', response);
+              resolve(user.balance || 0); // Fallback to balance
+            }
+          },
+          error: (error) => {
+            console.error('Error fetching portfolio:', error);
+            resolve(user.balance || 0); // Fallback to balance
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error calculating total assets:', error);
+      return 0;
+    }
   }
 
-  formatPrizeLabel(prize: Prize): string {
-    const actualValue = this.getActualPrizeValue(prize);
+  async getActualPrizeValue(prize: Prize): Promise<number> {
+    const totalAssets = await this.getTotalAssets();
 
-    if (actualValue >= 1000000) {
-      return `${(actualValue / 1000000).toFixed(1)}Mil`;
-    } else if (actualValue >= 1000) {
-      return `${(actualValue / 1000).toFixed(1)}K`;
+    // Calculate prize based on total assets
+    let prizeValue = Math.round((totalAssets * prize.percentage) / 100);
+
+    // Cap prize at 100€ to match the "Gewinne bis zu 100€!" text
+    if (prizeValue > 100) {
+      prizeValue = 100;
+    }
+
+    return prizeValue;
+  }
+
+  // Non-async version for use in templates with pipes
+  getActualPrizeValueSync(prize: Prize | null): number {
+    if (!prize) return 0;
+    return this.resolvedPrizeValue;
+  }
+
+  // Format prize label with a placeholder value, will be updated when wheel is created
+  formatPrizeLabel(prize: Prize): string {
+    // Calculate a placeholder value based on percentage (max 100€)
+    const maxPrize = 100; // Maximum prize of 100€
+    const placeholderValue = Math.min(Math.round((maxPrize * prize.percentage) / 50), maxPrize);
+
+    if (placeholderValue >= 1000000) {
+      return `${(placeholderValue / 1000000).toFixed(1)}Mil`;
+    } else if (placeholderValue >= 1000) {
+      return `${(placeholderValue / 1000).toFixed(1)}K`;
     } else {
-      return `${actualValue}€`;
+      return `${placeholderValue}€`;
     }
   }
 

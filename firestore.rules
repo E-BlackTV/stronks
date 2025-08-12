@@ -1,19 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Admin-Funktion (für Service Account)
     function isAdmin() {
-      return request.auth != null && 
-             (request.auth.token.admin == true || 
+      return request.auth != null &&
+             (request.auth.token.admin == true ||
               request.auth.token.firebase.sign_in_provider == 'service_account');
     }
-    
+
     // Authentifizierter User
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     // Valide Asset-Daten
     function isValidAsset() {
       return request.resource.data.keys().hasAll(['symbol', 'name', 'type']) &&
@@ -21,7 +21,7 @@ service cloud.firestore {
              request.resource.data.name is string &&
              request.resource.data.type in ['crypto', 'stock', 'forex'];
     }
-    
+
     // Valide User-Daten
     function isValidUser() {
       return request.resource.data.keys().hasAll(['username', 'email', 'balance']) &&
@@ -29,48 +29,61 @@ service cloud.firestore {
              request.resource.data.email is string &&
              request.resource.data.balance is number;
     }
-    
+
     // Assets Collection
     match /assets/{assetId} {
       allow read: if true; // Öffentlich lesbar
       allow create, update: if isAdmin() && isValidAsset();
       allow delete: if isAdmin();
     }
-    
+
     // Users Collection - LOGIN-FREUNDLICHE REGELN
     match /users/{userId} {
       // Lesen: Eigener User, Admin, oder für Login-Suche
-      allow read: if isAuthenticated() && 
+      allow read: if isAuthenticated() &&
                     (request.auth.uid == userId || isAdmin()) ||
                   // Erlaube Suche nach Benutzername für Login (ohne Auth)
-                  (request.auth == null && 
-                   request.path.segments[-1] == '__collection__' && 
+                  (request.auth == null &&
+                   request.path.segments[-1] == '__collection__' &&
                    request.query.limit <= 1 &&
                    request.query.filters.size() == 1 &&
                    request.query.filters[0].fieldPath == 'username') ||
                   // Erlaube Suche nach E-Mail für Login (ohne Auth)
-                  (request.auth == null && 
-                   request.path.segments[-1] == '__collection__' && 
+                  (request.auth == null &&
+                   request.path.segments[-1] == '__collection__' &&
                    request.query.limit <= 1 &&
                    request.query.filters.size() == 1 &&
                    request.query.filters[0].fieldPath == 'email');
-      
+
       // Erstellen: Eigener User, Admin oder temporärer User
-      allow create: if isAuthenticated() && 
+      allow create: if isAuthenticated() &&
                       (request.auth.uid == userId || isAdmin()) ||
-                    (request.resource.data.isTemporary == true && 
+                    (request.resource.data.isTemporary == true &&
                      isValidUser()); // Fallback-Modus
-      
+
       // Aktualisieren: Eigener User oder Admin
-      allow update: if isAuthenticated() && 
+      allow update: if isAuthenticated() &&
                       (request.auth.uid == userId || isAdmin()) ||
-                    (resource.data.isTemporary == true && 
+                    (resource.data.isTemporary == true &&
                      request.resource.data.isTemporary == true); // Fallback-Modus
-      
+
       // Löschen: Nur Admin
       allow delete: if isAdmin();
+
+      // User-Daten Subcollections (Wallet, Snapshots, Spins)
+      match /wallet/{doc} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+
+      match /snapshots/{doc} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+
+      match /spins/{doc} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
-    
+
     // Portfolios Collection
     match /portfolios/{portfolioId} {
       // Lesen erlaubt, wenn Doc-ID dem eigenen UID entspricht ODER userId-Feld übereinstimmt
@@ -93,22 +106,22 @@ service cloud.firestore {
                     );
       allow delete: if isAdmin();
     }
-    
+
     // Trades Collection
     match /trades/{tradeId} {
-      allow read: if isAuthenticated() && 
+      allow read: if isAuthenticated() &&
                     (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && 
+      allow create: if isAuthenticated() &&
                       request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
-    
+
     // Lucky Wheel Collection
     match /luckyWheel/{userId} {
-      allow read: if isAuthenticated() && 
+      allow read: if isAuthenticated() &&
                     (request.auth.uid == userId || isAdmin());
-      allow create, update: if isAuthenticated() && 
+      allow create, update: if isAuthenticated() &&
                               request.auth.uid == userId;
       allow delete: if isAdmin();
     }
@@ -119,7 +132,7 @@ service cloud.firestore {
       allow create, update: if isAuthenticated() && request.auth.uid == userId;
       allow delete: if isAdmin();
     }
-    
+
     // Cache Collection (für API-Daten) - alte Bezeichnung
     match /cache/{cacheId} {
       allow read: if true; // Öffentlich lesbar
@@ -134,34 +147,34 @@ service cloud.firestore {
       allow create, update: if isAuthenticated();
       allow delete: if isAdmin();
     }
-    
+
     // Transactions (richtiger Collection-Name im Frontend)
     match /transactions/{txId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
-    
+
     // System Collection (für App-Konfiguration)
     match /system/{configId} {
       allow read: if true; // Öffentlich lesbar
       allow write: if isAdmin();
     }
-    
+
     // Trading Data Collection (für gescrapte TradingView-Daten)
     match /trading_data/{docId} {
       allow read: if true; // Öffentlich lesbar für Charts/Preise
       allow create, update: if isAuthenticated(); // Erlaubt für angemeldete Nutzer
       allow delete: if isAdmin(); // Nur Admin kann löschen
     }
-    
+
     // Apple Data Collections (für optimierte Apple-Daten)
     match /apple_data_optimized/{docId} {
       allow read: if true; // Öffentlich lesbar für Charts/Preise
       allow create, update: if isAuthenticated(); // Erlaubt für angemeldete Nutzer
       allow delete: if isAdmin(); // Nur Admin kann löschen
     }
-    
+
     match /apple_data_summary/{docId} {
       allow read: if true; // Öffentlich lesbar für Statistiken
       allow create, update: if isAuthenticated(); // Erlaubt für angemeldete Nutzer

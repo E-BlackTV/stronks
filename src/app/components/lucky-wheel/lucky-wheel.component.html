@@ -68,14 +68,14 @@
           <h2>{{ spinResult.name }}</h2>
           <p *ngIf="spinResult.type === 'euro'">
             {{
-              getActualPrizeValue(spinResult)
+              resolvedPrizeValue
                 | currency : "EUR" : "symbol" : "1.2-2"
             }}
             ({{ spinResult.percentage }}% Ihres Vermögens) wurden Ihrem Konto
             gutgeschrieben!
           </p>
           <p *ngIf="spinResult.type === 'btc'">
-            {{ getActualPrizeValue(spinResult) }} BTC wurden Ihrem Portfolio
+            {{ resolvedPrizeValue }} BTC wurden Ihrem Portfolio
             hinzugefügt!
           </p>
           <ion-button color="success" expand="full" (click)="dismiss()">
