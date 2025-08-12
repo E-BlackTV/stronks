@@ -59,7 +59,7 @@
         <!-- Liste der Investitionen -->
         <ion-list *ngIf="userInvestments.length > 0">
           <ion-item *ngFor="let investment of userInvestments"
-                   [routerLink]="['/wallet/asset-detail', investment.asset_symbol]"
+                   [routerLink]="['/wallet/asset', investment.asset_symbol]"
                    detail="true">
             <ion-label>
               <h2>{{ investment.asset_symbol }}</h2>

@@ -12,7 +12,7 @@ export class AssetRedirectComponent implements OnInit {
   ngOnInit() {
     const symbol = this.route.snapshot.paramMap.get('symbol');
     if (symbol) {
-      this.router.navigate(['/wallet/asset-detail', symbol]);
+      this.router.navigate(['/wallet/asset', symbol]);
     } else {
       this.router.navigate(['/wallet/home']);
     }

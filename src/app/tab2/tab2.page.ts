@@ -551,5 +551,5 @@ export class Tab2Page implements OnInit {
     await modal.present();
   }
 
-  goToDetail(asset: ListAsset) { this.router.navigate(['/wallet/asset-detail', asset.symbol]); }
+  goToDetail(asset: ListAsset) { this.router.navigate(['/wallet/asset', asset.symbol]); }
 }
