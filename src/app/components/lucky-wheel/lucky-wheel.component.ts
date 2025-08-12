@@ -84,6 +84,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
   prizes: Prize[] = [];
   spinResult: Prize | null = null;
   resolvedPrizeValue: number = 0;
+  userBalance: number = 0; // Store user balance for prize calculations
 
   // Daily Spin Logic
   lastSpinTime: Date | null = null;
@@ -530,18 +531,20 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.resolvedPrizeValue;
   }
 
-  // Format prize label with a placeholder value, will be updated when wheel is created
-  formatPrizeLabel(prize: Prize): string {
-    // Calculate a placeholder value based on percentage (max 100€)
-    const maxPrize = 100; // Maximum prize of 100€
-    const placeholderValue = Math.min(Math.round((maxPrize * prize.percentage) / 50), maxPrize);
+  // Format prize label with actual value based on user's balance
+  formatPrizeLabel(prize: Prize, balance: number = 0): string {
+    // Calculate actual value based on user's balance and prize percentage
+    const prizeValue = Math.round((balance * prize.percentage) / 100);
 
-    if (placeholderValue >= 1000000) {
-      return `${(placeholderValue / 1000000).toFixed(1)}Mil`;
-    } else if (placeholderValue >= 1000) {
-      return `${(placeholderValue / 1000).toFixed(1)}K`;
+    // Cap prize at 100€ to match the "Gewinne bis zu 100€!" text
+    const cappedValue = prizeValue > 100 ? 100 : prizeValue;
+
+    if (cappedValue >= 1000000) {
+      return `${(cappedValue / 1000000).toFixed(1)}Mil`;
+    } else if (cappedValue >= 1000) {
+      return `${(cappedValue / 1000).toFixed(1)}K`;
     } else {
-      return `${placeholderValue}€`;
+      return `${cappedValue}€`;
     }
   }
 
@@ -554,6 +557,9 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
         this.tradingService.getBalance(currentUser.id).subscribe({
           next: (response: any) => {
             if (response.success) {
+              // Store the balance for prize calculations
+              this.userBalance = response.balance;
+
               // Aktualisiere das Vermögen im localStorage für Kompatibilität
               const userData = {
                 ...currentUser,
@@ -573,21 +579,25 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
                 response.message
               );
               // Fallback auf localStorage oder Standardwert
+              this.userBalance = currentUser.balance || 0;
               this.updateWheelLabels();
             }
           },
           error: (error) => {
             console.error('Fehler beim Laden des Vermögens:', error);
             // Fallback auf localStorage oder Standardwert
+            this.userBalance = currentUser.balance || 0;
             this.updateWheelLabels();
           },
         });
       } else {
         // Kein Benutzer gefunden, verwende Standardwert
+        this.userBalance = 0;
         this.updateWheelLabels();
       }
     } catch (error) {
       console.error('Fehler beim Laden des Benutzers:', error);
+      this.userBalance = 0;
       this.updateWheelLabels();
     }
   }

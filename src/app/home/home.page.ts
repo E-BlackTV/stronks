@@ -726,6 +726,22 @@ export class HomePage implements OnInit, OnDestroy {
 
             // Update user investments with consistent profit/loss calculation
             this.userInvestments = response.assets?.map((asset: any) => {
+              // For assets with quantity 0 (fully sold), show 0% profit/loss
+              if (asset.quantity === 0) {
+                return {
+                  id: asset.symbol,
+                  asset_symbol: asset.symbol,
+                  investments: asset.symbol,
+                  calculatedShares: 0,
+                  currentValue: 0,
+                  purchase_price: 0,
+                  amount: 0,
+                  quantity: 0,
+                  profit_loss: 0,
+                  profit_loss_percent: 0,
+                };
+              }
+
               const currentValue = asset.quantity * (asset.currentPrice || 0);
               const profitLoss = currentValue - asset.totalInvested;
               const profitLossPercent = asset.totalInvested > 0 ?

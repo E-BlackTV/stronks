@@ -384,7 +384,16 @@ export class FirestoreService {
           existing.totalInvested = (existing.totalInvested || 0) + amountDelta;
           existing.currentPrice = currentPrice;
 
-          if (existing.quantity <= 0) {
+          // When selling all, keep the asset in the portfolio with quantity 0
+          // This ensures we maintain the profit/loss history
+          if (existing.quantity <= 0 && amountDelta < 0) {
+            // If selling all (quantity becomes 0 or negative), set quantity to 0
+            // but keep the asset in the portfolio with totalInvested = 0
+            existing.quantity = 0;
+            existing.totalInvested = 0; // Reset investment amount on complete sell
+            assets[indexOfAsset] = existing;
+          } else if (existing.quantity <= 0) {
+            // For other cases where quantity becomes 0 or negative, remove the asset
             assets.splice(indexOfAsset, 1);
           } else {
             assets[indexOfAsset] = existing;

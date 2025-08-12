@@ -435,10 +435,18 @@ export class TradePopupComponent implements OnInit, OnDestroy {
           : 0;
     } else {
       // Beim Verkauf: Alle verfügbaren Assets
-      this.assetQuantity =
-        Math.round(this.availableQuantity * 100000000) / 100000000;
+      // For max sell, use the exact available quantity to ensure all assets can be sold
+      this.assetQuantity = this.availableQuantity;
+
+      // Calculate the dollar amount based on the exact quantity
       this.dollarAmount =
         Math.round(this.assetQuantity * this.currentPrice * 100) / 100;
+
+      console.log('Max sell:', {
+        availableQuantity: this.availableQuantity,
+        assetQuantity: this.assetQuantity,
+        dollarAmount: this.dollarAmount
+      });
     }
 
     this.tradeForm.patchValue(
@@ -533,9 +541,12 @@ export class TradePopupComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // For selling, check if the quantity is greater than available
+    // but allow a small tolerance for rounding errors
     if (
       this.action === 'sell' &&
-      formValue.assetQuantity > this.availableQuantity
+      formValue.assetQuantity > this.availableQuantity &&
+      Math.abs(formValue.assetQuantity - this.availableQuantity) >= 0.00000001
     ) {
       this.errorMessage = `Nicht genügend ${
         this.assetSymbol.split('-')[0]
@@ -543,13 +554,23 @@ export class TradePopupComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Prüfe auf Rundungsfehler beim Verkauf
+    // If selling all (or very close to all), use the exact available quantity
     if (
       this.action === 'sell' &&
       Math.abs(formValue.assetQuantity - this.availableQuantity) < 0.00000001
     ) {
-      // Wenn die Menge fast gleich der verfügbaren Menge ist, erlaube den Verkauf
-      console.log('Allowing sell of all available assets (rounding tolerance)');
+      // When selling all, use the exact available quantity to avoid rounding issues
+      console.log('Selling all available assets, adjusting quantity to exact available amount');
+      formValue.assetQuantity = this.availableQuantity;
+      this.assetQuantity = this.availableQuantity;
+
+      // Update the form value
+      this.tradeForm.patchValue(
+        {
+          assetQuantity: this.availableQuantity
+        },
+        { emitEvent: false }
+      );
     }
 
     this.isLoading = true;
