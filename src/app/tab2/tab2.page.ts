@@ -262,6 +262,29 @@ export class Tab2Page implements OnInit {
   onTypeFilterChange() { this.applyFilters(); }
   onSearchChange() { this.applyFilters(); }
 
+  // Handle sort option selection for mobile view
+  onSortOptionChange(event: any) {
+    const value = event.detail.value;
+
+    // Parse the selected value to set sortBy and sortDir
+    if (value === 'nameAsc') {
+      this.sortBy = 'name';
+      this.sortDir = 'asc';
+    } else if (value === 'nameDesc') {
+      this.sortBy = 'name';
+      this.sortDir = 'desc';
+    } else if (value === 'priceAsc') {
+      this.sortBy = 'price';
+      this.sortDir = 'asc';
+    } else if (value === 'priceDesc') {
+      this.sortBy = 'price';
+      this.sortDir = 'desc';
+    }
+
+    // Apply the filters with the new sort settings
+    this.applyFilters();
+  }
+
   applyFilters() {
     let filtered = [...this.assets];
     if (this.selectedType !== 'all') {

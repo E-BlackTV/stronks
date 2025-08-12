@@ -71,6 +71,15 @@ export interface PortfolioAsset {
   addedAt: Timestamp;
 }
 
+export interface AssetHistoryRecord {
+  id?: string;
+  userId: string;
+  totalValue: number;
+  cashBalance: number;
+  assetsValue: number;
+  timestamp: Timestamp;
+}
+
 /**
  * Firestore Service für die Frontend-Integration
  *
@@ -577,6 +586,65 @@ export class FirestoreService {
           total: assets.length,
           byType
         };
+      })
+    );
+  }
+
+  // ==================== ASSET HISTORY ====================
+
+  /**
+   * Speichert einen neuen Eintrag in der Asset-Historie
+   * @param userId Die ID des Benutzers
+   * @param totalValue Gesamtwert des Portfolios (Cash + Assets)
+   * @param cashBalance Barguthaben
+   * @param assetsValue Wert aller Assets
+   */
+  saveAssetHistoryRecord(userId: string, totalValue: number, cashBalance: number, assetsValue: number): Observable<string> {
+    const historyRef = collection(this.firestore, 'asset_history');
+    const record: Omit<AssetHistoryRecord, 'id'> = {
+      userId,
+      totalValue,
+      cashBalance,
+      assetsValue,
+      timestamp: serverTimestamp() as Timestamp
+    };
+
+    return from(addDoc(historyRef, record)).pipe(
+      map(docRef => docRef.id)
+    );
+  }
+
+  /**
+   * Ruft die Asset-Historie für einen Benutzer ab
+   * @param userId Die ID des Benutzers
+   * @param days Anzahl der Tage in der Vergangenheit (Standard: 30)
+   */
+  getAssetHistory(userId: string, days: number = 30): Observable<AssetHistoryRecord[]> {
+    const historyRef = collection(this.firestore, 'asset_history');
+
+    // Berechne das Datum vor 'days' Tagen
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Erstelle eine Abfrage für die Historie des Benutzers
+    const q = query(
+      historyRef,
+      where('userId', '==', userId),
+      orderBy('timestamp', 'asc')
+    );
+
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        const records = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as AssetHistoryRecord));
+
+        // Filtere Einträge nach dem Datum in JavaScript, um komplexe Firestore-Abfragen zu vermeiden
+        return records.filter(record => {
+          const recordDate = record.timestamp?.toDate?.() || new Date();
+          return recordDate >= startDate;
+        });
       })
     );
   }

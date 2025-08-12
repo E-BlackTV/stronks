@@ -37,7 +37,7 @@ export interface BalanceResponse {
 @Injectable({ providedIn: 'root' })
 export class TradingService {
   constructor(
-    private firestoreService: FirestoreService,
+    public firestoreService: FirestoreService,
     private marketData: MarketDataService,
   ) {}
 
@@ -612,5 +612,25 @@ export class TradingService {
     } catch (error) {
       return Math.floor(Date.now() / 1000);
     }
+  }
+
+  /**
+   * Speichert einen neuen Eintrag in der Asset-Historie
+   * @param userId Die ID des Benutzers
+   * @param totalValue Gesamtwert des Portfolios (Cash + Assets)
+   * @param cashBalance Barguthaben
+   * @param assetsValue Wert aller Assets
+   */
+  saveAssetHistoryRecord(userId: string, totalValue: number, cashBalance: number, assetsValue: number): Observable<string> {
+    return this.firestoreService.saveAssetHistoryRecord(userId, totalValue, cashBalance, assetsValue);
+  }
+
+  /**
+   * Ruft die Asset-Historie für einen Benutzer ab
+   * @param userId Die ID des Benutzers
+   * @param days Anzahl der Tage in der Vergangenheit (Standard: 30)
+   */
+  getAssetHistory(userId: string, days: number = 30): Observable<any[]> {
+    return this.firestoreService.getAssetHistory(userId, days);
   }
 }

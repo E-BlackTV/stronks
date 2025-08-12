@@ -21,6 +21,20 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js"></script>
   <script src="https://dougtesting.net/elements/winwheel/winwheel.min.js"></script>
+
+  <!-- Force CSS cache invalidation -->
+  <script>
+    // Add timestamp to CSS files to force cache invalidation
+    document.addEventListener('DOMContentLoaded', function() {
+      const timestamp = new Date().getTime();
+      const links = document.getElementsByTagName('link');
+      for (let i = 0; i < links.length; i++) {
+        if (links[i].rel === 'stylesheet') {
+          links[i].href = links[i].href + '?v=' + timestamp;
+        }
+      }
+    });
+  </script>
 </head>
 
 <body>
