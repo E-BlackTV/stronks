@@ -443,7 +443,7 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     let message = `Glückwunsch! Sie haben ${prize.name} gewonnen!`;
 
     if (prize.type === 'euro') {
-      message += ` ${actualPrizeValue}€ (max. 100€) wurden Ihrem Konto gutgeschrieben!`;
+      message += ` ${actualPrizeValue}€ wurden Ihrem Konto gutgeschrieben!`;
     } else if (prize.type === 'btc') {
       message += ` ${actualPrizeValue} BTC wurden Ihrem Portfolio hinzugefügt!`;
     }
@@ -517,11 +517,6 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     // Calculate prize based on total assets
     let prizeValue = Math.round((totalAssets * prize.percentage) / 100);
 
-    // Cap prize at 100€ to match the "Gewinne bis zu 100€!" text
-    if (prizeValue > 100) {
-      prizeValue = 100;
-    }
-
     return prizeValue;
   }
 
@@ -531,20 +526,34 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.resolvedPrizeValue;
   }
 
-  // Format prize label with actual value based on user's balance
-  formatPrizeLabel(prize: Prize, balance: number = 0): string {
-    // Calculate actual value based on user's balance and prize percentage
-    const prizeValue = Math.round((balance * prize.percentage) / 100);
+  // Format prize label with actual value based on user's total assets
+  async formatPrizeLabel(prize: Prize, balance: number = 0): Promise<string> {
+    // Use total assets (balance + investments) for consistency with getActualPrizeValue
+    const totalAssets = await this.getTotalAssets();
 
-    // Cap prize at 100€ to match the "Gewinne bis zu 100€!" text
-    const cappedValue = prizeValue > 100 ? 100 : prizeValue;
+    // Calculate actual value based on total assets and prize percentage
+    const prizeValue = Math.round((totalAssets * prize.percentage) / 100);
 
-    if (cappedValue >= 1000000) {
-      return `${(cappedValue / 1000000).toFixed(1)}Mil`;
-    } else if (cappedValue >= 1000) {
-      return `${(cappedValue / 1000).toFixed(1)}K`;
+    if (prizeValue >= 1000000) {
+      return `${(prizeValue / 1000000).toFixed(1)}Mil`;
+    } else if (prizeValue >= 1000) {
+      return `${(prizeValue / 1000).toFixed(1)}K`;
     } else {
-      return `${cappedValue}€`;
+      return `${prizeValue}€`;
+    }
+  }
+
+  // Synchronous version for use in templates
+  formatPrizeLabelSync(prize: Prize): string {
+    // Use the stored balance as a fallback
+    const prizeValue = Math.round((this.userBalance * prize.percentage) / 100);
+
+    if (prizeValue >= 1000000) {
+      return `${(prizeValue / 1000000).toFixed(1)}Mil`;
+    } else if (prizeValue >= 1000) {
+      return `${(prizeValue / 1000).toFixed(1)}K`;
+    } else {
+      return `${prizeValue}€`;
     }
   }
 
@@ -571,7 +580,9 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
               );
 
               // Aktualisiere die Sektoren mit dem aktuellen Vermögen
-              this.updateWheelLabels();
+              this.updateWheelLabels().catch(err => {
+                console.error('Error updating wheel labels:', err);
+              });
               console.log('Vermögen geladen:', response.balance);
             } else {
               console.error(
@@ -580,41 +591,85 @@ export class LuckyWheelComponent implements OnInit, AfterViewInit, OnDestroy {
               );
               // Fallback auf localStorage oder Standardwert
               this.userBalance = currentUser.balance || 0;
-              this.updateWheelLabels();
+              this.updateWheelLabels().catch(err => {
+                console.error('Error updating wheel labels:', err);
+              });
             }
           },
           error: (error) => {
             console.error('Fehler beim Laden des Vermögens:', error);
             // Fallback auf localStorage oder Standardwert
             this.userBalance = currentUser.balance || 0;
-            this.updateWheelLabels();
+            this.updateWheelLabels().catch(err => {
+              console.error('Error updating wheel labels:', err);
+            });
           },
         });
       } else {
         // Kein Benutzer gefunden, verwende Standardwert
         this.userBalance = 0;
-        this.updateWheelLabels();
+        this.updateWheelLabels().catch(err => {
+          console.error('Error updating wheel labels:', err);
+        });
       }
     } catch (error) {
       console.error('Fehler beim Laden des Benutzers:', error);
       this.userBalance = 0;
-      this.updateWheelLabels();
+      this.updateWheelLabels().catch(err => {
+        console.error('Error updating wheel labels:', err);
+      });
     }
   }
 
-  updateWheelLabels() {
-    // Aktualisiere die Labels basierend auf dem aktuellen Vermögen
-    this.sectors = this.prizes.map((prize, i) => {
-      return {
-        color: COLORS[i % COLORS.length],
-        label: this.formatPrizeLabel(prize),
-        prize: prize,
-      };
-    });
+  async updateWheelLabels() {
+    try {
+      // First, create sectors with synchronous labels
+      this.sectors = this.prizes.map((prize, i) => {
+        return {
+          color: COLORS[i % COLORS.length],
+          label: this.formatPrizeLabelSync(prize), // Use sync version initially
+          prize: prize,
+        };
+      });
 
-    // Zeichne das Rad neu
-    if (this.wheel) {
-      this.createWheel();
+      // Draw the wheel with initial labels
+      if (this.wheel) {
+        this.createWheel();
+      }
+
+      // Then update with accurate async labels
+      const labelPromises = this.prizes.map(prize => this.formatPrizeLabel(prize, this.userBalance));
+      const labels = await Promise.all(labelPromises);
+
+      // Update sectors with accurate labels
+      this.sectors = this.prizes.map((prize, i) => {
+        return {
+          color: COLORS[i % COLORS.length],
+          label: labels[i],
+          prize: prize,
+        };
+      });
+
+      // Redraw the wheel with accurate labels
+      if (this.wheel) {
+        this.createWheel();
+      }
+
+      console.log('Wheel labels updated with actual prize values');
+    } catch (error) {
+      console.error('Error updating wheel labels:', error);
+      // Fallback to sync labels if async fails
+      this.sectors = this.prizes.map((prize, i) => {
+        return {
+          color: COLORS[i % COLORS.length],
+          label: this.formatPrizeLabelSync(prize),
+          prize: prize,
+        };
+      });
+
+      if (this.wheel) {
+        this.createWheel();
+      }
     }
   }
 

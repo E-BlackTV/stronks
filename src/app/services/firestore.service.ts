@@ -387,10 +387,17 @@ export class FirestoreService {
           // When selling all, keep the asset in the portfolio with quantity 0
           // This ensures we maintain the profit/loss history
           if (existing.quantity <= 0 && amountDelta < 0) {
+            // Calculate realized profit/loss before resetting totalInvested
+            const oldTotalInvested = existing.totalInvested || 0;
+            const realizedProfit = -amountDelta - (quantityDelta * -1) * (oldTotalInvested / ((existing.quantity - quantityDelta) || 1));
+            const realizedProfitPercent = oldTotalInvested > 0 ? (realizedProfit / oldTotalInvested) * 100 : 0;
+
             // If selling all (quantity becomes 0 or negative), set quantity to 0
             // but keep the asset in the portfolio with totalInvested = 0
             existing.quantity = 0;
             existing.totalInvested = 0; // Reset investment amount on complete sell
+            existing.realizedProfit = realizedProfit; // Store realized profit/loss
+            existing.realizedProfitPercent = realizedProfitPercent; // Store realized profit/loss percentage
             assets[indexOfAsset] = existing;
           } else if (existing.quantity <= 0) {
             // For other cases where quantity becomes 0 or negative, remove the asset

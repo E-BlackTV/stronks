@@ -45,7 +45,8 @@ const routes: Routes = [
   {
     path: 'rewards',
     canActivate: [AuthGuard],
-    loadChildren: () => import('./pages/rewards/rewards.module').then(m => m.RewardsPageModule)
+    redirectTo: '/wallet/rewards',
+    pathMatch: 'full'
   },
   {
     path: 'login',
