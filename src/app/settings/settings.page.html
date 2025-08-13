@@ -1,19 +1,170 @@
-  <ion-header>
-    <ion-toolbar>
-      <ion-title>Einstellungen</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Einstellungen</ion-title>
+  </ion-toolbar>
+</ion-header>
 
-  <ion-content class="ion-padding">
-    <ion-list class="border-main">
-      <ion-item button detail routerLink="/debug">
-        <ion-label>Debug</ion-label>
-      </ion-item>
-    </ion-list>
-    <ion-button expand="block" class="ion-danger-btn ion-margin-top" color="danger" (click)="logout()">
+<ion-content class="ion-padding">
+  <!-- Profilbereich -->
+  <ion-card class="border-main">
+    <ion-card-header>
+      <ion-card-title>Profil</ion-card-title>
+      <ion-card-subtitle *ngIf="currentUser">
+        Angemeldet als {{ currentUser.username }} ({{ currentUser.email }})
+      </ion-card-subtitle>
+    </ion-card-header>
+
+    <ion-card-content>
+      <!-- Profiloptionen -->
+      <ion-list lines="none">
+        <!-- Benutzername ändern -->
+        <ion-item button detail="false" (click)="toggleProfileForm()">
+          <ion-icon name="person-outline" slot="start"></ion-icon>
+          <ion-label>Benutzername ändern</ion-label>
+          <ion-icon [name]="showProfileForm ? 'chevron-up-outline' : 'chevron-down-outline'" slot="end"></ion-icon>
+        </ion-item>
+
+        <!-- Benutzernamen-Formular -->
+        <div *ngIf="showProfileForm">
+          <form [formGroup]="profileForm" (ngSubmit)="updateProfile()">
+            <ion-item>
+              <ion-label position="floating">Neuer Benutzername</ion-label>
+              <ion-input formControlName="username" type="text"></ion-input>
+            </ion-item>
+            <div class="ion-padding-vertical" *ngIf="profileForm.get('username')?.invalid && profileForm.get('username')?.touched">
+              <ion-text color="danger">
+                Benutzername muss mindestens 3 Zeichen lang sein
+              </ion-text>
+            </div>
+            <ion-button expand="block" type="submit" [disabled]="profileForm.invalid" class="ion-margin-top">
+              Speichern
+            </ion-button>
+            <ion-button expand="block" fill="outline" (click)="toggleProfileForm()" class="ion-margin-top">
+              Abbrechen
+            </ion-button>
+          </form>
+        </div>
+
+        <!-- E-Mail ändern -->
+        <ion-item button detail="false" (click)="toggleEmailForm()">
+          <ion-icon name="mail-outline" slot="start"></ion-icon>
+          <ion-label>E-Mail-Adresse ändern</ion-label>
+          <ion-icon [name]="showEmailForm ? 'chevron-up-outline' : 'chevron-down-outline'" slot="end"></ion-icon>
+        </ion-item>
+
+        <!-- E-Mail-Formular -->
+        <div *ngIf="showEmailForm">
+          <form [formGroup]="emailForm" (ngSubmit)="updateEmail()">
+            <ion-item>
+              <ion-label position="floating">Neue E-Mail-Adresse</ion-label>
+              <ion-input formControlName="email" type="email"></ion-input>
+            </ion-item>
+            <div class="ion-padding-vertical" *ngIf="emailForm.get('email')?.invalid && emailForm.get('email')?.touched">
+              <ion-text color="danger">
+                Bitte geben Sie eine gültige E-Mail-Adresse ein
+              </ion-text>
+            </div>
+            <ion-item>
+              <ion-label position="floating">Passwort zur Bestätigung</ion-label>
+              <ion-input formControlName="password" type="password"></ion-input>
+            </ion-item>
+            <ion-button expand="block" type="submit" [disabled]="emailForm.invalid" class="ion-margin-top">
+              Speichern
+            </ion-button>
+            <ion-button expand="block" fill="outline" (click)="toggleEmailForm()" class="ion-margin-top">
+              Abbrechen
+            </ion-button>
+          </form>
+        </div>
+
+        <!-- Passwort ändern -->
+        <ion-item button detail="false" (click)="togglePasswordForm()">
+          <ion-icon name="key-outline" slot="start"></ion-icon>
+          <ion-label>Passwort ändern</ion-label>
+          <ion-icon [name]="showPasswordForm ? 'chevron-up-outline' : 'chevron-down-outline'" slot="end"></ion-icon>
+        </ion-item>
+
+        <!-- Passwort-Formular -->
+        <div *ngIf="showPasswordForm">
+          <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+            <ion-item>
+              <ion-label position="floating">Aktuelles Passwort</ion-label>
+              <ion-input formControlName="currentPassword" type="password"></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-label position="floating">Neues Passwort</ion-label>
+              <ion-input formControlName="newPassword" type="password"></ion-input>
+            </ion-item>
+            <div class="ion-padding-vertical" *ngIf="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched">
+              <ion-text color="danger">
+                Passwort muss mindestens 6 Zeichen lang sein
+              </ion-text>
+            </div>
+            <ion-item>
+              <ion-label position="floating">Passwort bestätigen</ion-label>
+              <ion-input formControlName="confirmPassword" type="password"></ion-input>
+            </ion-item>
+            <ion-button expand="block" type="submit" [disabled]="passwordForm.invalid" class="ion-margin-top">
+              Passwort ändern
+            </ion-button>
+            <ion-button expand="block" fill="outline" (click)="togglePasswordForm()" class="ion-margin-top">
+              Abbrechen
+            </ion-button>
+          </form>
+        </div>
+
+        <!-- Passwort zurücksetzen -->
+        <ion-item button detail="false" (click)="toggleResetPasswordForm()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          <ion-label>Passwort zurücksetzen</ion-label>
+          <ion-icon [name]="showResetPasswordForm ? 'chevron-up-outline' : 'chevron-down-outline'" slot="end"></ion-icon>
+        </ion-item>
+
+        <!-- Passwort-Reset-Formular -->
+        <div *ngIf="showResetPasswordForm">
+          <form [formGroup]="resetPasswordForm" (ngSubmit)="resetPassword()">
+            <ion-item>
+              <ion-label position="floating">E-Mail-Adresse</ion-label>
+              <ion-input formControlName="email" type="email"></ion-input>
+            </ion-item>
+            <div class="ion-padding-vertical" *ngIf="resetPasswordForm.get('email')?.invalid && resetPasswordForm.get('email')?.touched">
+              <ion-text color="danger">
+                Bitte geben Sie eine gültige E-Mail-Adresse ein
+              </ion-text>
+            </div>
+            <ion-text color="medium" class="ion-padding-vertical">
+              <p>Eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts wird an diese Adresse gesendet.</p>
+            </ion-text>
+            <ion-button expand="block" type="submit" [disabled]="resetPasswordForm.invalid" class="ion-margin-top">
+              Passwort-Reset-E-Mail senden
+            </ion-button>
+            <ion-button expand="block" fill="outline" (click)="toggleResetPasswordForm()" class="ion-margin-top">
+              Abbrechen
+            </ion-button>
+          </form>
+        </div>
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Weitere Einstellungen -->
+  <ion-card class="border-main">
+    <ion-card-header>
+      <ion-card-title>Weitere Einstellungen</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list>
+        <ion-item button detail routerLink="/debug">
+          <ion-icon name="bug-outline" slot="start"></ion-icon>
+          <ion-label>Debug</ion-label>
+        </ion-item>
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Abmelden -->
+  <ion-button expand="block" class="ion-danger-btn ion-margin-top" color="danger" (click)="logout()">
     <ion-icon name="log-out-outline" slot="start"></ion-icon>
     <span>Abmelden</span>
   </ion-button>
-  </ion-content>
-
-  
+</ion-content>
